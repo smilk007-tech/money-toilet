@@ -49,11 +49,7 @@ export default function PayslipShare({ data }: { data: ReceiptData }) {
   return (
     <main style={wrap}>
       <div style={cardWrap}>
-        <ReceiptCard
-          d={data}
-          presenceOverride={count}
-          globalOverride={liveWon}
-        />
+        <ReceiptCard d={data} />
       </div>
 
       {/* 실시간 라이브 배너 */}
