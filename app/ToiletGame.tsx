@@ -14,18 +14,43 @@ export default function ToiletGame() {
     <div id="app">
       {/* ===== 상단 HUD ===== */}
       <header className="hud">
-        <div className="hud__left">
-          <button className="gear" id="gearBtn" type="button" aria-label="설정">
+        <div className="hud__bar">
+          <button
+            className="hud__icon-btn"
+            id="gearBtn"
+            type="button"
+            aria-label="설정"
+          >
             ⚙️
           </button>
-          <div className="hud__chip hud__stalls">
-            <span className="dot"></span>🚽 <b id="stallCount">--</b>{" "}
-            <span className="hud__unit">명 볼일중</span>
+          <div className="hud__panel">
+            <span className="hud__stalls">
+              <span className="hud__stack hud__stack--right">
+                <span className="hud__label">
+                  <span className="hud__emoji" aria-hidden>
+                    🚽
+                  </span>
+                  <span className="hud__cap">볼일중</span>
+                </span>
+                <span className="hud__val">
+                  <b id="stallCount">--</b>명
+                </span>
+              </span>
+            </span>
+            <div className="hud__global">
+              <span className="hud__stack hud__stack--right">
+                <span className="hud__label">
+                  <span className="hud__emoji" aria-hidden>
+                    💰
+                  </span>
+                  <span className="hud__cap">오늘 다같이</span>
+                </span>
+                <span className="hud__val">
+                  <b id="globalEarned">0원</b>
+                </span>
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="hud__chip hud__global">
-          💰 <span className="hud__global-label">오늘 다같이</span>{" "}
-          <b id="globalEarned">0원</b>
         </div>
       </header>
 
@@ -151,7 +176,6 @@ export default function ToiletGame() {
             <div
               className="deckcol__top deckcol__total"
               id="totalEarned"
-              hidden
             >
               총 0원
             </div>
@@ -198,8 +222,6 @@ export default function ToiletGame() {
 
       {/* 설정 팝오버 */}
       <div className="settings-panel" id="settingsPanel" hidden>
-        <div className="settings__title">⚙️ 설정</div>
-
         <div className="settings__section">
           <div className="settings__row settings__nick">
             <span>닉네임</span>
@@ -224,25 +246,22 @@ export default function ToiletGame() {
             <span>타이머 표시</span>
             <input type="checkbox" id="timerToggle" className="sw" />
           </label>
-          <label className="settings__row">
-            <span>내가 번 돈 표시</span>
-            <input type="checkbox" id="totalToggle" className="sw" />
-          </label>
-          <button
-            className="settings__reset"
-            id="resetTotalBtn"
-            type="button"
-            hidden
-          >
-            내가 번 돈 초기화
-          </button>
-          <button
-            className="settings__share"
-            id="receiptBtnSettings"
-            type="button"
-          >
-            🧾 영수증 자랑하기
-          </button>
+          <div className="settings__actions">
+            <button
+              className="settings__reset"
+              id="resetTotalBtn"
+              type="button"
+            >
+              내가 번 돈 초기화
+            </button>
+            <button
+              className="settings__share"
+              id="receiptBtnSettings"
+              type="button"
+            >
+              🧾 영수증 자랑하기
+            </button>
+          </div>
         </div>
 
         <div className="settings__divider"></div>

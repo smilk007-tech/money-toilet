@@ -89,85 +89,113 @@ body {
   left: 0;
   right: 0;
   z-index: 20;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-  padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 8px;
-  font-size: 12.5px;
-  font-weight: 700;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 28px;
   pointer-events: none;
 }
-.hud__left {
+.hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.5) 38%,
+    rgba(0, 0, 0, 0.18) 72%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+.hud__bar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.hud__chip {
-  background: var(--panel);
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
   color: #eafff5;
-  border: 1px solid rgba(125, 255, 176, 0.25);
-  border-radius: 11px;
-  padding: 6px 9px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  white-space: nowrap;
+  pointer-events: auto;
 }
-/* 설정 톱니 — 좌상단 */
-.gear {
+.hud__icon-btn {
   flex: 0 0 auto;
   width: 34px;
   height: 34px;
   padding: 0;
-  pointer-events: auto;
   cursor: pointer;
   background: var(--panel);
   color: #eafff5;
   border: 1px solid rgba(125, 255, 176, 0.3);
   border-radius: 11px;
   font-size: 17px;
+  line-height: 1;
   backdrop-filter: blur(4px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.hud__icon-btn:active {
+  opacity: 0.7;
+}
+.hud__panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  padding: 6px 10px;
+  background: var(--panel);
+  border: 1px solid rgba(125, 255, 176, 0.25);
+  border-radius: 11px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.hud__stalls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.hud__global {
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  border-left: 1px solid rgba(125, 255, 176, 0.22);
+}
+.hud__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.1;
+}
+.hud__stack--right {
+  align-items: flex-end;
+}
+.hud__label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.hud__emoji {
+  font-size: 11px;
+  line-height: 1;
+}
+.hud__cap {
+  font-size: 9px;
+  font-weight: 600;
+  color: #9fdcc9;
+  letter-spacing: -0.02em;
+}
+.hud__val {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
 }
 .hud__stalls b {
   color: var(--neon);
   font-size: 14px;
-} /* 우상단 ₩ 영역과 동일 크기/볼드 */
-.hud__unit {
-  font-weight: 500;
 }
 .hud__global b {
   color: var(--gold);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
-}
-.hud__global-label {
-  font-size: 11px;
-  color: #9fdcc9;
-  font-weight: 600;
-}
-.hud__stalls .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ff5a5a;
-  box-shadow: 0 0 0 0 rgba(255, 90, 90, 0.7);
-  animation: live 1.6s infinite;
-}
-@keyframes live {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 90, 90, 0.6);
-  }
-  70% {
-    box-shadow: 0 0 0 7px rgba(255, 90, 90, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 90, 90, 0);
-  }
 }
 .hud__global.flash b {
   animation: flash 0.5s ease;
@@ -700,7 +728,7 @@ body {
   display: block;
   font-size: 8.5px;
   color: #7fe6c2;
-  font-weight: 800;
+  font-weight: 600;
   margin-bottom: 1px;
 }
 .bubble--flush {
@@ -761,7 +789,7 @@ body {
 .myfeed__msg b {
   display: block;
   font-size: 9.35px;
-  font-weight: 800;
+  font-weight: 600;
   margin-bottom: 1px;
 }
 .myfeed__msg::after {
@@ -1251,11 +1279,6 @@ body {
   border-top: 1px solid rgba(125, 255, 176, 0.4);
   transform: rotate(45deg);
 }
-.settings__title {
-  font-size: 13px;
-  font-weight: 800;
-  color: #cfeee2;
-}
 .settings__section {
   display: flex;
   flex-direction: column;
@@ -1335,28 +1358,33 @@ body {
   margin: 0;
   cursor: pointer;
 }
+.settings__actions {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
 .settings__reset {
-  align-self: flex-start;
+  flex: 1;
   background: #3a2626;
   color: #ffcaca;
   border: 1px solid #6a3a3a;
   border-radius: 9px;
-  padding: 7px 12px;
+  padding: 9px 10px;
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
 }
 .settings__share {
-  align-self: stretch;
-  background: linear-gradient(180deg, #2fd39a, #16967a);
-  color: #03241c;
-  border: 1px solid rgba(125, 255, 176, 0.6);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 13.5px;
+  flex: 1;
+  background: #3a4038;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 12px;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 .settings__share:active {
   transform: translateY(1px);
@@ -1567,13 +1595,14 @@ body {
 
 /* =====================  아주 좁은 화면 보정 (≤370px)  ===================== */
 @media (max-width: 370px) {
-  .hud {
+  .hud__bar {
     font-size: 11.5px;
   }
-  .hud__global-label {
-    font-size: 10px;
+  .hud__cap {
+    font-size: 8px;
   }
-  .hud__global b {
+  .hud__global b,
+  .hud__stalls b {
     font-size: 13px;
   }
   .ctrl-salary {
