@@ -171,14 +171,15 @@ export default function ToiletGame() {
               type="button"
               aria-label="영수증 공유"
             >
-              <span className="flush-receipt__icon" id="receiptBtnIcon" aria-hidden>
+              <span
+                className="flush-receipt__icon"
+                id="receiptBtnIcon"
+                aria-hidden
+              >
                 🧾
               </span>
             </button>
-            <div
-              className="deckcol__top deckcol__total"
-              id="totalEarned"
-            >
+            <div className="deckcol__top deckcol__total" id="totalEarned">
               총 0원
             </div>
             <button className="flush" id="flushBtn" type="button">
@@ -254,7 +255,7 @@ export default function ToiletGame() {
               id="resetTotalBtn"
               type="button"
             >
-              내가 번 돈 초기화
+              내 기록 초기화
             </button>
             <button
               className="settings__share"
@@ -275,6 +276,52 @@ export default function ToiletGame() {
           <button className="settings__link" type="button" data-action="ad">
             광고문의
           </button>
+        </div>
+      </div>
+
+      {/* 기록 초기화 확인 모달 */}
+      <div className="reset-confirm" id="resetConfirmModal" hidden>
+        <div
+          className="reset-confirm__backdrop"
+          id="resetConfirmBackdrop"
+        ></div>
+        <div
+          className="reset-confirm__sheet"
+          role="dialog"
+          aria-label="기록 초기화 확인"
+        >
+          <h2 className="reset-confirm__title">
+            자랑스러운 내 기록
+            <span className="reset-confirm__title-emoji" aria-hidden>
+              👏👏
+            </span>
+          </h2>
+          <dl className="reset-confirm__stats">
+            <div className="reset-confirm__stat">
+              <dt>물내림</dt>
+              <dd id="resetConfirmFlushes">0회</dd>
+            </div>
+            <div className="reset-confirm__stat">
+              <dt>내가 번 돈</dt>
+              <dd id="resetConfirmTotal">0원</dd>
+            </div>
+          </dl>
+          <div className="reset-confirm__actions">
+            <button
+              className="reset-confirm__btn reset-confirm__btn--cancel"
+              id="resetConfirmCancel"
+              type="button"
+            >
+              유지하기
+            </button>
+            <button
+              className="reset-confirm__btn reset-confirm__btn--yes"
+              id="resetConfirmYes"
+              type="button"
+            >
+              초기화
+            </button>
+          </div>
         </div>
       </div>
 
