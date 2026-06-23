@@ -188,7 +188,7 @@ export default function ReceiptCard({
               }}
             >
               <TabularText text={fmtRound(round)} />
-              <TabularText text={fmtWon(amount)} weight={500} />
+              <TabularText text={fmtWon(amount)} weight={600} />
             </div>
           ))
         ) : (
