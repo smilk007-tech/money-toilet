@@ -4,6 +4,12 @@ import { decodeReceipt, fmtWon, heroAmount } from "@/lib/receiptShare";
 import PayslipShare from "@/components/PayslipShare";
 
 type Props = { params: Promise<{ d: string }> };
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000");
+const siteUrlLabel = siteUrl.replace(/^https?:\/\//, "");
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { d } = await params;
@@ -62,5 +68,11 @@ export default async function ReceiptSharePage({ params }: Props) {
     );
   }
 
-  return <PayslipShare data={data} />;
+  return (
+    <PayslipShare
+      data={data}
+      siteUrlHref={siteUrl}
+      siteUrlLabel={siteUrlLabel}
+    />
+  );
 }

@@ -9,7 +9,7 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "돈버는화장실 · 똥탐 · 월급루팡",
+  title: "돈버는 화장실 · 변기위의 월급루팡",
   description: "변기 위에 앉아서 돈을 벌자!",
 };
 

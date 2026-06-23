@@ -1604,7 +1604,7 @@ body {
   z-index: 1;
   width: min(94%, 420px);
   max-height: 92%;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1641,9 +1641,21 @@ body {
   max-width: 420px;
   display: flex;
   justify-content: center;
+  overflow: hidden;
+  background: #fbfaf3;
+  border-radius: 16px;
   filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.5));
 }
+
+.receipt-modal__export {
+  position: absolute;
+  left: -99999px;
+  top: 0;
+  pointer-events: none;
+  opacity: 0;
+}
 .receipt-modal__actions {
+  flex-shrink: 0;
   display: flex;
   gap: 10px;
   width: 100%;
@@ -1673,6 +1685,7 @@ body {
   border: 1px solid rgba(125, 255, 176, 0.35);
 }
 .receipt-modal__hint {
+  flex-shrink: 0;
   font-size: 11px;
   font-weight: 600;
   color: #9fdcc9;

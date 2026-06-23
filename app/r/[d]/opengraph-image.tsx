@@ -176,7 +176,11 @@ export default async function Image({
         }}
       >
         <div style={{ display: "flex", width: 470 }}>
-          <ReceiptCard d={data} />
+          <ReceiptCard
+            d={data}
+            siteUrlLabel="money-toilet"
+            footerMode="snapshot"
+          />
         </div>
       </div>
     </div>,

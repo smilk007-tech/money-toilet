@@ -25,6 +25,10 @@ function toast(msg: string) {
 export default function PayslipModal() {
   const [data, setData] = useState<ReceiptData | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const exportCardRef = useRef<HTMLDivElement>(null);
+  const siteUrlHref =
+    typeof window !== "undefined" ? window.location.origin : undefined;
+  const siteUrlLabel = siteUrlHref?.replace(/^https?:\/\//, "");
 
   const close = useCallback(() => setData(null), []);
 
@@ -70,9 +74,9 @@ export default function PayslipModal() {
   }
 
   async function save() {
-    if (!cardRef.current) return;
+    if (!exportCardRef.current) return;
     try {
-      const dataUrl = await toPng(cardRef.current, {
+      const dataUrl = await toPng(exportCardRef.current, {
         pixelRatio: Math.max(2, window.devicePixelRatio || 1),
         cacheBust: true,
       });
@@ -107,7 +111,23 @@ export default function PayslipModal() {
           ✕
         </button>
         <div className="receipt-modal__preview" ref={cardRef}>
-          <ReceiptCard d={data} />
+          <ReceiptCard
+            d={data}
+            siteUrlHref={siteUrlHref}
+            siteUrlLabel={siteUrlLabel}
+            footerMode="interactive"
+            maxHeight="min(62dvh, 520px)"
+          />
+        </div>
+        <div className="receipt-modal__export" aria-hidden>
+          <div ref={exportCardRef}>
+            <ReceiptCard
+              d={data}
+              siteUrlHref={siteUrlHref}
+              siteUrlLabel={siteUrlLabel}
+              footerMode="snapshot"
+            />
+          </div>
         </div>
         <div className="receipt-modal__actions">
           <button
@@ -125,7 +145,7 @@ export default function PayslipModal() {
             📷 저장
           </button>
         </div>
-        <p className="receipt-modal__hint">🤫내 월급은 비밀로 해줄게요</p>
+        <p className="receipt-modal__hint">내 월급은 공개되지 않습니다!</p>
       </div>
     </div>
   );

@@ -12,7 +12,15 @@ import ReceiptCard from "@/components/ReceiptCard";
 
 const AVG_RATE_PER_PERSON = 3_000_000 / (22 * 8 * 3600); // ≈ 4.73원/초/인
 
-export default function PayslipShare({ data }: { data: ReceiptData }) {
+export default function PayslipShare({
+  data,
+  siteUrlHref,
+  siteUrlLabel,
+}: {
+  data: ReceiptData;
+  siteUrlHref: string;
+  siteUrlLabel: string;
+}) {
   const [count, setCount] = useState(data.p || 0);
   const [liveWon, setLiveWon] = useState(data.g || 0);
   const countRef = useRef(count);
@@ -49,7 +57,12 @@ export default function PayslipShare({ data }: { data: ReceiptData }) {
   return (
     <main style={wrap}>
       <div style={cardWrap}>
-        <ReceiptCard d={data} />
+        <ReceiptCard
+          d={data}
+          siteUrlHref={siteUrlHref}
+          siteUrlLabel={siteUrlLabel}
+          maxHeight="min(72dvh, 600px)"
+        />
       </div>
 
       {/* 실시간 라이브 배너 */}

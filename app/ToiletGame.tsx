@@ -263,7 +263,7 @@ export default function ToiletGame() {
               id="receiptBtnSettings"
               type="button"
             >
-              🧾 급여명세서 자랑하기
+              내가 번 돈 자랑하기 🧾
             </button>
           </div>
         </div>
