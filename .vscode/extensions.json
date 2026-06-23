@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    // 코드 포맷터 (들여쓰기 자동 정리)
+    "esbenp.prettier-vscode",
+    // TypeScript/JavaScript 지원
+    "dbaeumer.vscode-eslint",
+    // Tailwind CSS IntelliSense
+    "bradlc.vscode-tailwindcss"
+  ]
+}

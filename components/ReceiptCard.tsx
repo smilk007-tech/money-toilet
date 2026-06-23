@@ -12,9 +12,22 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
   const SUB = "#717a6f";
   const GOLD = "#a9760a";
   const LINE = "#c9ccc0";
-  const dash = { display: "flex", borderTop: `2px dashed ${LINE}`, height: 0, margin: "11px 0" } as const;
-  const row = { display: "flex", justifyContent: "space-between", width: "100%" } as const;
-  const center = { display: "flex", justifyContent: "center", width: "100%" } as const;
+  const dash = {
+    display: "flex",
+    borderTop: `2px dashed ${LINE}`,
+    height: 0,
+    margin: "11px 0",
+  } as const;
+  const row = {
+    display: "flex",
+    justifyContent: "space-between",
+    width: "100%",
+  } as const;
+  const center = {
+    display: "flex",
+    justifyContent: "center",
+    width: "100%",
+  } as const;
 
   return (
     <div
@@ -30,7 +43,16 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
       }}
     >
       <div style={{ ...center, fontSize: 44, fontWeight: 800 }}>💩 똥탐</div>
-      <div style={{ ...center, fontSize: 17, fontWeight: 700, color: SUB, letterSpacing: 6, marginTop: 4 }}>
+      <div
+        style={{
+          ...center,
+          fontSize: 17,
+          fontWeight: 700,
+          color: SUB,
+          letterSpacing: 6,
+          marginTop: 4,
+        }}
+      >
         화장실 영수증
       </div>
 
@@ -54,25 +76,69 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
         <span>{fmtWon(d.l)}</span>
       </div>
 
-      <div style={{ display: "flex", borderTop: `2px solid ${INK}`, height: 0, margin: "11px 0" }} />
+      <div
+        style={{
+          display: "flex",
+          borderTop: `2px solid ${INK}`,
+          height: 0,
+          margin: "11px 0",
+        }}
+      />
       <div style={{ display: "flex", alignItems: "flex-end", width: "100%" }}>
         <span style={{ fontSize: 21, fontWeight: 800 }}>합계</span>
-        <span style={{ fontSize: 13, color: SUB, marginLeft: 8, marginBottom: 3 }}>TOTAL</span>
+        <span
+          style={{ fontSize: 13, color: SUB, marginLeft: 8, marginBottom: 3 }}
+        >
+          TOTAL
+        </span>
       </div>
-      <div style={{ ...center, fontSize: 54, fontWeight: 800, marginTop: 6 }}>{fmtWon(hero)}</div>
+      <div style={{ ...center, fontSize: 54, fontWeight: 800, marginTop: 6 }}>
+        {fmtWon(hero)}
+      </div>
 
-      <div style={{ display: "flex", borderTop: `2px solid ${INK}`, height: 0, marginTop: 11 }} />
-      <div style={{ display: "flex", borderTop: `2px solid ${INK}`, height: 0, marginTop: 3, marginBottom: 11 }} />
+      <div
+        style={{
+          display: "flex",
+          borderTop: `2px solid ${INK}`,
+          height: 0,
+          marginTop: 11,
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          borderTop: `2px solid ${INK}`,
+          height: 0,
+          marginTop: 3,
+          marginBottom: 11,
+        }}
+      />
 
-      <div style={{ ...center, fontSize: 17, fontWeight: 700, color: SUB }}>오늘 다 같이 번 돈</div>
-      <div style={{ ...center, fontSize: 28, fontWeight: 800, color: GOLD, marginTop: 6 }}>{fmtWon(d.g)}</div>
+      <div style={{ ...center, fontSize: 17, fontWeight: 700, color: SUB }}>
+        오늘 다 같이 번 돈
+      </div>
+      <div
+        style={{
+          ...center,
+          fontSize: 28,
+          fontWeight: 800,
+          color: GOLD,
+          marginTop: 6,
+        }}
+      >
+        {fmtWon(d.g)}
+      </div>
       <div style={{ ...center, fontSize: 15, color: SUB, marginTop: 8 }}>
         지금 볼일 중 {d.p}명 · 내 물내림 {d.f}회
       </div>
 
       <div style={dash} />
-      <div style={{ ...center, fontSize: 18, fontWeight: 700 }}>&quot;{d.sl}&quot;</div>
-      <div style={{ ...center, fontSize: 15, fontWeight: 700, marginTop: 11 }}>똥탐 · paid-toilet</div>
+      <div style={{ ...center, fontSize: 18, fontWeight: 700 }}>
+        &quot;{d.sl}&quot;
+      </div>
+      <div style={{ ...center, fontSize: 15, fontWeight: 700, marginTop: 11 }}>
+        똥탐 · paid-toilet
+      </div>
     </div>
   );
 }

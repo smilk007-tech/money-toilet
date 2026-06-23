@@ -1,5 +1,38 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Editor Setup (Cursor / VSCode)
+
+이 프로젝트는 Cursor / VSCode 설정이 포함되어 있습니다.
+
+### 들여쓰기 & 포맷팅
+
+`.vscode/settings.json` 파일이 자동으로 적용됩니다. (탭 크기 2, Prettier, 저장 시 자동 포맷)
+
+권장 확장 프로그램 설치: `Cmd+Shift+P` → `Extensions: Show Recommended Extensions`
+
+### 단축키 적용
+
+VSCode/Cursor는 프로젝트 레벨 단축키를 직접 지원하지 않으므로, 아래 스크립트로 적용하세요.
+
+```bash
+# Cursor에 적용 (기본값)
+bash scripts/apply-keybindings.sh
+
+# VSCode에 적용
+bash scripts/apply-keybindings.sh --vscode
+```
+
+| 단축키       | 동작                 |
+| ------------ | -------------------- |
+| `Cmd+D`      | 현재 줄 삭제         |
+| `Alt+Left`   | 뒤로 이동            |
+| `Alt+Right`  | 앞으로 이동          |
+| `Cmd+Left`   | 줄 맨 앞으로 (Home)  |
+| `Cmd+I`      | Cursor AI Agent 모드 |
+| `Ctrl+Cmd+F` | 찾기/바꾸기          |
+
+> 단축키 레퍼런스: `.vscode/keybindings.json`
+
 ## Getting Started
 
 First, run the development server:
