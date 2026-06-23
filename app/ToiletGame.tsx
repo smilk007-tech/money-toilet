@@ -31,7 +31,7 @@ export default function ToiletGame() {
                   <span className="hud__emoji" aria-hidden>
                     🚽
                   </span>
-                  <span className="hud__cap">볼일중</span>
+                  <span className="hud__cap">볼일 중</span>
                 </span>
                 <span className="hud__val">
                   <b id="stallCount">--</b>명
