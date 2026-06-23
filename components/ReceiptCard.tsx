@@ -120,7 +120,7 @@ export default function ReceiptCard({
           gap: 7,
         }}
       >
-        <span style={{ fontSize: 26, fontWeight: 800 }}>📌 급여명세서</span>
+        <span style={{ fontSize: 26, fontWeight: 800 }}>🧾 급여명세서</span>
         <span
           style={{
             fontSize: 17,
@@ -136,7 +136,31 @@ export default function ReceiptCard({
         </span>
       </div>
 
-      <div style={{ ...dash, margin: "14px 0" }} />
+      <div style={{ ...solid, margin: "14px 0" }} />
+      <div
+        style={{
+          ...center,
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: SUB,
+            letterSpacing: 0.5,
+          }}
+        >
+          실 수령액
+        </span>
+        <span style={{ fontSize: 30, fontWeight: 800, color: "#2f6b4e" }}>
+          <TabularText text={fmtWon(hero)} bold />
+        </span>
+      </div>
+
+      <div style={{ ...solid, margin: "14px 0" }} />
       <div style={{ ...row, fontSize: 13.5 }}>
         <span style={{ color: SUB }}>발급일</span>
         <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
@@ -216,23 +240,7 @@ export default function ReceiptCard({
         )}
       </div>
 
-      <div style={{ ...dash, margin: "14px 0" }} />
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          width: "100%",
-          lineHeight: 1.15,
-        }}
-      >
-        <span style={{ fontSize: 16.5, fontWeight: 700 }}>실 수령액</span>
-        <span style={{ fontSize: 23, fontWeight: 800, color: "#2f6b4e" }}>
-          <TabularText text={fmtWon(hero)} bold />
-        </span>
-      </div>
-
-      <div style={{ ...solid, margin: "16px 0 14px" }} />
+      <div style={{ ...solid, margin: "14px 0 14px" }} />
       <div
         style={{
           ...center,

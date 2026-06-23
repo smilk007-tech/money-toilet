@@ -97,11 +97,7 @@ export default function PayslipModal() {
   return (
     <div className="receipt-modal" role="presentation">
       <div className="receipt-modal__backdrop" onClick={close} aria-hidden />
-      <div
-        className="receipt-modal__sheet"
-        role="dialog"
-        aria-label="화장실 급여명세서 공유"
-      >
+      <div className="receipt-modal__frame">
         <button
           className="receipt-modal__close"
           type="button"
@@ -110,44 +106,50 @@ export default function PayslipModal() {
         >
           ✕
         </button>
-        <div className="receipt-modal__preview" ref={cardRef}>
-          <ReceiptCard
-            d={data}
-            siteUrlHref={siteUrlHref}
-            siteUrlLabel={siteUrlLabel}
-            footerMode="interactive"
-            maxHeight="min(62dvh, 520px)"
-          />
-        </div>
-        <div className="receipt-modal__export" aria-hidden>
-          <div ref={exportCardRef} className="receipt-export-frame">
-            <div className="receipt-export-frame__card">
-              <ReceiptCard
-                d={data}
-                siteUrlHref={siteUrlHref}
-                siteUrlLabel={siteUrlLabel}
-                footerMode="snapshot"
-              />
+        <div
+          className="receipt-modal__sheet"
+          role="dialog"
+          aria-label="화장실 급여명세서 공유"
+        >
+          <div className="receipt-modal__preview" ref={cardRef}>
+            <ReceiptCard
+              d={data}
+              siteUrlHref={siteUrlHref}
+              siteUrlLabel={siteUrlLabel}
+              footerMode="interactive"
+              maxHeight="min(62dvh, 520px)"
+            />
+          </div>
+          <div className="receipt-modal__export" aria-hidden>
+            <div ref={exportCardRef} className="receipt-export-frame">
+              <div className="receipt-export-frame__card">
+                <ReceiptCard
+                  d={data}
+                  siteUrlHref={siteUrlHref}
+                  siteUrlLabel={siteUrlLabel}
+                  footerMode="snapshot"
+                />
+              </div>
             </div>
           </div>
+          <div className="receipt-modal__actions">
+            <button
+              className="receipt-btn receipt-btn--save"
+              type="button"
+              onClick={save}
+            >
+              📷 저장
+            </button>
+            <button
+              className="receipt-btn receipt-btn--share"
+              type="button"
+              onClick={share}
+            >
+              🔗 자랑하기
+            </button>
+          </div>
+          <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
         </div>
-        <div className="receipt-modal__actions">
-          <button
-            className="receipt-btn receipt-btn--save"
-            type="button"
-            onClick={save}
-          >
-            📷 저장
-          </button>
-          <button
-            className="receipt-btn receipt-btn--share"
-            type="button"
-            onClick={share}
-          >
-            🔗 자랑하기
-          </button>
-        </div>
-        <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
       </div>
     </div>
   );

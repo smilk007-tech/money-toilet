@@ -1599,10 +1599,17 @@ body {
   background: rgba(4, 8, 6, 0.72);
   backdrop-filter: blur(3px);
 }
-.receipt-modal__sheet {
+.receipt-modal__frame {
   position: relative;
   z-index: 1;
   width: min(94%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.receipt-modal__sheet {
+  position: relative;
+  width: 100%;
   max-height: 92%;
   overflow: hidden;
   display: flex;
@@ -1621,13 +1628,14 @@ body {
     transform: none;
   }
 }
+/* 시트 밖(완전히 위쪽)에 떠서 모서리에 끼여 잘리는 일이 없도록 한다 */
 .receipt-modal__close {
   position: absolute;
-  top: -6px;
-  right: -2px;
+  top: -44px;
+  right: 0;
   z-index: 2;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: rgba(16, 24, 18, 0.92);
   color: #eafff5;
