@@ -82,7 +82,7 @@ export default function PayslipModal() {
       });
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = "ddongtam-payslip.png";
+      a.download = "money-toilet.png";
       document.body.appendChild(a);
       a.click();
       a.remove();
