@@ -921,6 +921,27 @@ body {
   flex: 0 0 74px;
 }
 
+/* 우하단 영수증 버튼 — 설정(gear) 버튼과 동일 크기 */
+.flush-receipt {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  cursor: pointer;
+  background: var(--panel);
+  color: #eafff5;
+  border: 1px solid rgba(125, 255, 176, 0.3);
+  border-radius: 11px;
+  font-size: 17px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  line-height: 1;
+}
+.flush-receipt:active {
+  opacity: 0.7;
+}
+
 /* 시계/총 칩 — 컬럼(버튼) 폭에 맞춰 stretch */
 .deckcol__top {
   background: var(--panel);
@@ -945,10 +966,13 @@ body {
 }
 .deckcol__total {
   color: var(--gold);
-  white-space: normal;
-  word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
   line-height: 1.2;
-} /* 길면 개행 */
+}
+.deckcol__total.flash {
+  animation: flash 0.5s ease;
+}
 
 .ctrl-salary {
   width: 100%;

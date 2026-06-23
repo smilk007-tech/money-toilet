@@ -18,14 +18,6 @@ export default function ToiletGame() {
           <button className="gear" id="gearBtn" type="button" aria-label="설정">
             ⚙️
           </button>
-          <button
-            className="gear hud__receipt"
-            id="receiptBtn"
-            type="button"
-            aria-label="영수증 공유"
-          >
-            🧾
-          </button>
           <div className="hud__chip hud__stalls">
             <span className="dot"></span>🚽 <b id="stallCount">--</b>{" "}
             <span className="hud__unit">명 볼일중</span>
@@ -148,6 +140,14 @@ export default function ToiletGame() {
             </div>
           </div>
           <div className="deckcol deckcol--flush">
+            <button
+              className="flush-receipt"
+              id="receiptBtn"
+              type="button"
+              aria-label="영수증 공유"
+            >
+              🧾
+            </button>
             <div
               className="deckcol__top deckcol__total"
               id="totalEarned"
@@ -168,7 +168,7 @@ export default function ToiletGame() {
           <input
             type="text"
             id="chatInput"
-            placeholder="옆 칸 모두에게 한마디..."
+            placeholder="옆 칸 모두에게 한마디"
             maxLength={40}
           />
           <button type="submit">전송</button>
