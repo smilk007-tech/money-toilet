@@ -171,7 +171,9 @@ export default function ToiletGame() {
               type="button"
               aria-label="영수증 공유"
             >
-              🧾
+              <span className="flush-receipt__icon" id="receiptBtnIcon" aria-hidden>
+                🧾
+              </span>
             </button>
             <div
               className="deckcol__top deckcol__total"

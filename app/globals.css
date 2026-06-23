@@ -947,6 +947,7 @@ body {
 }
 .deckcol--flush {
   flex: 0 0 74px;
+  overflow: visible;
 }
 
 /* 우하단 영수증 버튼 — 설정(gear) 버튼과 동일 크기 */
@@ -965,9 +966,38 @@ body {
   backdrop-filter: blur(4px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   line-height: 1;
+  overflow: visible;
 }
 .flush-receipt:active {
   opacity: 0.7;
+}
+.flush-receipt__icon {
+  display: inline-block;
+  line-height: 1;
+  transform-origin: center center;
+}
+.flush-receipt__icon--nudge {
+  animation: receiptIconPulse 0.75s cubic-bezier(0.34, 1.2, 0.5, 1);
+}
+@keyframes receiptIconPulse {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  18% {
+    transform: translateY(-5px) scale(1.14) rotate(-20deg);
+  }
+  32% {
+    transform: translateY(-6px) scale(1.18) rotate(20deg);
+  }
+  46% {
+    transform: translateY(-4px) scale(1.1) rotate(-12deg);
+  }
+  62% {
+    transform: translateY(-2px) scale(1.05) rotate(6deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
 }
 
 /* 시계/총 칩 — 컬럼(버튼) 폭에 맞춰 stretch */
@@ -997,9 +1027,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
   line-height: 1.2;
-}
-.deckcol__total.flash {
-  animation: flash 0.5s ease;
 }
 
 .ctrl-salary {
