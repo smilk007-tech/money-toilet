@@ -83,6 +83,7 @@ export default function ReceiptCard({
     width: "100%",
   } as const;
   const fmtRound = (n: number) => `${n.toLocaleString("ko-KR")}회차`;
+  const rows = [...d.h].reverse(); // 최신(마지막 회차)이 맨 위로 쌓이도록 역순 표시
 
   return (
     <div
@@ -92,11 +93,11 @@ export default function ReceiptCard({
         width: "100%",
         background: "#fbfaf3",
         color: INK,
-        padding: "24px 26px",
+        padding: "28px 28px",
         border: `1px solid ${LINE}`,
-        borderRadius: 14,
+        borderRadius: 16,
         fontFamily: '"Noto Sans KR"',
-        lineHeight: 1.25,
+        lineHeight: 1.3,
         boxSizing: "border-box",
         ...(maxHeight
           ? {
@@ -116,13 +117,13 @@ export default function ReceiptCard({
           ...center,
           flexDirection: "column",
           alignItems: "center",
-          gap: 5,
+          gap: 7,
         }}
       >
-        <span style={{ fontSize: 24, fontWeight: 800 }}>📌 급여명세서</span>
+        <span style={{ fontSize: 26, fontWeight: 800 }}>📌 급여명세서</span>
         <span
           style={{
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: 700,
             letterSpacing: 2,
             overflow: "hidden",
@@ -135,90 +136,109 @@ export default function ReceiptCard({
         </span>
       </div>
 
-      <div style={dash} />
-      <div style={{ ...row, fontSize: 13 }}>
+      <div style={{ ...dash, margin: "14px 0" }} />
+      <div style={{ ...row, fontSize: 13.5 }}>
         <span style={{ color: SUB }}>발급일</span>
-        <span style={{ fontVariantNumeric: "tabular-nums" }}>{issued}</span>
+        <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+          {issued}
+        </span>
       </div>
 
-      <div style={dash} />
-      <div style={{ ...row, fontSize: 12, fontWeight: 700, color: SUB }}>
+      <div style={{ ...dash, margin: "14px 0" }} />
+      <div
+        style={{
+          ...row,
+          fontSize: 12.5,
+          fontWeight: 700,
+          color: SUB,
+          letterSpacing: 0.5,
+        }}
+      >
         <span>물내림 수당</span>
         <span>금액</span>
       </div>
 
-      {omitted && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            width: "100%",
-            marginTop: 5,
-          }}
-        >
-          <span
-            style={{
-              display: "flex",
-              fontSize: 10,
-              color: SUB,
-              marginTop: 3,
-            }}
-          >
-            (종이가 모자라 생략...😢)
-          </span>
-        </div>
-      )}
-      {d.h.length > 0 ? (
-        d.h.map(([round, amount], i) => (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          marginTop: 10,
+        }}
+      >
+        {rows.length > 0 ? (
+          rows.map(([round, amount], i) => (
+            <div
+              key={round}
+              style={{
+                ...row,
+                fontSize: 13.5,
+                padding: "7px 10px",
+                marginTop: i === 0 ? 0 : 4,
+                borderRadius: 8,
+                background: i % 2 === 0 ? "#f2f0e3" : "transparent",
+              }}
+            >
+              <TabularText text={fmtRound(round)} />
+              <TabularText text={fmtWon(amount)} bold />
+            </div>
+          ))
+        ) : (
           <div
-            key={round}
             style={{
               ...row,
-              fontSize: 12,
-              marginTop: i === 0 && !omitted ? 8 : 6,
+              fontSize: 13.5,
+              padding: "7px 10px",
             }}
           >
-            <TabularText text={fmtRound(round)} />
-            <TabularText text={fmtWon(amount)} bold />
+            <TabularText text={fmtRound(0)} />
+            <TabularText text={fmtWon(0)} bold />
           </div>
-        ))
-      ) : (
-        <div
-          style={{
-            ...row,
-            fontSize: 12,
-            marginTop: 8,
-          }}
-        >
-          <TabularText text={fmtRound(0)} />
-          <TabularText text={fmtWon(0)} bold />
-        </div>
-      )}
+        )}
 
-      <div style={dash} />
+        {omitted && (
+          <div
+            style={{
+              ...center,
+              marginTop: 8,
+            }}
+          >
+            <span
+              style={{
+                display: "flex",
+                fontSize: 10.5,
+                color: SUB,
+              }}
+            >
+              (종이가 모자라 생략...😢)
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div style={{ ...dash, margin: "14px 0" }} />
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           width: "100%",
-          lineHeight: 1.12,
+          lineHeight: 1.15,
         }}
       >
-        <span style={{ fontSize: 15, fontWeight: 700 }}>실 수령액</span>
-        <span style={{ fontSize: 20, fontWeight: 800 }}>
+        <span style={{ fontSize: 16.5, fontWeight: 700 }}>실 수령액</span>
+        <span style={{ fontSize: 23, fontWeight: 800, color: "#2f6b4e" }}>
           <TabularText text={fmtWon(hero)} bold />
         </span>
       </div>
 
-      <div style={dash} />
+      <div style={{ ...solid, margin: "16px 0 14px" }} />
       <div
         style={{
           ...center,
-          fontSize: 14,
+          fontSize: 14.5,
           fontWeight: 700,
-          lineHeight: 1.35,
+          lineHeight: 1.45,
           textAlign: "center",
         }}
       >
@@ -228,8 +248,8 @@ export default function ReceiptCard({
         <div
           style={{
             ...center,
-            marginTop: 8,
-            fontSize: 10,
+            marginTop: 12,
+            fontSize: 10.5,
             fontWeight: 700,
             color: "#3f7668",
             textDecoration: "underline",
@@ -246,9 +266,9 @@ export default function ReceiptCard({
           rel="noopener noreferrer"
           style={{
             ...center,
-            fontSize: 12,
+            fontSize: 12.5,
             fontWeight: 600,
-            marginTop: 8,
+            marginTop: 12,
             color: SUB,
             textDecoration: "none",
             cursor: "pointer",

@@ -120,13 +120,15 @@ export default function PayslipModal() {
           />
         </div>
         <div className="receipt-modal__export" aria-hidden>
-          <div ref={exportCardRef}>
-            <ReceiptCard
-              d={data}
-              siteUrlHref={siteUrlHref}
-              siteUrlLabel={siteUrlLabel}
-              footerMode="snapshot"
-            />
+          <div ref={exportCardRef} className="receipt-export-frame">
+            <div className="receipt-export-frame__card">
+              <ReceiptCard
+                d={data}
+                siteUrlHref={siteUrlHref}
+                siteUrlLabel={siteUrlLabel}
+                footerMode="snapshot"
+              />
+            </div>
           </div>
         </div>
         <div className="receipt-modal__actions">

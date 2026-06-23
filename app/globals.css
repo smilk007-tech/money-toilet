@@ -1654,6 +1654,21 @@ body {
   pointer-events: none;
   opacity: 0;
 }
+/* 저장용 캡처 프레임 — 폰 화면폭과 무관하게 고정폭으로 렌더해
+   세로로 과하게 길어지는 걸 막고, 위아래 여백 바로 보기 좋게 마무리한다. */
+.receipt-export-frame {
+  width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #11160f;
+  padding: 44px 22px;
+  box-sizing: border-box;
+}
+.receipt-export-frame__card {
+  width: 100%;
+}
 .receipt-modal__actions {
   flex-shrink: 0;
   display: flex;
