@@ -214,11 +214,11 @@ export default function ReceiptCard({
             <span
               style={{
                 display: "flex",
-                fontSize: 10.5,
+                fontSize: 10,
                 color: SUB,
               }}
             >
-              (종이가 모자라 생략...😢)
+              종이가 모자라 생략...😢
             </span>
           </div>
         )}
