@@ -292,7 +292,7 @@ export default function ToiletGame() {
           aria-label="기록 초기화 확인"
         >
           <h2 className="reset-confirm__title">
-            자랑스러운 내 기록
+            시원한 내 기록
             <span className="reset-confirm__title-emoji" aria-hidden>
               👏👏
             </span>

@@ -117,7 +117,7 @@ export default function PayslipModal() {
               siteUrlHref={siteUrlHref}
               siteUrlLabel={siteUrlLabel}
               footerMode="interactive"
-              maxHeight="min(62dvh, 520px)"
+              maxHeight="calc(100dvh - 96px)"
             />
           </div>
           <div className="receipt-modal__export" aria-hidden>

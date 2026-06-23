@@ -12,13 +12,21 @@ const digitCell = {
   textAlign: "center" as const,
 };
 
-function TabularText({ text, bold = false }: { text: string; bold?: boolean }) {
+function TabularText({
+  text,
+  bold = false,
+  weight,
+}: {
+  text: string;
+  bold?: boolean;
+  weight?: number;
+}) {
   return (
     <span
       style={{
         whiteSpace: "nowrap",
         display: "inline-block",
-        fontWeight: bold ? 700 : undefined,
+        fontWeight: weight ?? (bold ? 700 : undefined),
       }}
     >
       {text.split("").map((ch, i) =>
@@ -93,11 +101,11 @@ export default function ReceiptCard({
         width: "100%",
         background: "#fbfaf3",
         color: INK,
-        padding: "28px 28px",
+        padding: "20px 24px",
         border: `1px solid ${LINE}`,
         borderRadius: 16,
         fontFamily: '"Noto Sans KR"',
-        lineHeight: 1.3,
+        lineHeight: 1.25,
         boxSizing: "border-box",
         ...(maxHeight
           ? {
@@ -117,15 +125,16 @@ export default function ReceiptCard({
           ...center,
           flexDirection: "column",
           alignItems: "center",
-          gap: 7,
+          gap: 5,
         }}
       >
-        <span style={{ fontSize: 26, fontWeight: 800 }}>🧾 급여명세서</span>
+        <span style={{ fontSize: 18, fontWeight: 700 }}>📌 급여명세서</span>
         <span
           style={{
             fontSize: 17,
-            fontWeight: 700,
-            letterSpacing: 2,
+            fontWeight: 800,
+            letterSpacing: 1.5,
+            color: "#2f6b4e",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -136,44 +145,20 @@ export default function ReceiptCard({
         </span>
       </div>
 
-      <div style={{ ...solid, margin: "14px 0" }} />
-      <div
-        style={{
-          ...center,
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 2,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: SUB,
-            letterSpacing: 0.5,
-          }}
-        >
-          실 수령액
-        </span>
-        <span style={{ fontSize: 30, fontWeight: 800, color: "#2f6b4e" }}>
-          <TabularText text={fmtWon(hero)} bold />
-        </span>
-      </div>
-
-      <div style={{ ...solid, margin: "14px 0" }} />
-      <div style={{ ...row, fontSize: 13.5 }}>
+      <div style={{ ...solid, margin: "10px 0" }} />
+      <div style={{ ...row, fontSize: 10.5 }}>
         <span style={{ color: SUB }}>발급일</span>
-        <span style={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+        <span style={{ color: SUB, fontVariantNumeric: "tabular-nums" }}>
           {issued}
         </span>
       </div>
 
-      <div style={{ ...dash, margin: "14px 0" }} />
+      <div style={{ ...dash, margin: "8px 0" }} />
       <div
         style={{
           ...row,
-          fontSize: 12.5,
-          fontWeight: 700,
+          fontSize: 11,
+          fontWeight: 500,
           color: SUB,
           letterSpacing: 0.5,
         }}
@@ -187,7 +172,7 @@ export default function ReceiptCard({
           display: "flex",
           flexDirection: "column",
           width: "100%",
-          marginTop: 10,
+          marginTop: 5,
         }}
       >
         {rows.length > 0 ? (
@@ -196,27 +181,26 @@ export default function ReceiptCard({
               key={round}
               style={{
                 ...row,
-                fontSize: 13.5,
-                padding: "7px 10px",
-                marginTop: i === 0 ? 0 : 4,
-                borderRadius: 8,
+                fontSize: 11.5,
+                padding: "3px 7px",
+                marginTop: i === 0 ? 0 : 1,
                 background: i % 2 === 0 ? "#f2f0e3" : "transparent",
               }}
             >
               <TabularText text={fmtRound(round)} />
-              <TabularText text={fmtWon(amount)} bold />
+              <TabularText text={fmtWon(amount)} weight={600} />
             </div>
           ))
         ) : (
           <div
             style={{
               ...row,
-              fontSize: 13.5,
-              padding: "7px 10px",
+              fontSize: 11.5,
+              padding: "3px 7px",
             }}
           >
             <TabularText text={fmtRound(0)} />
-            <TabularText text={fmtWon(0)} bold />
+            <TabularText text={fmtWon(0)} weight={600} />
           </div>
         )}
 
@@ -224,7 +208,7 @@ export default function ReceiptCard({
           <div
             style={{
               ...center,
-              marginTop: 8,
+              marginTop: 5,
             }}
           >
             <span
@@ -240,13 +224,29 @@ export default function ReceiptCard({
         )}
       </div>
 
-      <div style={{ ...solid, margin: "14px 0 14px" }} />
+      <div style={{ ...dash, margin: "10px 0" }} />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+          lineHeight: 1.15,
+        }}
+      >
+        <span style={{ fontSize: 16, fontWeight: 700 }}>실 수령액</span>
+        <span style={{ fontSize: 22, fontWeight: 800, color: "#2f6b4e" }}>
+          <TabularText text={fmtWon(hero)} weight={900} />
+        </span>
+      </div>
+
+      <div style={{ ...solid, margin: "10px 0" }} />
       <div
         style={{
           ...center,
-          fontSize: 14.5,
+          fontSize: 14,
           fontWeight: 700,
-          lineHeight: 1.45,
+          lineHeight: 1.4,
           textAlign: "center",
         }}
       >
@@ -256,7 +256,7 @@ export default function ReceiptCard({
         <div
           style={{
             ...center,
-            marginTop: 12,
+            marginTop: 8,
             fontSize: 10.5,
             fontWeight: 700,
             color: "#3f7668",
@@ -274,9 +274,9 @@ export default function ReceiptCard({
           rel="noopener noreferrer"
           style={{
             ...center,
-            fontSize: 12.5,
+            fontSize: 12,
             fontWeight: 600,
-            marginTop: 12,
+            marginTop: 8,
             color: SUB,
             textDecoration: "none",
             cursor: "pointer",
