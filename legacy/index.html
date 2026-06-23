@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>똥탐 · 실시간 화장실</title>
+<meta name="theme-color" content="#1c2620" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== 상단 HUD ===== -->
+  <header class="hud">
+    <div class="hud__left">
+      <button class="gear" id="gearBtn" type="button" aria-label="설정">⚙️</button>
+      <button class="gear hud__receipt" id="receiptBtn" type="button" aria-label="영수증 공유">🧾</button>
+      <div class="hud__chip hud__stalls">
+        <span class="dot"></span>🚽 <b id="stallCount">--</b> <span class="hud__unit">명 볼일중</span>
+      </div>
+    </div>
+    <div class="hud__chip hud__global">
+      💰 <span class="hud__global-label">오늘 다같이</span> <b id="globalEarned">0원</b>
+    </div>
+  </header>
+
+  <!-- ===== 1인칭 공중화장실 칸 (1점 투시) ===== -->
+  <div class="scene" id="scene">
+    <div class="ceil"></div>
+    <div class="floor"></div>
+
+    <!-- 좌측 가벽 + 선반형 스텐 휴지걸이 -->
+    <div class="wall wall--left">
+      <div class="fixture tp">
+        <div class="tp__bracket"></div>
+        <div class="tp__shelf"></div>
+        <div class="tp__roll">
+          <div class="tp__core"></div>
+          <div class="tp__peg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 우측 가벽 + 상단 스텐 옷걸이(로브훅) -->
+    <div class="wall wall--right">
+      <div class="fixture hook">
+        <div class="hook__base"></div>
+        <div class="hook__peg"></div>
+        <div class="hook__cap"></div>
+      </div>
+    </div>
+
+    <!-- 정면 가벽 문 -->
+    <div class="door">
+      <div class="door__panel">
+        <a class="ad-a4" id="adA4" href="#" target="_blank" rel="noopener">
+          <span class="ad-a4__tag">광고</span>
+          <div class="ad-a4__emoji" id="adEmoji">📢</div>
+          <div class="ad-a4__head" id="adHead">여기에 광고</div>
+          <div class="ad-a4__sub"  id="adSub">A4 광고 영역 · 문의 환영</div>
+          <div class="ad-a4__foot">tap</div>
+        </a>
+      </div>
+      <div class="door__under"></div>
+    </div>
+
+    <!-- 좌/우 벽 회색 외곽선 -->
+    <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,0 20,9 20,73 0,100 Z" fill="none" stroke="#8f948b" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+      <path d="M100,0 80,9 80,73 100,100 Z" fill="none" stroke="#8f948b" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+    </svg>
+
+    <!-- 좌우 실시간 말풍선 (봇) -->
+    <div class="bubbles bubbles--left" id="bubblesLeft"></div>
+    <div class="bubbles bubbles--right" id="bubblesRight"></div>
+  </div>
+
+  <!-- ===== 전경: 내 무릎(랩) ===== -->
+  <div class="foreground">
+    <div class="thigh thigh--l"></div>
+    <div class="thigh thigh--r"></div>
+  </div>
+
+  <!-- ===== 하단 스택 ===== -->
+  <div class="bottom">
+    <!-- 1row: [시계/내 월급] | [내 채팅/적립] | [총/물내리기] -->
+    <div class="deck">
+      <div class="deckcol deckcol--salary">
+        <div class="deckcol__top deckcol__timer" id="timer" hidden>⏰ <span id="timerVal">00:00</span></div>
+        <button class="ctrl-salary" id="salaryToggle" type="button">
+          <span class="ctrl-salary__cap">내 월급</span>
+          <b id="salaryLabel">300만원</b>
+        </button>
+      </div>
+      <div class="deckcol deckcol--mid">
+        <div class="myfeed" id="myFeed"></div>
+        <div class="readout">
+          <span class="readout__amt" id="personalEarned">0원</span>
+          <span class="readout__rate" id="rateLabel">1초에 5원 버는중</span>
+        </div>
+      </div>
+      <div class="deckcol deckcol--flush">
+        <div class="deckcol__top deckcol__total" id="totalEarned" hidden>총 0원</div>
+        <button class="flush" id="flushBtn" type="button"><div class="flush__fill" id="flushFill"></div><span class="flush__icon">🚽</span><span id="flushLabel">물내리기</span></button>
+      </div>
+    </div>
+
+    <!-- 2row: 채팅 -->
+    <form class="chat" id="chatForm" autocomplete="off">
+      <input type="text" id="chatInput" placeholder="옆 칸 모두에게 한마디..." maxlength="40" />
+      <button type="submit">전송</button>
+    </form>
+  </div>
+
+  <!-- 월급 설정 팝오버 -->
+  <div class="salary-panel" id="salaryPanel" hidden>
+    <div class="salary-panel__row">
+      <div class="salary-panel__left">
+        <span class="salary-panel__cap">내 월급 대충</span>
+        <b id="salaryBig">300만원</b>
+      </div>
+      <span class="salary-panel__rate" id="salaryRate">1초에 약 4.7원</span>
+    </div>
+    <input type="range" id="salaryRange" min="0" max="13" step="1" value="3" />
+  </div>
+
+  <!-- 설정 팝오버 -->
+  <div class="settings-panel" id="settingsPanel" hidden>
+    <div class="settings__title">⚙️ 설정</div>
+
+    <div class="settings__section">
+      <div class="settings__row settings__nick">
+        <span>닉네임</span>
+        <button class="nick-random" id="nickRandomBtn" type="button" aria-label="닉네임 랜덤 생성"><span id="nickRandomIcon">🎲</span></button>
+        <input type="text" id="nickInput" maxlength="10" />
+        <label class="settings__pin" title="체크하면 닉네임을 기기에 저장합니다">
+          <input type="checkbox" id="nickPinChk" />고정
+        </label>
+      </div>
+      <label class="settings__row">
+        <span>타이머 표시</span>
+        <input type="checkbox" id="timerToggle" class="sw" />
+      </label>
+      <label class="settings__row">
+        <span>내가 번 돈 표시</span>
+        <input type="checkbox" id="totalToggle" class="sw" />
+      </label>
+      <button class="settings__reset" id="resetTotalBtn" type="button" hidden>내가 번 돈 초기화</button>
+      <button class="settings__share" id="receiptBtnSettings" type="button">🧾 영수증 자랑하기</button>
+    </div>
+
+    <div class="settings__divider"></div>
+
+    <div class="settings__section settings__links">
+      <button class="settings__link" type="button" data-action="donate">개발자 후원하기</button>
+      <button class="settings__link" type="button" data-action="ad">광고문의</button>
+    </div>
+  </div>
+
+  <!-- 영수증 공유 모달 -->
+  <div class="receipt-modal" id="receiptModal" hidden>
+    <div class="receipt-modal__backdrop" id="receiptBackdrop"></div>
+    <div class="receipt-modal__sheet" role="dialog" aria-label="영수증 공유">
+      <button class="receipt-modal__close" id="receiptClose" type="button" aria-label="닫기">✕</button>
+      <div class="receipt-modal__preview" id="receiptPreview"></div>
+      <div class="receipt-modal__actions">
+        <button class="receipt-btn receipt-btn--share" id="receiptShare" type="button">🔗 공유하기</button>
+        <button class="receipt-btn receipt-btn--save" id="receiptSave" type="button">📷 저장</button>
+      </div>
+      <p class="receipt-modal__hint">내 월급·시간은 영수증에 안 나와요 🙈</p>
+    </div>
+  </div>
+
+  <!-- 물내림 컨페티 -->
+  <div class="confettiLayer" id="confettiLayer"></div>
+  <!-- 토스트 -->
+  <div class="toast" id="toast" hidden></div>
+</div>
+
+<script>
+  // 항상 최신 파일을 받도록 매번 새 쿼리로 로드 (브라우저 캐시 무시)
+  document.write('<script src="fake-socket.js?v=' + Date.now() + '"></scr' + 'ipt>');
+  document.write('<script src="app.js?v=' + Date.now() + '"></scr' + 'ipt>');
+</script>
+</body>
+</html>
