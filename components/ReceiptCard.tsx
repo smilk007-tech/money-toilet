@@ -206,8 +206,8 @@ export default function ReceiptCard({
           lineHeight: 1.12,
         }}
       >
-        <span style={{ fontSize: 15, fontWeight: 800 }}>실 수령액</span>
-        <span style={{ fontSize: 24, fontWeight: 800 }}>
+        <span style={{ fontSize: 15, fontWeight: 700 }}>실 수령액</span>
+        <span style={{ fontSize: 20, fontWeight: 800 }}>
           <TabularText text={fmtWon(hero)} bold />
         </span>
       </div>

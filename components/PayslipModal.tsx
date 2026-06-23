@@ -14,7 +14,7 @@ const OPEN_EVENT = "ddong:payslip-open";
 const TOAST_EVENT = "ddong:toast";
 
 function bragText(d: ReceiptData) {
-  return `화장실에서 ${fmtWon(heroAmount(d))}원 벌었다ㅋㅋ #변기위의 월급루팡`;
+  return `화장실에서 ${fmtWon(heroAmount(d))} 벌었다ㅋㅋ #변기위의 월루`;
 }
 
 function toast(msg: string) {
@@ -145,7 +145,7 @@ export default function PayslipModal() {
             📷 저장
           </button>
         </div>
-        <p className="receipt-modal__hint">내 월급은 공개되지 않습니다!</p>
+        <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
       </div>
     </div>
   );
