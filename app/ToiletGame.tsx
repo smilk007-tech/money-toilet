@@ -169,7 +169,7 @@ export default function ToiletGame() {
               className="flush-receipt"
               id="receiptBtn"
               type="button"
-              aria-label="영수증 공유"
+              aria-label="화장실 급여명세서 공유"
             >
               <span
                 className="flush-receipt__icon"
@@ -262,7 +262,7 @@ export default function ToiletGame() {
               id="receiptBtnSettings"
               type="button"
             >
-              🧾 영수증 자랑하기
+              🧾 급여명세서 자랑하기
             </button>
           </div>
         </div>
@@ -325,13 +325,13 @@ export default function ToiletGame() {
         </div>
       </div>
 
-      {/* 영수증 공유 모달 */}
+      {/* 화장실 급여명세서 공유 모달 */}
       <div className="receipt-modal" id="receiptModal" hidden>
         <div className="receipt-modal__backdrop" id="receiptBackdrop"></div>
         <div
           className="receipt-modal__sheet"
           role="dialog"
-          aria-label="영수증 공유"
+          aria-label="화장실 급여명세서 공유"
         >
           <button
             className="receipt-modal__close"
@@ -358,9 +358,7 @@ export default function ToiletGame() {
               📷 저장
             </button>
           </div>
-          <p className="receipt-modal__hint">
-            내 월급·시간은 영수증에 안 나와요 🙈
-          </p>
+          <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
         </div>
       </div>
 

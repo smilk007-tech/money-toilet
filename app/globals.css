@@ -950,7 +950,7 @@ body {
   overflow: visible;
 }
 
-/* 우하단 영수증 버튼 — 설정(gear) 버튼과 동일 크기 */
+/* 우하단 급여명세서 버튼 — 설정(gear) 버튼과 동일 크기 (디자인 유지) */
 .flush-receipt {
   flex: 0 0 auto;
   align-self: flex-end;
@@ -1580,7 +1580,7 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
-/* =====================  영수증 공유 모달  ===================== */
+/* =====================  화장실 급여명세서 공유 모달  ===================== */
 .receipt-modal {
   position: absolute;
   inset: 0;
@@ -1602,7 +1602,7 @@ body {
 .receipt-modal__sheet {
   position: relative;
   z-index: 1;
-  width: min(94%, 360px);
+  width: min(94%, 380px);
   max-height: 92%;
   overflow: auto;
   display: flex;
@@ -1645,14 +1645,14 @@ body {
 .receipt-modal__preview canvas {
   display: block;
   width: 100%;
-  max-width: 300px;
+  max-width: 340px;
   height: auto;
 }
 .receipt-modal__actions {
   display: flex;
   gap: 10px;
   width: 100%;
-  max-width: 300px;
+  max-width: 340px;
 }
 .receipt-btn {
   flex: 1;

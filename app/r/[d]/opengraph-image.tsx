@@ -9,7 +9,7 @@ import ReceiptCard from "@/components/ReceiptCard";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "똥탐 화장실 영수증";
+export const alt = "똥탐 화장실 급여명세서";
 
 // 오래된 Safari UA → Google Fonts가 woff2 대신 ttf(satori 호환)를 내려준다.
 const TTF_UA =
@@ -36,8 +36,8 @@ async function loadKoreanFont(
 
 const FALLBACK: ReceiptData = {
   n: "익명의 볼일러",
-  s: 0,
-  l: 0,
+  h: [],
+  t: 0,
   g: 0,
   p: 0,
   f: 0,
@@ -56,10 +56,11 @@ export default async function Image({
 
   // 이미지에 등장하는 모든 글자를 모아 서브셋 폰트를 받는다(작고 빠름, 한글 깨짐 방지).
   const glyphs =
-    "💩똥탐화장실영수증발행손님품목금액근무수당시간적립진행중합계오늘다같이번돈지금볼일명내물내림회너도와서벌어봐근무시간에싸돈paidtoilet원" +
-    "0123456789,. :·()TOTAL" +
+    "💩똥탐화장실급여명세서발급일성명지급항목금액회차물내림수당총똥실수령액세금원청정수익오늘다같이캔값지금변기위명근무중너도와서벌어봐근무시간에싸돈이전종이모자라생략PAYSTATEMENT변기사업부paidtoilet" +
+    "0123456789,. :·()⋮" +
     data.n +
     data.sl +
+    data.h.map(([r, a]) => `${r}${a}`).join("") +
     fmtWon(hero) +
     fmtWon(data.g);
 
@@ -116,7 +117,7 @@ export default async function Image({
             color: "#7fe6c2",
           }}
         >
-          💩 똥탐 · 화장실 영수증
+          💩 똥탐 · 화장실 급여명세서
         </div>
         <div
           style={{
@@ -126,7 +127,7 @@ export default async function Image({
             color: "#cfeee2",
           }}
         >
-          {data.n}님이 화장실에서
+          {data.n}님 변기 위 실수령액
         </div>
         <div
           style={{
@@ -140,7 +141,7 @@ export default async function Image({
           {fmtWon(hero)}
         </div>
         <div style={{ display: "flex", fontSize: 34, color: "#cfeee2" }}>
-          벌었다 ㅋㅋ
+          총 {data.f}회 물내림 적립 ㅋㅋ
         </div>
         <div
           style={{
@@ -164,7 +165,7 @@ export default async function Image({
         </div>
       </div>
 
-      {/* 오른쪽: 영수증 카드 */}
+      {/* 오른쪽: 급여명세서 카드 */}
       <div
         style={{
           display: "flex",
