@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = decodeReceipt(d);
   const nick = data?.n || "익명의 볼일러";
   const hero = data ? heroAmount(data) : 0;
-  const title = `${nick}님이 화장실에서 ${fmtWon(hero)}원 벌었어요💰`;
+  const title = `${nick}님이 화장실에서 ${fmtWon(hero)} 벌었어요💰`;
   const description =
     "근무시간에 싸서 번 돈 인증 · 돈버는 화장실에서 너도 받아봐 👇";
   return {
