@@ -131,18 +131,18 @@ export default function PayslipModal() {
         </div>
         <div className="receipt-modal__actions">
           <button
-            className="receipt-btn receipt-btn--share"
-            type="button"
-            onClick={share}
-          >
-            🔗 공유하기
-          </button>
-          <button
             className="receipt-btn receipt-btn--save"
             type="button"
             onClick={save}
           >
             📷 저장
+          </button>
+          <button
+            className="receipt-btn receipt-btn--share"
+            type="button"
+            onClick={share}
+          >
+            🔗 자랑하기
           </button>
         </div>
         <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
