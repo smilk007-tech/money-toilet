@@ -1,5 +1,5 @@
 /* ===================================================================
-   똥탐 · 실시간 공중화장실  —  1인칭 변기뷰 (B급 감성)
+   돈버는 화장실  —  1인칭 변기뷰 (B급 감성)
    모바일 360px+ 기준
    =================================================================== */
 
@@ -1602,7 +1602,7 @@ body {
 .receipt-modal__sheet {
   position: relative;
   z-index: 1;
-  width: min(94%, 380px);
+  width: min(94%, 420px);
   max-height: 92%;
   overflow: auto;
   display: flex;
@@ -1638,21 +1638,16 @@ body {
 }
 .receipt-modal__preview {
   width: 100%;
+  max-width: 420px;
   display: flex;
   justify-content: center;
   filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.5));
-}
-.receipt-modal__preview canvas {
-  display: block;
-  width: 100%;
-  max-width: 340px;
-  height: auto;
 }
 .receipt-modal__actions {
   display: flex;
   gap: 10px;
   width: 100%;
-  max-width: 340px;
+  max-width: 420px;
 }
 .receipt-btn {
   flex: 1;

@@ -9,8 +9,8 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "똥탐 · 실시간 화장실",
-  description: "공중화장실에서 돈 버는 B급 실시간 화장실 게임",
+  title: "돈버는화장실 · 똥탐 · 월급루팡",
+  description: "변기 위에 앉아서 돈을 벌자!",
 };
 
 export const viewport: Viewport = {

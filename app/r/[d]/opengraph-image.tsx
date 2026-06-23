@@ -161,7 +161,7 @@ export default async function Image({
             marginTop: 6,
           }}
         >
-          너도 와서 벌어봐 👉 paid-toilet
+          너도 와서 벌어봐 👉 money-toilet
         </div>
       </div>
 

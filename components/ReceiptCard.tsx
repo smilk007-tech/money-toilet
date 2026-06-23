@@ -19,20 +19,22 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
   const LINE = "#c9ccc0";
   const dash = {
     display: "flex",
-    borderTop: `2px dashed ${LINE}`,
+    borderTop: `1.5px dashed ${LINE}`,
     height: 0,
-    margin: "11px 0",
+    margin: "8px 0",
   } as const;
   const solid = {
     display: "flex",
-    borderTop: `2px solid ${INK}`,
+    borderTop: `1.6px solid ${INK}`,
     height: 0,
-    margin: "10px 0",
+    margin: "8px 0",
   } as const;
   const row = {
     display: "flex",
     justifyContent: "space-between",
+    alignItems: "center",
     width: "100%",
+    lineHeight: 1.25,
   } as const;
   const center = {
     display: "flex",
@@ -48,38 +50,41 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
         width: "100%",
         background: "#fbfaf3",
         color: INK,
-        padding: "30px 36px",
-        borderRadius: 16,
+        padding: "24px 26px",
+        border: `1px solid ${LINE}`,
+        borderRadius: 14,
         fontFamily: '"Noto Sans KR"',
+        lineHeight: 1.25,
       }}
     >
-      <div style={{ ...center, fontSize: 34, fontWeight: 800 }}>돈버는 화장실</div>
+      <div style={{ ...center, fontSize: 29, fontWeight: 800 }}>
+        📌급여명세서
+      </div>
       <div
         style={{
           ...center,
-          fontSize: 17,
+          fontSize: 14,
           fontWeight: 700,
           color: SUB,
-          letterSpacing: 5,
-          marginTop: 6,
+          letterSpacing: 2,
+          marginTop: 5,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
       >
-        급여명세서
+        {d.n}
       </div>
 
       <div style={dash} />
-      <div style={{ ...row, fontSize: 15 }}>
+      <div style={{ ...row, fontSize: 13 }}>
         <span style={{ color: SUB }}>발급일</span>
-        <span>{issued}</span>
-      </div>
-      <div style={{ ...row, fontSize: 15, marginTop: 8 }}>
-        <span style={{ color: SUB }}>성명</span>
-        <span style={{ fontWeight: 700 }}>{d.n}</span>
+        <span style={{ fontVariantNumeric: "tabular-nums" }}>{issued}</span>
       </div>
 
       <div style={dash} />
-      <div style={{ ...row, fontSize: 13, color: SUB }}>
-        <span>지급 항목</span>
+      <div style={{ ...row, fontSize: 12, fontWeight: 700, color: SUB }}>
+        <span>물내림 수당</span>
         <span>금액</span>
       </div>
 
@@ -90,21 +95,21 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
             flexDirection: "column",
             alignItems: "center",
             width: "100%",
-            marginTop: 8,
+            marginTop: 5,
           }}
         >
-          <span style={{ display: "flex", fontSize: 16, color: SUB }}>·</span>
-          <span style={{ display: "flex", fontSize: 16, color: SUB }}>·</span>
-          <span style={{ display: "flex", fontSize: 16, color: SUB }}>·</span>
+          <span style={{ display: "flex", fontSize: 12, lineHeight: 0.8, color: SUB }}>·</span>
+          <span style={{ display: "flex", fontSize: 12, lineHeight: 0.8, color: SUB }}>·</span>
+          <span style={{ display: "flex", fontSize: 12, lineHeight: 0.8, color: SUB }}>·</span>
           <span
             style={{
               display: "flex",
-              fontSize: 11,
+              fontSize: 10,
               color: SUB,
-              marginTop: 2,
+              marginTop: 3,
             }}
           >
-            (이전 회차는 종이가 모자라 생략)
+            (종이가 모자라 생략)
           </span>
         </div>
       )}
@@ -113,15 +118,27 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
         d.h.map(([round, amount], i) => (
           <div
             key={round}
-            style={{ ...row, fontSize: 15, marginTop: i === 0 && !omitted ? 10 : 8 }}
+            style={{
+              ...row,
+              fontSize: 14,
+              marginTop: i === 0 && !omitted ? 8 : 6,
+            }}
           >
-            <span>{round}회차 물내림 수당</span>
-            <span>{fmtWon(amount)}</span>
+            <span style={{ whiteSpace: "nowrap" }}>{round}회차</span>
+            <span
+              style={{
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {fmtWon(amount)}
+            </span>
           </div>
         ))
       ) : (
-        <div style={{ ...center, fontSize: 14, color: SUB, marginTop: 12 }}>
-          아직 물내린 적 없음 (지급 내역 0건)
+        <div style={{ ...center, fontSize: 13, color: SUB, marginTop: 9 }}>
+          아직 안내려봤음
         </div>
       )}
 
@@ -132,20 +149,38 @@ export default function ReceiptCard({ d }: { d: ReceiptData }) {
           justifyContent: "space-between",
           alignItems: "flex-end",
           width: "100%",
+          lineHeight: 1.12,
         }}
       >
-        <span style={{ fontSize: 17, fontWeight: 800 }}>
-          총 {d.f}회 물내림 실수령액
+        <span style={{ fontSize: 15, fontWeight: 800 }}>
+          총 {d.f}회 실수령액
         </span>
-        <span style={{ fontSize: 36, fontWeight: 800 }}>{fmtWon(hero)}</span>
+        <span
+          style={{
+            fontSize: 30,
+            fontWeight: 800,
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {fmtWon(hero)}
+        </span>
       </div>
 
       <div style={dash} />
-      <div style={{ ...center, fontSize: 17, fontWeight: 700 }}>
+      <div
+        style={{
+          ...center,
+          fontSize: 14,
+          fontWeight: 700,
+          lineHeight: 1.35,
+          textAlign: "center",
+        }}
+      >
         &quot;{d.sl}&quot;
       </div>
-      <div style={{ ...center, fontSize: 15, fontWeight: 700, marginTop: 11 }}>
-        똥탐 · paid-toilet
+      <div style={{ ...center, fontSize: 12, fontWeight: 700, marginTop: 8 }}>
+        돈버는화장실 · money-toilet
       </div>
     </div>
   );

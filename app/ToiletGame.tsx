@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { initGame } from "@/lib/game";
+import PayslipModal from "@/components/PayslipModal";
 
 export default function ToiletGame() {
   useEffect(() => {
@@ -325,47 +326,12 @@ export default function ToiletGame() {
         </div>
       </div>
 
-      {/* 화장실 급여명세서 공유 모달 */}
-      <div className="receipt-modal" id="receiptModal" hidden>
-        <div className="receipt-modal__backdrop" id="receiptBackdrop"></div>
-        <div
-          className="receipt-modal__sheet"
-          role="dialog"
-          aria-label="화장실 급여명세서 공유"
-        >
-          <button
-            className="receipt-modal__close"
-            id="receiptClose"
-            type="button"
-            aria-label="닫기"
-          >
-            ✕
-          </button>
-          <div className="receipt-modal__preview" id="receiptPreview"></div>
-          <div className="receipt-modal__actions">
-            <button
-              className="receipt-btn receipt-btn--share"
-              id="receiptShare"
-              type="button"
-            >
-              🔗 공유하기
-            </button>
-            <button
-              className="receipt-btn receipt-btn--save"
-              id="receiptSave"
-              type="button"
-            >
-              📷 저장
-            </button>
-          </div>
-          <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
-        </div>
-      </div>
-
       {/* 물내림 컨페티 */}
       <div className="confettiLayer" id="confettiLayer"></div>
       {/* 토스트 */}
       <div className="toast" id="toast" hidden></div>
+      {/* 급여명세서 미리보기 (ReceiptCard — 공유 페이지와 동일) */}
+      <PayslipModal />
     </div>
   );
 }

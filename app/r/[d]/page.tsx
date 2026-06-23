@@ -10,9 +10,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = decodeReceipt(d);
   const nick = data?.n || "익명의 볼일러";
   const hero = data ? heroAmount(data) : 0;
-  const title = `${nick}님의 화장실 급여명세서 · 실수령 ${fmtWon(hero)} 🧾`;
+  const title = `${nick}님이 화장실에서 ${fmtWon(hero)}원 벌었어요💰`;
   const description =
-    "근무시간에 싸서 받은 월급 인증 · 똥탐(paid-toilet)에서 너도 받아봐 👇";
+    "근무시간에 싸서 번 돈 인증 · 돈버는 화장실에서 너도 받아봐 👇";
   return {
     title,
     description,
@@ -56,7 +56,7 @@ export default async function ReceiptSharePage({ params }: Props) {
           급여명세서를 불러올 수 없어요 🥲
         </p>
         <Link href="/" style={cta}>
-          🚽 똥탐 하러 가기
+          🚽 화장실 가기
         </Link>
       </main>
     );
