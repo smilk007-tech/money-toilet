@@ -163,7 +163,7 @@ export default function ReceiptCard({
           letterSpacing: 0.5,
         }}
       >
-        <span>물내림 수당</span>
+        <span>물내림</span>
         <span>금액</span>
       </div>
 
