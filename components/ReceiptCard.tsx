@@ -163,7 +163,7 @@ export default function ReceiptCard({
           letterSpacing: 0.5,
         }}
       >
-        <span>물내림</span>
+        <span>물 내림</span>
         <span>금액</span>
       </div>
 
@@ -188,7 +188,7 @@ export default function ReceiptCard({
               }}
             >
               <TabularText text={fmtRound(round)} />
-              <TabularText text={fmtWon(amount)} weight={600} />
+              <TabularText text={fmtWon(amount)} weight={500} />
             </div>
           ))
         ) : (
