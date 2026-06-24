@@ -55,80 +55,74 @@ export default function ToiletGame() {
         </div>
       </header>
 
-      {/* ===== 1인칭 공중화장실 칸 (1점 투시) ===== */}
+      {/* ===== 1인칭 공중화장실 칸 (SVG 스킨) ===== */}
       <div className="scene" id="scene">
-        <div className="ceil"></div>
-        <div className="floor"></div>
+        {/* 좌/우 가벽 */}
+        <img
+          className="skin-side skin-side--left"
+          src="/skin/left-wall.svg"
+          alt=""
+          aria-hidden
+        />
+        <img
+          className="skin-side skin-side--right"
+          src="/skin/right-wall.svg"
+          alt=""
+          aria-hidden
+        />
 
-        {/* 좌측 가벽 + 선반형 스텐 휴지걸이 */}
-        <div className="wall wall--left">
-          <div className="fixture tp">
-            <div className="tp__bracket"></div>
-            <div className="tp__shelf"></div>
-            <div className="tp__roll">
-              <div className="tp__core"></div>
-              <div className="tp__peg"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* 우측 가벽 + 상단 스텐 옷걸이(로브훅) */}
-        <div className="wall wall--right">
-          <div className="fixture hook">
-            <div className="hook__base"></div>
-            <div className="hook__peg"></div>
-            <div className="hook__cap"></div>
-          </div>
-        </div>
-
-        {/* 정면 가벽 문 */}
-        <div className="door">
-          <div className="door__panel">
-            <a
-              className="ad-a4"
-              id="adA4"
-              href="#"
-              target="_blank"
-              rel="noopener"
-            >
-              <span className="ad-a4__tag">광고</span>
-              <div className="ad-a4__emoji" id="adEmoji">
-                📢
-              </div>
-              <div className="ad-a4__head" id="adHead">
-                여기에 광고
-              </div>
-              <div className="ad-a4__sub" id="adSub">
-                A4 광고 영역 · 문의 환영
-              </div>
-              <div className="ad-a4__foot">tap</div>
-            </a>
-          </div>
-          <div className="door__under"></div>
-        </div>
-
-        {/* 좌/우 벽 회색 외곽선 */}
-        <svg
-          className="edges"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M0,0 20,9 20,73 0,100 Z"
-            fill="none"
-            stroke="#8f948b"
-            strokeWidth="1.4"
-            vectorEffect="non-scaling-stroke"
+        {/* 정면 문 + 천장등/경첩/잠금 */}
+        <div className="skin-center" aria-hidden>
+          <img
+            className="skin-center__base"
+            src="/skin/center-door.svg"
+            alt=""
           />
-          <path
-            d="M100,0 80,9 80,73 100,100 Z"
-            fill="none"
-            stroke="#8f948b"
-            strokeWidth="1.4"
-            vectorEffect="non-scaling-stroke"
+          <img className="skin-light" src="/skin/ceiling-light.svg" alt="" />
+          <img className="skin-hinge skin-hinge--1" src="/skin/hinge.svg" alt="" />
+          <img className="skin-hinge skin-hinge--2" src="/skin/hinge.svg" alt="" />
+          <img className="skin-hinge skin-hinge--3" src="/skin/hinge.svg" alt="" />
+          <img className="skin-latch" src="/skin/latch.svg" alt="" />
+        </div>
+
+        {/* 좌측 휴지걸이 / 우측 옷걸이 */}
+        <img
+          className="skin-tp"
+          src="/skin/toilet-paper.svg"
+          alt=""
+          aria-hidden
+        />
+        <img className="skin-hook" src="/skin/hook.svg" alt="" aria-hidden />
+
+        {/* 바닥(좌/중앙/우 원근) */}
+        <div className="skin-floor" aria-hidden>
+          <img
+            className="skin-floor__side skin-floor__side--left"
+            src="/skin/floor-left.svg"
+            alt=""
           />
-        </svg>
+          <img className="skin-floor__center" src="/skin/floor-center.svg" alt="" />
+          <img
+            className="skin-floor__side skin-floor__side--right"
+            src="/skin/floor-right.svg"
+            alt=""
+          />
+        </div>
+
+        {/* 동적 A4 광고 — 문 가운데 포스터 자리(게임 로직 유지) */}
+        <a className="ad-a4" id="adA4" href="#" target="_blank" rel="noopener">
+          <span className="ad-a4__tag">광고</span>
+          <div className="ad-a4__emoji" id="adEmoji">
+            📢
+          </div>
+          <div className="ad-a4__head" id="adHead">
+            여기에 광고
+          </div>
+          <div className="ad-a4__sub" id="adSub">
+            A4 광고 영역 · 문의 환영
+          </div>
+          <div className="ad-a4__foot">tap</div>
+        </a>
 
         {/* 좌우 실시간 말풍선 (봇) */}
         <div className="bubbles bubbles--left" id="bubblesLeft"></div>
@@ -137,8 +131,7 @@ export default function ToiletGame() {
 
       {/* ===== 전경: 내 무릎(랩) ===== */}
       <div className="foreground">
-        <div className="thigh thigh--l"></div>
-        <div className="thigh thigh--r"></div>
+        <img className="skin-knees" src="/skin/knees.svg" alt="" aria-hidden />
       </div>
 
       {/* ===== 하단 스택 ===== */}

@@ -230,238 +230,139 @@ body {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: #9aa297;
+  background: #3a3c3d;
 }
+/* 약한 비네팅(깊이감) — 스킨이 깔끔하므로 가장자리만 살짝 */
 .scene::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 9;
-  background:
-    radial-gradient(
-      120% 80% at 50% 26%,
-      rgba(190, 255, 225, 0.1),
-      transparent 55%
-    ),
-    radial-gradient(150% 130% at 50% 125%, transparent 48%, rgba(0, 0, 0, 0.5));
+  z-index: 22;
+  background: radial-gradient(
+    150% 115% at 50% 32%,
+    transparent 62%,
+    rgba(0, 0, 0, 0.26)
+  );
   mix-blend-mode: multiply;
-  animation: flicker 7s infinite;
-}
-@keyframes flicker {
-  0%,
-  97%,
-  100% {
-    opacity: 1;
-  }
-  98% {
-    opacity: 0.78;
-  }
-  99% {
-    opacity: 0.92;
-  }
 }
 
-.ceil,
-.floor,
-.wall,
-.door {
+/* =====================  SVG 스킨 (1인칭 화장실 칸)  ===================== */
+:root {
+  --skin-side: 82px;
+}
+
+/* 좌/우 가벽 */
+.skin-side {
   position: absolute;
-  inset: 0;
+  inset-block: 0;
+  z-index: 10;
+  width: var(--skin-side);
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
 }
-
-/* 천장 위 = 칸막이가 떠 있는 빈 공간(검은색 공백) */
-.ceil {
-  clip-path: polygon(0 0, 100% 0, var(--dx2) var(--dy1), var(--dx1) var(--dy1));
-  background: linear-gradient(#0c100d, var(--gapdark));
-}
-
-/* 바닥 — 소실점(50% dy2)에서 방사형 사선 원근 */
-.floor {
-  clip-path: polygon(
-    0 100%,
-    var(--dx1) var(--dy2),
-    var(--dx2) var(--dy2),
-    100% 100%
-  );
-  background:
-    linear-gradient(to top, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.4)),
-    repeating-radial-gradient(
-      circle at 50% var(--dy2),
-      transparent 0 20px,
-      rgba(0, 0, 0, 0.11) 20px 22px
-    ),
-    repeating-conic-gradient(
-      from 0deg at 50% var(--dy2),
-      rgba(0, 0, 0, 0.14) 0 0.8deg,
-      transparent 0.8deg 11deg
-    ),
-    var(--floor-tile);
-}
-
-/* ---- 좌/우 가벽 (상·하단 뚫린 파티션) ---- */
-.wall {
-  background-repeat: no-repeat;
-}
-.wall--left {
-  clip-path: polygon(0 0, var(--dx1) var(--dy1), var(--dx1) var(--dy2), 0 100%);
-  background-image:
-    linear-gradient(to right, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.42)),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.05) 0 2px,
-      transparent 2px 15px
-    ),
-    linear-gradient(
-      192deg,
-      var(--gapdark) 0 9%,
-      var(--part-edge) 9% 10%,
-      var(--part) 10% 83%,
-      var(--part-trim) 83% 84.5%,
-      var(--beyond) 84.5% 100%
-    );
-}
-.wall--right {
-  clip-path: polygon(
-    100% 0,
-    100% 100%,
-    var(--dx2) var(--dy2),
-    var(--dx2) var(--dy1)
-  );
-  background-image:
-    linear-gradient(to left, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.42)),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.05) 0 2px,
-      transparent 2px 15px
-    ),
-    linear-gradient(
-      168deg,
-      var(--gapdark) 0 9%,
-      var(--part-edge) 9% 10%,
-      var(--part) 10% 83%,
-      var(--part-trim) 83% 84.5%,
-      var(--beyond) 84.5% 100%
-    );
-}
-
-/* ---- 정면 가벽 문 ---- */
-.door {
-  left: var(--dx1);
-  top: var(--dy1);
-  right: auto;
-  bottom: auto;
-  width: 60%;
-  height: 64%;
-  background: var(--gapdark);
-}
-.door__panel {
-  position: absolute;
-  top: 8%;
-  bottom: 8px;
+.skin-side--left {
   left: 0;
+}
+.skin-side--right {
   right: 0;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.05) 0 2px,
-      transparent 2px 22px
-    ),
-    linear-gradient(180deg, #d4d8d1, var(--part) 14%, var(--part) 86%, #bdc2bb);
-  border: 4px solid #8f948b;
-  border-radius: 3px;
-  box-shadow:
-    inset 0 0 26px rgba(0, 0, 0, 0.28),
-    0 4px 12px rgba(0, 0, 0, 0.4);
-}
-.door__under {
-  position: absolute;
-  left: -4%;
-  right: -4%;
-  top: 100%;
-  height: 8%;
-  background: linear-gradient(#0e120f, rgba(14, 18, 15, 0));
-  border-radius: 0 0 6px 6px;
-}
-/* 문 좌/우 세로 프레임(스타일) — 문 border 회색으로 채움 */
-.door__stile {
-  position: absolute;
-  top: 6%;
-  bottom: 6%;
-  width: 9%;
-  background: #8f948b;
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.25);
-  border-radius: 2px;
-}
-.door__stile--l {
-  left: 13%;
-}
-.door__stile--r {
-  right: 13%;
 }
 
-/* 좌/우 벽 회색 외곽선 */
-.edges {
+/* 정면 문 영역(좌우 벽 사이) */
+.skin-center {
   position: absolute;
-  inset: 0;
+  inset-block: 0;
+  left: var(--skin-side);
+  right: var(--skin-side);
+  z-index: 8;
+}
+.skin-center__base {
   width: 100%;
   height: 100%;
-  z-index: 8;
+  object-fit: fill;
   pointer-events: none;
 }
 
-/* 스텐 잠금장치 (문 우측) — 가로로 누운 손잡이 */
-.lock {
+/* 천장등 */
+.skin-light {
   position: absolute;
-  right: 5%;
-  top: 48%;
-  transform: translateY(-50%);
-}
-.lock__plate {
-  width: 38px;
-  height: 15px;
-  border-radius: 8px;
-  position: relative;
-  background: var(--steel);
-  border: 1px solid #7c848a;
-  box-shadow:
-    0 3px 6px rgba(0, 0, 0, 0.45),
-    inset 0 1px 2px rgba(255, 255, 255, 0.6);
-}
-.lock__knob {
-  position: absolute;
-  left: 7px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--steel);
-  border: 1px solid #6f767c;
-  box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.7),
-    0 1px 2px rgba(0, 0, 0, 0.4);
-}
-.lock__knob::after {
-  /* 가로 손잡이 표시 */
-  content: "";
-  position: absolute;
+  z-index: 24;
+  top: clamp(8px, 2.2svh, 24px);
   left: 50%;
-  top: 50%;
-  width: 11px;
-  height: 3px;
-  background: #5a6066;
-  transform: translate(-50%, -50%);
-  border-radius: 2px;
+  width: 96px;
+  height: auto;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* 문 경첩(좌측 모서리) */
+.skin-hinge {
+  position: absolute;
+  z-index: 28;
+  left: 0;
+  width: 15px;
+  height: 28px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.skin-hinge--1 {
+  top: 22.5%;
+}
+.skin-hinge--2 {
+  top: 45%;
+}
+.skin-hinge--3 {
+  top: 67.5%;
+}
+
+/* 문 잠금(우측 모서리) */
+.skin-latch {
+  position: absolute;
+  z-index: 34;
+  top: 50.5%;
+  right: 0;
+  width: 28px;
+  height: auto;
+  transform: translate(14%, -50%);
+  pointer-events: none;
+}
+
+/* 바닥(좌/중앙/우 원근) */
+.skin-floor {
+  position: absolute;
+  z-index: 18;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: var(--skin-side) minmax(0, 1fr) var(--skin-side);
+  width: 100%;
+  height: clamp(86px, 15svh, 140px);
+  pointer-events: none;
+}
+.skin-floor img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+/* 톤 보정 — 벽/문/바닥의 따뜻한 베이지를 살짝 탈채도·쿨하게 보정해
+   네온그린 HUD/하단 덱과 톤을 맞춤(흰 광고지·크롬 비품은 미적용) */
+.skin-side,
+.skin-center__base,
+.skin-floor img {
+  filter: saturate(0.58) hue-rotate(8deg);
 }
 
 /* A4 광고 (문에 붙은 전단지) — 똑바로, 잠금장치와 안 겹치게 약간 좁힘 */
 .ad-a4 {
   position: absolute;
-  left: 46%;
-  top: 47%;
+  z-index: 25;
+  left: 50%;
+  top: 45%;
   transform: translate(-50%, -50%);
-  width: 46%;
+  width: clamp(150px, 42%, 208px);
   aspect-ratio: 210/297;
   background: #fffdf7;
   color: #222;
@@ -534,146 +435,25 @@ body {
   color: #aaa;
 }
 
-/* ---- 좌측: 선반형 스텐 휴지걸이 (업로드 이미지, 살짝 3D로 기울임 80%) ---- */
-.fixture {
+/* ---- 좌측 휴지걸이 / 우측 옷걸이 (SVG) ---- */
+.skin-tp {
   position: absolute;
+  z-index: 31;
+  left: 4px;
+  top: 62%;
+  width: 66px;
+  height: auto;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
-.tp {
-  left: 2%;
-  top: 33%;
-  width: 20%;
-  min-width: 66px;
-  transform: skewY(13deg) scale(0.8);
-  transform-origin: top left;
-}
-.tp__shelf {
-  /* 윗면 평판 */
+.skin-hook {
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 11px;
-  border-radius: 3px;
-  z-index: 3;
-  background: var(--nickel);
-  box-shadow:
-    0 3px 5px rgba(0, 0, 0, 0.3),
-    inset 0 1px 1px rgba(255, 255, 255, 0.7);
-}
-.tp__shelf::after {
-  /* 앞면 두께(립) */
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -4px;
-  height: 5px;
-  background: linear-gradient(#bdbbb3, #9b998f);
-  border-radius: 0 0 3px 3px;
-}
-.tp__bracket {
-  /* 좌측 세로 브래킷(벽→페그) */
-  position: absolute;
-  left: 3px;
-  top: 8px;
-  width: 11px;
-  height: 30px;
-  border-radius: 0 0 2px 3px;
-  z-index: 1;
-  background: var(--nickel);
-  box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.2);
-}
-.tp__roll {
-  /* 두루마리(정면) — 살짝 찌그러진 타원으로 입체감 */
-  position: absolute;
-  left: 14%;
-  top: 22px;
-  width: 84%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  z-index: 2;
-  transform: scaleX(0.9) rotate(-3deg);
-  background: radial-gradient(circle at 38% 32%, #fdfdfb, #e7e7e2 56%, #d4d4ce);
-  box-shadow:
-    0 5px 9px rgba(0, 0, 0, 0.28),
-    inset -4px -6px 12px rgba(0, 0, 0, 0.12),
-    inset 3px 4px 8px rgba(255, 255, 255, 0.5);
-}
-.tp__core {
-  /* 가운데 구멍(튜브) */
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 34%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 45%, #aaa498, #c6c1b5);
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
-}
-.tp__peg {
-  /* 정사각 페그 */
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 16%;
-  aspect-ratio: 1;
-  border-radius: 2px;
-  background: var(--nickel);
-  border: 1px solid #8a8f86;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
-/* ---- 우측: 상단 스텐 옷걸이(로브훅) (사진1 기반) ---- */
-.hook {
-  right: 5%;
-  top: 17%;
-  width: 24%;
-  transform: skewY(-11deg) rotate(-3deg) scale(0.8);
-  transform-origin: top right;
-}
-.hook__base {
-  /* 벽 마운트 */
-  position: absolute;
-  right: 0;
-  top: 4px;
-  width: 13px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--steel);
-  border: 1px solid #7c848a;
-  box-shadow:
-    0 2px 5px rgba(0, 0, 0, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.6);
-}
-.hook__peg {
-  /* 원통 페그 */
-  position: absolute;
-  right: 9px;
-  top: 8px;
-  width: 38px;
-  height: 14px;
-  border-radius: 8px;
-  background: var(--steel);
-  border: 1px solid #868d92;
-  box-shadow:
-    0 3px 5px rgba(0, 0, 0, 0.35),
-    inset 0 1px 2px rgba(255, 255, 255, 0.55);
-}
-.hook__cap {
-  /* 끝 둥근 캡 */
-  position: absolute;
-  right: 42px;
-  top: 4px;
-  width: 15px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(120deg, #fbfcfd, #cdd4d8 60%, #aab2b8);
-  border: 1px solid #8a9197;
-  box-shadow:
-    0 3px 6px rgba(0, 0, 0, 0.4),
-    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  z-index: 31;
+  top: 18%;
+  right: 16px;
+  width: 30px;
+  height: auto;
+  pointer-events: none;
 }
 
 /* =====================  옆칸(봇) 말풍선 (어두운 반투명, 긴 꼬리)  ===================== */
@@ -871,44 +651,16 @@ body {
   z-index: 6;
   pointer-events: none;
 }
-.thigh {
+/* 내 무릎(SVG) — 전경 하단 중앙 */
+.skin-knees {
   position: absolute;
-  bottom: -12%;
-  width: 58%;
-  height: 118%;
-  background: linear-gradient(180deg, #4a6fa5 0%, #35527d 60%, #294264 100%);
-  box-shadow:
-    inset 0 8px 18px rgba(255, 255, 255, 0.12),
-    inset 0 -10px 24px rgba(0, 0, 0, 0.4);
-}
-.thigh--l {
-  left: -17%;
-  transform: rotate(-9deg);
-  border-radius: 48% 60% 0 0;
-}
-.thigh--r {
-  right: -17%;
-  transform: rotate(9deg);
-  border-radius: 60% 48% 0 0;
-}
-.thigh::after {
-  content: "";
-  position: absolute;
-  top: 6%;
+  left: 50%;
   bottom: 0;
-  width: 3px;
-  background: repeating-linear-gradient(
-    0deg,
-    #f6d98a 0 6px,
-    transparent 6px 11px
-  );
-  opacity: 0.5;
-}
-.thigh--l::after {
-  right: 24%;
-}
-.thigh--r::after {
-  left: 24%;
+  width: clamp(220px, 86%, 340px);
+  max-width: calc(100% - 16px);
+  height: auto;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 /* =====================  하단 스택  ===================== */

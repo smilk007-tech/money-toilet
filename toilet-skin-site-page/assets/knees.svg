@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 180">
+  <defs>
+    <linearGradient id="leftPants" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b3e42"/>
+      <stop offset=".48" stop-color="#292c2f"/>
+      <stop offset="1" stop-color="#151719"/>
+    </linearGradient>
+    <linearGradient id="rightPants" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b3e42"/>
+      <stop offset=".48" stop-color="#292c2f"/>
+      <stop offset="1" stop-color="#151719"/>
+    </linearGradient>
+    <linearGradient id="leftHighlight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="rightHighlight" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+
+  <!-- 바닥 그림자 -->
+  <path d="M0 178 26 112Q44 57 87 29Q113 12 136 27L250 178Z" fill="#090a0b" opacity=".24" filter="url(#softShadow)"/>
+  <path d="M500 178 474 112Q456 57 413 29Q387 12 364 27L250 178Z" fill="#090a0b" opacity=".24" filter="url(#softShadow)"/>
+
+  <!-- 왼쪽 다리: 안쪽 선이 약 45도로 중앙 하단에 모임 -->
+  <path d="M0 180
+           22 112
+           Q39 57 79 29
+           Q108 9 134 25
+           Q143 31 151 42
+           L250 180Z"
+        fill="url(#leftPants)"/>
+
+  <!-- 오른쪽 다리 -->
+  <path d="M500 180
+           478 112
+           Q461 57 421 29
+           Q392 9 366 25
+           Q357 31 349 42
+           L250 180Z"
+        fill="url(#rightPants)"/>
+
+  <!-- 둥근 무릎 면 -->
+  <path d="M23 112Q43 55 82 31Q107 15 130 29L149 46 206 126Q166 90 124 70Q77 48 23 112Z" fill="url(#leftHighlight)" opacity=".62"/>
+  <path d="M477 112Q457 55 418 31Q393 15 370 29L351 46 294 126Q334 90 376 70Q423 48 477 112Z" fill="url(#rightHighlight)" opacity=".62"/>
+
+  <!-- V자 안쪽 솔기: 약 45도 -->
+  
+  
+</svg>
