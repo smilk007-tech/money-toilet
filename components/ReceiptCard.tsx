@@ -145,8 +145,7 @@ export default function ReceiptCard({
   /* 근무 요약 항목 */
   const summary: [string, string][] = [
     ["물 내림 횟수", `${d.f.toLocaleString("ko-KR")}회`],
-    ["함께한 볼일러", `${d.p.toLocaleString("ko-KR")}명`],
-    ["오늘 다같이", fmtWon(d.g)],
+    ["실 수령액 합계", fmtWon(d.t)],
   ];
 
   return (
@@ -201,26 +200,12 @@ export default function ReceiptCard({
           {d.n}
         </span>
         <span style={{ display: "flex", fontSize: 10, color: SUB }}>
-          (주)돈버는화장실 · 화장실사업부
-        </span>
-      </div>
-
-      <div style={{ ...solid, margin: "10px 0" }} />
-      <div style={{ ...row, fontSize: 10.5 }}>
-        <span style={{ color: SUB }}>발급일</span>
-        <span style={{ color: SUB, fontVariantNumeric: "tabular-nums" }}>
-          {issued}
-        </span>
-      </div>
-      <div style={metaRow}>
-        <span style={{ color: SUB }}>사원번호</span>
-        <span style={{ color: SUB, fontVariantNumeric: "tabular-nums" }}>
-          {empNo}
+          (주)돈버는화장실
         </span>
       </div>
 
       {/* 근무 요약 */}
-      <div style={{ ...dash, margin: "9px 0" }} />
+      <div style={{ ...solid, margin: "10px 0" }} />
       <span style={sectionLabel}>근무 요약</span>
       <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
         {summary.map(([label, value], i) => (
@@ -295,7 +280,7 @@ export default function ReceiptCard({
         }}
       >
         <span style={{ display: "flex", fontSize: 11, color: SUB }}>
-          실수령액 합계
+          앉아서 번 돈
         </span>
         <span
           style={{
@@ -364,31 +349,6 @@ export default function ReceiptCard({
         </div>
       </div>
 
-      {/* 바코드 + 문서번호 */}
-      <div style={{ ...dash, margin: "10px 0 6px" }} />
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "center",
-          width: "100%",
-          height: 30,
-          flexShrink: 0,
-        }}
-      >
-        {bars.map((b, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              flexShrink: 0,
-              width: b.w,
-              height: "100%",
-              background: b.on ? INK : "transparent",
-            }}
-          />
-        ))}
-      </div>
       <div style={{ ...center, marginTop: 4 }}>
         <span
           style={{
@@ -402,36 +362,6 @@ export default function ReceiptCard({
           NO. {docNo}
         </span>
       </div>
-
-      {/* 푸터 */}
-      {footerMode === "snapshot" ? (
-        <div
-          style={{
-            ...center,
-            marginTop: 8,
-            fontSize: 10.5,
-            fontWeight: 700,
-            color: "#3f7668",
-            textDecoration: "underline",
-            wordBreak: "break-all",
-            textAlign: "center",
-          }}
-        >
-          {siteUrlHref ?? "money-toilet"}
-        </div>
-      ) : (
-        <span
-          style={{
-            ...center,
-            fontSize: 12,
-            fontWeight: 600,
-            marginTop: 8,
-            color: SUB,
-          }}
-        >
-          돈버는 화장실 · money-toilet
-        </span>
-      )}
     </div>
   );
 }
