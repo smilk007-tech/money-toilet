@@ -82,6 +82,18 @@ body {
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
 }
 
+/* 공유 페이지(/r/*) — body overflow:hidden 우회, 세로 스크롤 허용 */
+.share-scroll {
+  position: fixed;
+  inset: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
 /* =====================  상단 HUD  ===================== */
 .hud {
   position: absolute;
