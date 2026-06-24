@@ -60,14 +60,22 @@ function normalizeLoaded(o: unknown): ReceiptData | null {
 export async function saveReceipt(data: ReceiptData): Promise<string | null> {
   const r = getRedis();
   if (!r) return null;
-  const id = genId();
-  await r.set(`r:${id}`, data, { ex: TTL_SECONDS });
-  return id;
+  try {
+    const id = genId();
+    await r.set(`r:${id}`, data, { ex: TTL_SECONDS });
+    return id;
+  } catch {
+    return null;
+  }
 }
 
 export async function loadReceipt(id: string): Promise<ReceiptData | null> {
   const r = getRedis();
   if (!r) return null;
-  const raw = await r.get(`r:${id}`);
-  return normalizeLoaded(raw);
+  try {
+    const raw = await r.get(`r:${id}`);
+    return normalizeLoaded(raw);
+  } catch {
+    return null;
+  }
 }

@@ -14,8 +14,13 @@ import { shareCtaLook } from "@/lib/shareCta";
 const OPEN_EVENT = "ddong:payslip-open";
 const TOAST_EVENT = "ddong:toast";
 
-// 세션 내 메모리 캐시 — 같은 인코딩이면 API 재호출 없이 기존 ID 재사용
-const shareIdCache = new Map<string, string>();
+// ts·sl은 모달 열 때마다 바뀌므로 실제 게임 진행 상태만으로 fingerprint 생성
+function stableFingerprint(d: ReceiptData): string {
+  return `${d.n}|${d.t}|${d.f}|${d.h.join(",")}`;
+}
+
+// 세션 내 메모리 캐시 — fingerprint 동일하면 API 재호출 없이 기존 ID 재사용
+const shareIdCache = new Map<string, string>(); // fingerprint → shareId
 
 function bragText(d: ReceiptData) {
   return `화장실에서 ${fmtWon(heroAmount(d))} 벌었다ㅋㅋ #변기위의 월루`;
@@ -55,10 +60,11 @@ export default function PayslipModal() {
   async function share() {
     if (!data) return;
     const encoded = encodeReceiptForShare(data);
+    const fp = stableFingerprint(data);
 
     // 캐시 히트면 API 재호출 없이 바로 사용
-    let shareId = shareIdCache.get(encoded) ?? encoded;
-    if (!shareIdCache.has(encoded)) {
+    let shareId = shareIdCache.get(fp) ?? encoded;
+    if (!shareIdCache.has(fp)) {
       try {
         const res = await fetch("/api/receipt", {
           method: "POST",
@@ -69,7 +75,7 @@ export default function PayslipModal() {
           const json = await res.json();
           if (json.id) {
             shareId = json.id;
-            shareIdCache.set(encoded, json.id);
+            shareIdCache.set(fp, json.id);
           }
         }
       } catch {
