@@ -818,17 +818,26 @@ body {
   overflow: hidden;
   line-height: 1.2;
   opacity: 0;
-  transition: opacity 0.6s ease;
 }
-.deckcol__total--reveal {
+/* 이미 등장한 상태(재진입/영속) — 애니메이션 없이 즉시 표시 */
+.deckcol__total--visible {
   opacity: 1;
 }
-@keyframes revealTotal {
-  from {
+/* 최초 등장 시 1회성 팝업 애니메이션 */
+.deckcol__total--pop {
+  animation: totalPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes totalPop {
+  0% {
     opacity: 0;
+    transform: translateY(6px) scale(0.8);
   }
-  to {
+  60% {
+    transform: translateY(0) scale(1.12);
+  }
+  100% {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -908,7 +917,7 @@ body {
 .readout__rate {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(233, 244, 238, 0.74);
+  color: rgba(233, 244, 238, 0.82);
   white-space: nowrap;
 }
 
