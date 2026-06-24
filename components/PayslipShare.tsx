@@ -85,9 +85,9 @@ const wrap: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  justifyContent: "center",
-  gap: 18,
-  padding: "32px 16px",
+  justifyContent: "flex-start",
+  gap: 16,
+  padding: "24px 16px",
   background: "radial-gradient(120% 120% at 50% 0%, #1b2a22 0%, #0d120f 60%)",
 };
 const cardWrap: React.CSSProperties = {

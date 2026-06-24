@@ -10,7 +10,7 @@ export type PayLine = [number, number];
 
 export interface ReceiptData {
   n: string; // 닉네임(성명)
-  h: PayLine[]; // 지급내역(최근 7건) [회차, 금액]
+  h: PayLine[]; // 지급내역(최근 10건) [회차, 금액]
   t: number; // 누적 실수령액(내가 번 돈 총합)
   g: number; // 오늘 다같이 번 돈(글로벌)
   p: number; // 발급 시점 접속자(볼일 중 인원)
@@ -33,7 +33,7 @@ function sanitizeHistory(raw: unknown): PayLine[] {
       return [round, amount];
     })
     .filter((x): x is PayLine => x !== null)
-    .slice(-7);
+    .slice(-10);
 }
 
 function toBase64Url(bin: string): string {
