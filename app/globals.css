@@ -1717,6 +1717,14 @@ body {
 }
 .receipt-btn--share {
   flex: 1.6;
+  background: #3a2600;
+  color: #ffc726;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.receipt-btn--share:active {
+  background: linear-gradient(180deg, #ffe98a, #ffc726);
+  color: #3a2600;
+  transform: translateY(1px);
 }
 .receipt-btn--save {
   background: rgba(20, 30, 24, 0.95);
