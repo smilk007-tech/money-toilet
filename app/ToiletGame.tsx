@@ -196,7 +196,7 @@ export default function ToiletGame() {
               maxLength={40}
             />
           </div>
-          <button type="submit">전송</button>
+          <button type="submit" className="chat__send">✈️</button>
         </form>
       </div>
 
