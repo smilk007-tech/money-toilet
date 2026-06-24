@@ -236,9 +236,10 @@ export default function ToiletGame() {
 
       {/* 설정 팝오버 */}
       <div className="settings-panel" id="settingsPanel" hidden>
-        <div className="settings__section">
-          <div className="settings__row settings__nick">
-            <span>닉네임</span>
+        {/* 프로필 */}
+        <div className="settings__group">
+          <div className="settings__group-title">프로필</div>
+          <div className="settings__nick-row">
             <button
               className="nick-random"
               id="nickRandomBtn"
@@ -247,44 +248,65 @@ export default function ToiletGame() {
             >
               <span id="nickRandomIcon">🎲</span>
             </button>
-            <input type="text" id="nickInput" maxLength={10} />
-            <label
-              className="settings__pin"
-              title="체크하면 닉네임을 기기에 저장합니다"
-            >
-              <input type="checkbox" id="nickPinChk" />
-              고정
-            </label>
+            <input
+              type="text"
+              id="nickInput"
+              maxLength={10}
+              placeholder="닉네임"
+            />
           </div>
-          <label className="settings__row">
+          <label
+            className="settings__row settings__row--toggle"
+            title="켜면 닉네임을 이 기기에 저장합니다"
+          >
+            <span>닉네임 기기에 저장</span>
+            <input type="checkbox" id="nickPinChk" className="sw" />
+          </label>
+        </div>
+
+        {/* 표시 */}
+        <div className="settings__group">
+          <div className="settings__group-title">표시</div>
+          <label className="settings__row settings__row--toggle">
             <span>타이머 표시</span>
             <input type="checkbox" id="timerToggle" className="sw" />
           </label>
+        </div>
+
+        {/* 내 기록 */}
+        <div className="settings__group">
+          <div className="settings__group-title">내 기록</div>
           <div className="settings__actions">
             <button
-              className="settings__reset"
-              id="resetTotalBtn"
-              type="button"
-            >
-              내 기록 초기화
-            </button>
-            <button
-              className="settings__share"
+              className="settings__btn settings__btn--share"
               id="receiptBtnSettings"
               type="button"
             >
-              내가 번 돈 자랑하기 🧾
+              🧾 돈 자랑하기
+            </button>
+            <button
+              className="settings__btn settings__btn--reset"
+              id="resetTotalBtn"
+              type="button"
+            >
+              기록 초기화
             </button>
           </div>
         </div>
 
         <div className="settings__divider"></div>
 
-        <div className="settings__section settings__links">
+        <div className="settings__links">
           <button className="settings__link" type="button" data-action="donate">
+            <span className="settings__link-ico" aria-hidden>
+              💜
+            </span>
             개발자 후원하기
           </button>
           <button className="settings__link" type="button" data-action="ad">
+            <span className="settings__link-ico" aria-hidden>
+              📢
+            </span>
             광고문의
           </button>
         </div>
