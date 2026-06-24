@@ -47,13 +47,11 @@ function TabularText({
 export default function ReceiptCard({
   d,
   siteUrlHref,
-  siteUrlLabel,
   footerMode = "interactive",
   maxHeight,
 }: {
   d: ReceiptData;
   siteUrlHref?: string;
-  siteUrlLabel?: string;
   footerMode?: "interactive" | "snapshot";
   maxHeight?: string;
 }) {
@@ -218,7 +216,7 @@ export default function ReceiptCard({
                 color: SUB,
               }}
             >
-              종이가 모자라 생략...😢
+              (종이가 모자라 생략...😢)
             </span>
           </div>
         )}
@@ -265,25 +263,20 @@ export default function ReceiptCard({
             textAlign: "center",
           }}
         >
-          {siteUrlLabel ?? siteUrlHref ?? "money-toilet"}
+          {siteUrlHref ?? "money-toilet"}
         </div>
       ) : (
-        <a
-          href={siteUrlHref}
-          target="_blank"
-          rel="noopener noreferrer"
+        <span
           style={{
             ...center,
             fontSize: 12,
             fontWeight: 600,
             marginTop: 8,
             color: SUB,
-            textDecoration: "none",
-            cursor: "pointer",
           }}
         >
           돈버는 화장실 · money-toilet
-        </a>
+        </span>
       )}
     </div>
   );

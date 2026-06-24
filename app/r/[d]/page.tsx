@@ -9,8 +9,6 @@ const siteUrl =
   (process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000");
-const siteUrlLabel = siteUrl.replace(/^https?:\/\//, "");
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { d } = await params;
   const data = decodeReceipt(d);
@@ -72,7 +70,6 @@ export default async function ReceiptSharePage({ params }: Props) {
     <PayslipShare
       data={data}
       siteUrlHref={siteUrl}
-      siteUrlLabel={siteUrlLabel}
     />
   );
 }

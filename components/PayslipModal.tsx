@@ -28,7 +28,6 @@ export default function PayslipModal() {
   const exportCardRef = useRef<HTMLDivElement>(null);
   const siteUrlHref =
     typeof window !== "undefined" ? window.location.origin : undefined;
-  const siteUrlLabel = siteUrlHref?.replace(/^https?:\/\//, "");
 
   const close = useCallback(() => setData(null), []);
 
@@ -115,7 +114,6 @@ export default function PayslipModal() {
             <ReceiptCard
               d={data}
               siteUrlHref={siteUrlHref}
-              siteUrlLabel={siteUrlLabel}
               footerMode="interactive"
               maxHeight="calc(100dvh - 96px)"
             />
@@ -126,7 +124,6 @@ export default function PayslipModal() {
                 <ReceiptCard
                   d={data}
                   siteUrlHref={siteUrlHref}
-                  siteUrlLabel={siteUrlLabel}
                   footerMode="snapshot"
                 />
               </div>

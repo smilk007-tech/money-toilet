@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FakeToiletSocket } from "@/lib/fakeSocket";
 import { fmtWon, type ReceiptData } from "@/lib/receiptShare";
 import ReceiptCard from "@/components/ReceiptCard";
@@ -15,12 +15,11 @@ const AVG_RATE_PER_PERSON = 3_000_000 / (22 * 8 * 3600); // ≈ 4.73원/초/인
 export default function PayslipShare({
   data,
   siteUrlHref,
-  siteUrlLabel,
 }: {
   data: ReceiptData;
   siteUrlHref: string;
-  siteUrlLabel: string;
 }) {
+  const router = useRouter();
   const [count, setCount] = useState(data.p || 0);
   const [liveWon, setLiveWon] = useState(data.g || 0);
   const countRef = useRef(count);
@@ -55,14 +54,12 @@ export default function PayslipShare({
   }, []);
 
   return (
-    <main style={wrap}>
+    <main
+      style={{ ...wrap, cursor: "pointer" }}
+      onClick={() => router.push("/")}
+    >
       <div style={cardWrap}>
-        <ReceiptCard
-          d={data}
-          siteUrlHref={siteUrlHref}
-          siteUrlLabel={siteUrlLabel}
-          maxHeight="min(72dvh, 600px)"
-        />
+        <ReceiptCard d={data} siteUrlHref={siteUrlHref} />
       </div>
 
       {/* 실시간 라이브 배너 */}
@@ -78,10 +75,7 @@ export default function PayslipShare({
         </div>
       </div>
 
-      <Link href="/" style={cta}>
-        🚽 함께 돈 벌러 가기
-      </Link>
-      <p style={note}>내 월급은 공개되지 않습니다</p>
+      <div style={cta}>🚽 함께 돈 벌러 가기</div>
     </main>
   );
 }
@@ -146,18 +140,12 @@ const cta: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 8,
-  background: "linear-gradient(180deg,#2fd39a,#16967a)",
-  color: "#03241c",
+  background: "linear-gradient(180deg,#ffe98a,#ffc726)",
+  color: "#3a2600",
   fontWeight: 900,
   fontSize: 17,
   padding: "14px 24px",
   borderRadius: 14,
   textDecoration: "none",
   boxShadow: "0 6px 18px rgba(0,0,0,.45)",
-};
-const note: React.CSSProperties = {
-  color: "#9fdcc9",
-  fontSize: 12,
-  fontWeight: 600,
-  textAlign: "center",
 };
