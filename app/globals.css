@@ -1756,10 +1756,8 @@ body {
   outline: none;
   -webkit-tap-highlight-color: transparent;
 }
-.receipt-btn:active,
 .receipt-btn:focus,
 .receipt-btn:focus-visible {
-  background: inherit;
   filter: none;
   outline: none;
 }
