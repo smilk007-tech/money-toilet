@@ -71,10 +71,5 @@ export default async function ReceiptSharePage({ params }: Props) {
     );
   }
 
-  return (
-    <PayslipShare
-      data={data}
-      siteUrlHref={siteUrl}
-    />
-  );
+  return <PayslipShare data={data} siteUrlHref={siteUrl} />;
 }

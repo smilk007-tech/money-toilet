@@ -14,6 +14,9 @@ import { shareCtaLook } from "@/lib/shareCta";
 const OPEN_EVENT = "ddong:payslip-open";
 const TOAST_EVENT = "ddong:toast";
 
+// 세션 내 메모리 캐시 — 같은 인코딩이면 API 재호출 없이 기존 ID 재사용
+const shareIdCache = new Map<string, string>();
+
 function bragText(d: ReceiptData) {
   return `화장실에서 ${fmtWon(heroAmount(d))} 벌었다ㅋㅋ #변기위의 월루`;
 }
@@ -53,20 +56,25 @@ export default function PayslipModal() {
     if (!data) return;
     const encoded = encodeReceiptForShare(data);
 
-    // KV 저장 후 짧은 ID 획득, 실패 시 base64url 폴백
-    let shareId = encoded;
-    try {
-      const res = await fetch("/api/receipt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ d: encoded }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.id) shareId = json.id;
+    // 캐시 히트면 API 재호출 없이 바로 사용
+    let shareId = shareIdCache.get(encoded) ?? encoded;
+    if (!shareIdCache.has(encoded)) {
+      try {
+        const res = await fetch("/api/receipt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ d: encoded }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.id) {
+            shareId = json.id;
+            shareIdCache.set(encoded, json.id);
+          }
+        }
+      } catch {
+        // 네트워크 오류 등 → 긴 URL 폴백
       }
-    } catch {
-      // 네트워크 오류 등 → 긴 URL 폴백
     }
 
     const url = `${location.origin}/r/${shareId}`;

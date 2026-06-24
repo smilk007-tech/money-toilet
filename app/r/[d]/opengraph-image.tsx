@@ -54,17 +54,99 @@ export default async function Image({
   params: Promise<{ d: string }>;
 }) {
   const { d } = await params;
-  const data =
-    (SHORT_ID_RE.test(d) ? await loadReceipt(d) : decodeReceipt(d)) ?? FALLBACK;
+  const resolved = SHORT_ID_RE.test(d)
+    ? await loadReceipt(d)
+    : decodeReceipt(d);
+  const expired = resolved === null && SHORT_ID_RE.test(d);
+  const data = resolved ?? FALLBACK;
   const hero = heroAmount(data);
+
+  // 만료된 링크 전용 이미지
+  if (expired) {
+    const expiredGlyphs =
+      "돈버는화장실급여명세서만료된링크입니다너도와서벌어봐money-toilet🚽💸";
+    const [w400exp, w800exp] = await Promise.all([
+      loadKoreanFont(400, expiredGlyphs),
+      loadKoreanFont(800, expiredGlyphs),
+    ]);
+    const expFonts = [
+      w400exp && {
+        name: "Noto Sans KR",
+        data: w400exp,
+        weight: 400 as const,
+        style: "normal" as const,
+      },
+      w800exp && {
+        name: "Noto Sans KR",
+        data: w800exp,
+        weight: 800 as const,
+        style: "normal" as const,
+      },
+    ].filter(Boolean) as {
+      name: string;
+      data: ArrayBuffer;
+      weight: 400 | 800;
+      style: "normal";
+    }[];
+
+    return new ImageResponse(
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#0d120f",
+          fontFamily: '"Noto Sans KR"',
+          gap: 0,
+        }}
+      >
+        <div style={{ display: "flex", fontSize: 96 }}>🚽</div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 48,
+            fontWeight: 800,
+            color: "#7fe6c2",
+            marginTop: 24,
+          }}
+        >
+          만료된 급여명세서예요
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 28,
+            color: "#9fdcc9",
+            marginTop: 16,
+          }}
+        >
+          나도 화장실에서 돈 벌어볼까? 💸
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 22,
+            color: "#4a7c65",
+            marginTop: 12,
+          }}
+        >
+          money-toilet
+        </div>
+      </div>,
+      { ...size, fonts: expFonts, emoji: "twemoji" },
+    );
+  }
 
   // 이미지에 등장하는 모든 글자를 모아 서브셋 폰트를 받는다(작고 빠름, 한글 깨짐 방지).
   const glyphs =
-    "돈버는화장실급여명세서발급일성명지급항목금액회차물내림수당실수령액원이전종이모자라생략paidtoilet" +
-    "0123456789,. :·()⋮" +
+    "돈버는화장실급여명세서발급일성명지급항목금액회차물내림수당실수령액원이전종이모자라생략벌었어요총회물내림paidtoilet" +
+    "0123456789,. :·()⋮·💸👉" +
     data.n +
     resolveReceiptSlogan(data.sl) +
-    data.h.map(([r, a]) => `${r}${a}`).join("") +
+    data.h.map((a) => `${a}`).join("") +
     fmtWon(hero) +
     `총${data.f}회`;
 
@@ -98,74 +180,102 @@ export default async function Image({
         width: "100%",
         height: "100%",
         display: "flex",
-        background: "#0d120f",
+        background: "#0b1510",
         fontFamily: '"Noto Sans KR"',
       }}
     >
-      {/* 왼쪽: 자랑 카피 */}
+      {/* 왼쪽 녹색 액센트 바 */}
+      <div
+        style={{
+          display: "flex",
+          width: 8,
+          background: "linear-gradient(180deg,#36e0a0 0%,#1a7a57 100%)",
+        }}
+      />
+
+      {/* 왼쪽: 카피 */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
-          width: 600,
-          padding: "0 56px",
-          color: "#eafff5",
+          justifyContent: "space-between",
+          width: 558,
+          padding: "48px 44px",
         }}
       >
+        {/* 브랜드 */}
         <div
           style={{
             display: "flex",
-            fontSize: 27,
+            fontSize: 20,
             fontWeight: 800,
-            color: "#7fe6c2",
+            color: "#36e0a0",
           }}
         >
-          돈버는 화장실 · 급여명세서
+          🚽 돈버는 화장실 · 급여명세서
         </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 34,
-            marginTop: 24,
-            color: "#cfeee2",
-          }}
-        >
-          {data.n}님 총 {data.f}회 물내림 실수령액
+
+        {/* 메인 금액 */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 28,
+              fontWeight: 500,
+              color: "#9fdcc9",
+            }}
+          >
+            {data.n}님이 화장실에서
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 82,
+              fontWeight: 800,
+              color: "#ffd84d",
+              lineHeight: 1.05,
+              marginTop: 6,
+            }}
+          >
+            {fmtWon(hero)}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 25,
+              fontWeight: 600,
+              color: "#cfeee2",
+              marginTop: 10,
+            }}
+          >
+            벌었어요 · 총 {data.f}회 물내림
+          </div>
         </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 88,
-            fontWeight: 800,
-            color: "#ffd84d",
-            marginTop: 2,
-          }}
-        >
-          {fmtWon(hero)}
-        </div>
-        <div style={{ display: "flex", fontSize: 34, color: "#cfeee2" }}>
-          총 {data.f}회 물내림 적립 ㅋㅋ
-        </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 22,
-            color: "#9fdcc9",
-            marginTop: 32,
-          }}
-        >
-          근무시간에 싸서 번 돈
-        </div>
-        <div
-          style={{
-            display: "flex",
-            fontSize: 22,
-            color: "#9fdcc9",
-            marginTop: 6,
-          }}
-        >
-          너도 와서 벌어봐 👉 money-toilet
+
+        {/* 하단: 명언 + CTA */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 17,
+              color: "#5aab87",
+              borderLeft: "3px solid #2a5c42",
+              paddingLeft: 12,
+            }}
+          >
+            &quot;{resolveReceiptSlogan(data.sl)}&quot;
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 19,
+              fontWeight: 700,
+              color: "#36e0a0",
+              marginTop: 14,
+            }}
+          >
+            너도 와서 벌어봐 👉
+          </div>
         </div>
       </div>
 
@@ -175,11 +285,18 @@ export default async function Image({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 600,
-          padding: "24px 56px 24px 0",
+          flex: 1,
+          padding: "32px 44px 32px 8px",
         }}
       >
-        <div style={{ display: "flex", width: 470 }}>
+        <div
+          style={{
+            display: "flex",
+            width: 432,
+            borderRadius: 20,
+            boxShadow: "0 24px 64px rgba(0,0,0,0.65)",
+          }}
+        >
           <ReceiptCard
             d={data}
             footerMode="snapshot"

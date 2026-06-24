@@ -11,18 +11,15 @@ import { RECEIPT_SLOGANS } from "@/lib/constants";
 export const RECEIPT_HISTORY_MAX_MODAL = 10;
 export const RECEIPT_HISTORY_MAX_SHARE = 6;
 
-// 지급내역 한 줄: [회차, 금액]
-export type PayLine = [number, number];
-
 export interface ReceiptData {
-  n: string; // 닉네임(성명)
-  h: PayLine[]; // 지급내역 [회차, 금액] — 모달 최대 10건, 공유 URL은 6건
-  t: number; // 누적 실수령액(내가 번 돈 총합)
-  g: number; // 오늘 다같이 번 돈(글로벌)
-  p: number; // 발급 시점 접속자(볼일 중 인원)
-  f: number; // 총 물내림 횟수
-  ts: number; // 발급 시각(epoch ms, 벽시계 — 누적시간 아님)
-  sl: number; // 명언 인덱스 (RECEIPT_SLOGANS)
+  n: string;      // 닉네임(성명)
+  h: number[];    // 지급내역 금액 배열 (오래된 순) — 회차는 f에서 역산
+  t: number;      // 누적 실수령액(내가 번 돈 총합)
+  g: number;      // 오늘 다같이 번 돈(글로벌)
+  p: number;      // 발급 시점 접속자(볼일 중 인원)
+  f: number;      // 총 물내림 횟수
+  ts: number;     // 발급 시각(epoch ms, 벽시계 — 누적시간 아님)
+  sl: number;     // 명언 인덱스 (RECEIPT_SLOGANS)
 }
 
 function randomSloganIndex(): number {
@@ -66,17 +63,20 @@ export function resolveReceiptSlogan(sl: number): string {
 const clampNum = (x: unknown) =>
   Math.max(0, Math.min(Math.floor(Number(x) || 0), 1e15));
 
-function sanitizeHistory(raw: unknown): PayLine[] {
+function sanitizeHistory(raw: unknown): number[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((item): PayLine | null => {
-      if (!Array.isArray(item)) return null;
-      const round = clampNum(item[0]);
-      const amount = clampNum(item[1]);
-      if (round <= 0) return null;
-      return [round, amount];
+    .flatMap((item): number[] => {
+      // 신규: 숫자 하나 (금액만)
+      if (typeof item === "number" && isFinite(item)) {
+        return [clampNum(item)];
+      }
+      // 레거시: [회차, 금액] 쌍 → 금액만 추출
+      if (Array.isArray(item) && item.length >= 2) {
+        return [clampNum(item[1])];
+      }
+      return [];
     })
-    .filter((x): x is PayLine => x !== null)
     .slice(-RECEIPT_HISTORY_MAX_MODAL);
 }
 
@@ -139,13 +139,15 @@ export function hasOmittedLines(
   maxVisible = RECEIPT_HISTORY_MAX_MODAL,
 ): boolean {
   if (d.h.length === 0) return false;
-  if (d.h[0][0] > 1 || d.f > d.h.length) return true;
+  if (d.f > d.h.length) return true;
   return d.h.length > maxVisible;
 }
 
+// 화면 표시용: 최신순 [회차, 금액] 쌍으로 변환 (회차는 f에서 역산)
 export function visibleHistoryRows(
   d: ReceiptData,
   maxVisible = RECEIPT_HISTORY_MAX_MODAL,
-): PayLine[] {
-  return [...d.h].reverse().slice(0, maxVisible);
+): [number, number][] {
+  const reversed = [...d.h].reverse().slice(0, maxVisible);
+  return reversed.map((amount, i) => [Math.max(1, d.f - i), amount]);
 }

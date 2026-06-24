@@ -5,7 +5,7 @@
    =================================================================== */
 
 import { Redis } from "@upstash/redis";
-import type { PayLine, ReceiptData } from "@/lib/receiptShare";
+import type { ReceiptData } from "@/lib/receiptShare";
 
 const TTL_SECONDS = 60 * 60 * 24 * 30; // 30일
 
@@ -35,15 +35,15 @@ function genId(): string {
 function normalizeLoaded(o: unknown): ReceiptData | null {
   if (!o || typeof o !== "object") return null;
   const r = o as Record<string, unknown>;
-  const h: PayLine[] = Array.isArray(r.h)
-    ? (r.h as unknown[])
-        .filter(
-          (x): x is [unknown, unknown] => Array.isArray(x) && x.length >= 2,
-        )
-        .map(([a, b]) => [
-          Math.max(0, Math.floor(Number(a) || 0)),
-          Math.max(0, Math.floor(Number(b) || 0)),
-        ])
+  const h: number[] = Array.isArray(r.h)
+    ? (r.h as unknown[]).flatMap((item): number[] => {
+        if (typeof item === "number" && isFinite(item))
+          return [Math.max(0, Math.floor(item))];
+        // 레거시 [회차, 금액] 쌍
+        if (Array.isArray(item) && item.length >= 2)
+          return [Math.max(0, Math.floor(Number(item[1]) || 0))];
+        return [];
+      })
     : [];
   return {
     n: String(r.n ?? "익명의 볼일러").slice(0, 16),
