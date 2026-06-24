@@ -144,11 +144,6 @@ export default function ToiletGame() {
         <div className="bubbles bubbles--right" id="bubblesRight"></div>
       </div>
 
-      {/* ===== 전경: 내 무릎(랩) ===== */}
-      <div className="foreground">
-        <img className="skin-knees" src="/skin/knees.svg" alt="" aria-hidden />
-      </div>
-
       {/* ===== 하단 스택 ===== */}
       <div className="bottom">
         {/* 1row: [시계/내 월급] | [내 채팅/적립] | [총/물내리기] */}

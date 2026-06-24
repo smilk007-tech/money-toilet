@@ -8,11 +8,11 @@
       <stop offset="1" stop-color="#686c6f"/>
     </linearGradient>
     <filter id="shadow" x="-50%" y="-40%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="3"/>
+      <feGaussianBlur stdDeviation="2"/>
     </filter>
   </defs>
 
-  <path d="M10 34 61 12 87 28 84 105 25 127 9 84Z" fill="#1e2022" opacity=".27" filter="url(#shadow)"/>
+  <path d="M10 34 61 12 87 28 84 105 25 127 9 84Z" fill="#1e2022" opacity=".12" filter="url(#shadow)"/>
   <path d="M8 23 56 5Q79 5 89 27L89 61 53 83 8 68Z" fill="url(#metal)"/>
   <circle cx="46" cy="61" r="27" fill="#efeeeb"/>
   <circle cx="46" cy="61" r="9" fill="#76797b"/>
