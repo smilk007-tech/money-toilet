@@ -9,6 +9,7 @@ import {
   type ReceiptData,
 } from "@/lib/receiptShare";
 import ReceiptCard from "@/components/ReceiptCard";
+import { shareCtaLook } from "@/lib/shareCta";
 
 const OPEN_EVENT = "ddong:payslip-open";
 const TOAST_EVENT = "ddong:toast";
@@ -140,6 +141,7 @@ export default function PayslipModal() {
             <button
               className="receipt-btn receipt-btn--share"
               type="button"
+              style={shareCtaLook}
               onClick={share}
             >
               🔗 자랑하기

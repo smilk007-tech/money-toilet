@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FakeToiletSocket } from "@/lib/fakeSocket";
 import { fmtWon, type ReceiptData } from "@/lib/receiptShare";
+import { shareCtaLook } from "@/lib/shareCta";
 import ReceiptCard from "@/components/ReceiptCard";
 
 /* 공유받은 사람이 링크 타고 들어왔을 때 보는 화면.
@@ -140,12 +141,10 @@ const cta: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 8,
-  background: "linear-gradient(180deg,#ffe98a,#ffc726)",
-  color: "#3a2600",
+  ...shareCtaLook,
   fontWeight: 900,
   fontSize: 17,
   padding: "14px 24px",
   borderRadius: 14,
   textDecoration: "none",
-  boxShadow: "0 6px 18px rgba(0,0,0,.45)",
 };
