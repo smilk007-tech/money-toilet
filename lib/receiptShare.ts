@@ -5,6 +5,8 @@
      서버(공유 페이지 / OG 이미지)에서 decodeReceipt 로 복원.
    =================================================================== */
 
+import { RECEIPT_SLOGANS } from "@/lib/constants";
+
 // 지급내역 표시 상한 — 모달/이미지 저장 vs 공유 랜딩
 export const RECEIPT_HISTORY_MAX_MODAL = 10;
 export const RECEIPT_HISTORY_MAX_SHARE = 6;
@@ -20,7 +22,45 @@ export interface ReceiptData {
   p: number; // 발급 시점 접속자(볼일 중 인원)
   f: number; // 총 물내림 횟수
   ts: number; // 발급 시각(epoch ms, 벽시계 — 누적시간 아님)
-  sl: string; // 명언(슬로건)
+  sl: number; // 명언 인덱스 (RECEIPT_SLOGANS)
+}
+
+function randomSloganIndex(): number {
+  return Math.floor(Math.random() * RECEIPT_SLOGANS.length);
+}
+
+/** URL/레거시 페이로드 → 유효한 명언 인덱스 (범위 밖이면 랜덤) */
+function normalizeSloganIndex(raw: unknown): number {
+  const len = RECEIPT_SLOGANS.length;
+  if (len === 0) return 0;
+
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    const idx = Math.floor(raw);
+    if (idx >= 0 && idx < len) return idx;
+    return randomSloganIndex();
+  }
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (/^\d+$/.test(trimmed)) {
+      const idx = parseInt(trimmed, 10);
+      if (idx >= 0 && idx < len) return idx;
+      return randomSloganIndex();
+    }
+    const found = RECEIPT_SLOGANS.indexOf(trimmed);
+    if (found >= 0) return found;
+    return randomSloganIndex();
+  }
+
+  return randomSloganIndex();
+}
+
+export function resolveReceiptSlogan(sl: number): string {
+  const idx = Math.floor(Number(sl) || 0);
+  if (idx >= 0 && idx < RECEIPT_SLOGANS.length) {
+    return RECEIPT_SLOGANS[idx];
+  }
+  return RECEIPT_SLOGANS[randomSloganIndex()];
 }
 
 const clampNum = (x: unknown) =>
@@ -77,7 +117,7 @@ export function decodeReceipt(s: string): ReceiptData | null {
       p: clampNum(o.p),
       f: clampNum(o.f),
       ts: Number(o.ts) || Date.now(),
-      sl: String(o.sl ?? "").slice(0, 40),
+      sl: normalizeSloganIndex(o.sl),
     };
   } catch {
     return null;

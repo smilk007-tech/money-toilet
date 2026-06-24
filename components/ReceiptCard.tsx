@@ -3,6 +3,7 @@ import {
   heroAmount,
   hasOmittedLines,
   RECEIPT_HISTORY_MAX_MODAL,
+  resolveReceiptSlogan,
   visibleHistoryRows,
   type ReceiptData,
 } from "@/lib/receiptShare";
@@ -252,7 +253,7 @@ export default function ReceiptCard({
           textAlign: "center",
         }}
       >
-        &quot;{d.sl}&quot;
+        &quot;{resolveReceiptSlogan(d.sl)}&quot;
       </div>
       {footerMode === "snapshot" ? (
         <div

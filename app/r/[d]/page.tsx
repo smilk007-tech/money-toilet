@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { decodeReceipt, fmtWon, heroAmount } from "@/lib/receiptShare";
+import { SHORT_ID_RE, loadReceipt } from "@/lib/receiptStore";
 import PayslipShare from "@/components/PayslipShare";
 
 type Props = { params: Promise<{ d: string }> };
@@ -9,9 +10,13 @@ const siteUrl =
   (process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000");
+async function resolveData(d: string) {
+  return SHORT_ID_RE.test(d) ? await loadReceipt(d) : decodeReceipt(d);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { d } = await params;
-  const data = decodeReceipt(d);
+  const data = await resolveData(d);
   const nick = data?.n || "익명의 볼일러";
   const hero = data ? heroAmount(data) : 0;
   const title = `${nick}님이 화장실에서 ${fmtWon(hero)} 벌었어요💰`;
@@ -51,7 +56,7 @@ const cta: React.CSSProperties = {
 
 export default async function ReceiptSharePage({ params }: Props) {
   const { d } = await params;
-  const data = decodeReceipt(d);
+  const data = await resolveData(d);
 
   if (!data) {
     return (

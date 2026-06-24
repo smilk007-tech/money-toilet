@@ -4,8 +4,10 @@ import {
   fmtWon,
   heroAmount,
   RECEIPT_HISTORY_MAX_SHARE,
+  resolveReceiptSlogan,
   type ReceiptData,
 } from "@/lib/receiptShare";
+import { SHORT_ID_RE, loadReceipt } from "@/lib/receiptStore";
 import ReceiptCard from "@/components/ReceiptCard";
 
 export const size = { width: 1200, height: 630 };
@@ -43,7 +45,7 @@ const FALLBACK: ReceiptData = {
   p: 0,
   f: 0,
   ts: Date.now(),
-  sl: "회사에서 싸야 이득 💸",
+  sl: 0,
 };
 
 export default async function Image({
@@ -52,7 +54,8 @@ export default async function Image({
   params: Promise<{ d: string }>;
 }) {
   const { d } = await params;
-  const data = decodeReceipt(d) ?? FALLBACK;
+  const data =
+    (SHORT_ID_RE.test(d) ? await loadReceipt(d) : decodeReceipt(d)) ?? FALLBACK;
   const hero = heroAmount(data);
 
   // 이미지에 등장하는 모든 글자를 모아 서브셋 폰트를 받는다(작고 빠름, 한글 깨짐 방지).
@@ -60,7 +63,7 @@ export default async function Image({
     "돈버는화장실급여명세서발급일성명지급항목금액회차물내림수당실수령액원이전종이모자라생략paidtoilet" +
     "0123456789,. :·()⋮" +
     data.n +
-    data.sl +
+    resolveReceiptSlogan(data.sl) +
     data.h.map(([r, a]) => `${r}${a}`).join("") +
     fmtWon(hero) +
     `총${data.f}회`;

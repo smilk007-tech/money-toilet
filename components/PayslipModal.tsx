@@ -51,15 +51,29 @@ export default function PayslipModal() {
 
   async function share() {
     if (!data) return;
-    const url = `${location.origin}/r/${encodeReceiptForShare(data)}`;
+    const encoded = encodeReceiptForShare(data);
+
+    // KV 저장 후 짧은 ID 획득, 실패 시 base64url 폴백
+    let shareId = encoded;
+    try {
+      const res = await fetch("/api/receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ d: encoded }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.id) shareId = json.id;
+      }
+    } catch {
+      // 네트워크 오류 등 → 긴 URL 폴백
+    }
+
+    const url = `${location.origin}/r/${shareId}`;
     const text = bragText(data);
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: "화장실 급여명세서",
-          text,
-          url,
-        });
+        await navigator.share({ title: "화장실 급여명세서", text, url });
         return;
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") return;
