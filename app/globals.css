@@ -191,7 +191,7 @@ body {
 .hud__cap {
   font-size: 9px;
   font-weight: 600;
-  color: rgba(233, 244, 238, 0.55);
+  color: rgba(233, 244, 238, 0.82);
   letter-spacing: -0.02em;
 }
 .hud__val {
@@ -853,7 +853,7 @@ body {
 .ctrl-salary__cap {
   font-size: 9.5px;
   font-weight: 600;
-  color: rgba(233, 244, 238, 0.5);
+  color: rgba(233, 244, 238, 0.82);
 }
 .ctrl-salary b {
   font-size: 13px;
@@ -1036,11 +1036,11 @@ body {
 }
 .chat button {
   flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.22);
-  color: #f4f8f5;
+  background: #d4d8d4;
+  color: #1a1f1b;
   font-weight: 800;
   font-size: 13.5px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 11px;
   padding: 0 16px;
   cursor: pointer;
