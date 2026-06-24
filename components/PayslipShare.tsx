@@ -88,7 +88,7 @@ const wrap: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "flex-start",
   gap: 16,
-  padding: "24px 16px",
+  padding: "16px",
   background: "radial-gradient(120% 120% at 50% 0%, #1b2a22 0%, #0d120f 60%)",
 };
 const cardWrap: React.CSSProperties = {
@@ -102,9 +102,9 @@ const liveBox: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 4,
-  padding: "14px 16px",
-  borderRadius: 14,
+  gap: 2,
+  padding: "10px 14px",
+  borderRadius: 12,
   background: "rgba(16,24,18,0.7)",
   border: "1px solid rgba(125,255,176,0.28)",
 };
@@ -127,6 +127,7 @@ const liveAmt: React.CSSProperties = {
   color: "#ffd84d",
   fontSize: 30,
   fontWeight: 900,
+  lineHeight: 1,
   fontVariantNumeric: "tabular-nums",
   textShadow: "0 0 16px rgba(255,216,77,0.35)",
 };
@@ -135,7 +136,7 @@ const liveSub: React.CSSProperties = {
   fontSize: 12.5,
   fontWeight: 600,
   textAlign: "center",
-  lineHeight: 1.45,
+  lineHeight: 1.35,
 };
 const cta: React.CSSProperties = {
   display: "inline-flex",
