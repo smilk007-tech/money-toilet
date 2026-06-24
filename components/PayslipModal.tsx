@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import {
-  encodeReceipt,
+  encodeReceiptForShare,
   fmtWon,
   heroAmount,
   type ReceiptData,
@@ -51,7 +51,7 @@ export default function PayslipModal() {
 
   async function share() {
     if (!data) return;
-    const url = `${location.origin}/r/${encodeReceipt(data)}`;
+    const url = `${location.origin}/r/${encodeReceiptForShare(data)}`;
     const text = bragText(data);
     if (navigator.share) {
       try {

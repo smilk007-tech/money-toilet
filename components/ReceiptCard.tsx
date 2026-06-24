@@ -2,6 +2,8 @@ import {
   fmtWon,
   heroAmount,
   hasOmittedLines,
+  RECEIPT_HISTORY_MAX_MODAL,
+  visibleHistoryRows,
   type ReceiptData,
 } from "@/lib/receiptShare";
 
@@ -49,17 +51,19 @@ export default function ReceiptCard({
   siteUrlHref,
   footerMode = "interactive",
   maxHeight,
+  maxHistoryRows = RECEIPT_HISTORY_MAX_MODAL,
 }: {
   d: ReceiptData;
   siteUrlHref?: string;
   footerMode?: "interactive" | "snapshot";
   maxHeight?: string;
+  maxHistoryRows?: number;
 }) {
   const hero = heroAmount(d);
   const dt = new Date(d.ts || Date.now());
   const z = (n: number) => String(n).padStart(2, "0");
   const issued = `${dt.getFullYear()}.${z(dt.getMonth() + 1)}.${z(dt.getDate())} ${z(dt.getHours())}:${z(dt.getMinutes())}`;
-  const omitted = hasOmittedLines(d);
+  const omitted = hasOmittedLines(d, maxHistoryRows);
 
   const INK = "#20271f";
   const SUB = "#717a6f";
@@ -89,7 +93,7 @@ export default function ReceiptCard({
     width: "100%",
   } as const;
   const fmtRound = (n: number) => `${n.toLocaleString("ko-KR")}회차`;
-  const rows = [...d.h].reverse(); // 최신(마지막 회차)이 맨 위로 쌓이도록 역순 표시
+  const rows = visibleHistoryRows(d, maxHistoryRows);
 
   return (
     <div

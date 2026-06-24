@@ -3,6 +3,7 @@ import {
   decodeReceipt,
   fmtWon,
   heroAmount,
+  RECEIPT_HISTORY_MAX_SHARE,
   type ReceiptData,
 } from "@/lib/receiptShare";
 import ReceiptCard from "@/components/ReceiptCard";
@@ -176,7 +177,11 @@ export default async function Image({
         }}
       >
         <div style={{ display: "flex", width: 470 }}>
-          <ReceiptCard d={data} footerMode="snapshot" />
+          <ReceiptCard
+            d={data}
+            footerMode="snapshot"
+            maxHistoryRows={RECEIPT_HISTORY_MAX_SHARE}
+          />
         </div>
       </div>
     </div>,

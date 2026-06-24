@@ -5,12 +5,16 @@
      서버(공유 페이지 / OG 이미지)에서 decodeReceipt 로 복원.
    =================================================================== */
 
+// 지급내역 표시 상한 — 모달/이미지 저장 vs 공유 랜딩
+export const RECEIPT_HISTORY_MAX_MODAL = 10;
+export const RECEIPT_HISTORY_MAX_SHARE = 6;
+
 // 지급내역 한 줄: [회차, 금액]
 export type PayLine = [number, number];
 
 export interface ReceiptData {
   n: string; // 닉네임(성명)
-  h: PayLine[]; // 지급내역(최근 10건) [회차, 금액]
+  h: PayLine[]; // 지급내역 [회차, 금액] — 모달 최대 10건, 공유 URL은 6건
   t: number; // 누적 실수령액(내가 번 돈 총합)
   g: number; // 오늘 다같이 번 돈(글로벌)
   p: number; // 발급 시점 접속자(볼일 중 인원)
@@ -33,7 +37,7 @@ function sanitizeHistory(raw: unknown): PayLine[] {
       return [round, amount];
     })
     .filter((x): x is PayLine => x !== null)
-    .slice(-10);
+    .slice(-RECEIPT_HISTORY_MAX_MODAL);
 }
 
 function toBase64Url(bin: string): string {
@@ -50,6 +54,14 @@ export function encodeReceipt(obj: ReceiptData): string {
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
   return toBase64Url(bin);
+}
+
+/** 공유 링크용 — 지급내역은 최근 6건만 URL에 담는다 */
+export function encodeReceiptForShare(obj: ReceiptData): string {
+  return encodeReceipt({
+    ...obj,
+    h: obj.h.slice(-RECEIPT_HISTORY_MAX_SHARE),
+  });
 }
 
 export function decodeReceipt(s: string): ReceiptData | null {
@@ -81,8 +93,19 @@ export function heroAmount(d: ReceiptData): number {
   return Math.max(0, d.t);
 }
 
-// 지급내역에서 생략된 이전 회차가 있는지(맨 위 ⋮ 표시 여부)
-export function hasOmittedLines(d: ReceiptData): boolean {
+// 지급내역에서 생략 표시 여부 (데이터 생략 또는 화면 표시 상한 초과)
+export function hasOmittedLines(
+  d: ReceiptData,
+  maxVisible = RECEIPT_HISTORY_MAX_MODAL,
+): boolean {
   if (d.h.length === 0) return false;
-  return d.h[0][0] > 1 || d.f > d.h.length;
+  if (d.h[0][0] > 1 || d.f > d.h.length) return true;
+  return d.h.length > maxVisible;
+}
+
+export function visibleHistoryRows(
+  d: ReceiptData,
+  maxVisible = RECEIPT_HISTORY_MAX_MODAL,
+): PayLine[] {
+  return [...d.h].reverse().slice(0, maxVisible);
 }

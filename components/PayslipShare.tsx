@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FakeToiletSocket } from "@/lib/fakeSocket";
-import { fmtWon, type ReceiptData } from "@/lib/receiptShare";
+import {
+  fmtWon,
+  RECEIPT_HISTORY_MAX_SHARE,
+  type ReceiptData,
+} from "@/lib/receiptShare";
 import { shareCtaLook } from "@/lib/shareCta";
 import ReceiptCard from "@/components/ReceiptCard";
 
@@ -60,7 +64,11 @@ export default function PayslipShare({
       onClick={() => router.push("/")}
     >
       <div style={cardWrap}>
-        <ReceiptCard d={data} siteUrlHref={siteUrlHref} />
+        <ReceiptCard
+          d={data}
+          siteUrlHref={siteUrlHref}
+          maxHistoryRows={RECEIPT_HISTORY_MAX_SHARE}
+        />
       </div>
 
       {/* 실시간 라이브 배너 */}
@@ -86,7 +94,7 @@ const wrap: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  justifyContent: "flex-start",
+  justifyContent: "center",
   gap: 16,
   padding: "16px",
   background: "radial-gradient(120% 120% at 50% 0%, #1b2a22 0%, #0d120f 60%)",
