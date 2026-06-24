@@ -79,9 +79,21 @@ export default function ToiletGame() {
             alt=""
           />
           <img className="skin-light" src="/skin/ceiling-light.svg" alt="" />
-          <img className="skin-hinge skin-hinge--1" src="/skin/hinge.svg" alt="" />
-          <img className="skin-hinge skin-hinge--2" src="/skin/hinge.svg" alt="" />
-          <img className="skin-hinge skin-hinge--3" src="/skin/hinge.svg" alt="" />
+          <img
+            className="skin-hinge skin-hinge--1"
+            src="/skin/hinge.svg"
+            alt=""
+          />
+          <img
+            className="skin-hinge skin-hinge--2"
+            src="/skin/hinge.svg"
+            alt=""
+          />
+          <img
+            className="skin-hinge skin-hinge--3"
+            src="/skin/hinge.svg"
+            alt=""
+          />
           <img className="skin-latch" src="/skin/latch.svg" alt="" />
         </div>
 
@@ -100,7 +112,11 @@ export default function ToiletGame() {
             src="/skin/floor-left.svg"
             alt=""
           />
-          <img className="skin-floor__center" src="/skin/floor-center.svg" alt="" />
+          <img
+            className="skin-floor__center"
+            src="/skin/floor-center.svg"
+            alt=""
+          />
           <img
             className="skin-floor__side skin-floor__side--right"
             src="/skin/floor-right.svg"
@@ -195,7 +211,9 @@ export default function ToiletGame() {
               maxLength={40}
             />
           </div>
-          <button type="submit" className="chat__send">전송</button>
+          <button type="submit" className="chat__send">
+            전송
+          </button>
         </form>
       </div>
 

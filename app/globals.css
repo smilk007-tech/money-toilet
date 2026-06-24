@@ -1013,10 +1013,10 @@ body {
 .chat__nick {
   flex-shrink: 0;
   white-space: nowrap;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 600;
   color: #555;
-  background: rgba(0, 0, 0, 0.07);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 7px;
   padding: 4px 6px;
   line-height: 1;
@@ -1046,9 +1046,9 @@ body {
 .chat button {
   flex: 0 0 auto;
   background: #d4d8d4;
-  color: #1a1f1b;
-  font-weight: 800;
-  font-size: 13.5px;
+  color: #555;
+  font-weight: 700;
+  font-size: 12px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 11px;
   padding: 0 16px;

@@ -87,7 +87,7 @@ export default function PayslipModal() {
     const text = bragText(data);
     if (navigator.share) {
       try {
-        await navigator.share({ title: "화장실 급여명세서", text, url });
+        await navigator.share({ title: "돈버는 화장실", text, url });
         return;
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") return;
