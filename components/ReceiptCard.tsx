@@ -221,9 +221,8 @@ export default function ReceiptCard({
             <span
               style={{
                 display: "flex",
-                fontSize: 10,
+                fontSize: 8,
                 color: SUB,
-                fontStyle: "italic",
               }}
             >
               휴지가 모자라 생략...
