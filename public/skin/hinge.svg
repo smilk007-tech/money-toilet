@@ -1,35 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 30">
-  <defs>
-    <linearGradient id="plate" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#6c7073"/>
-      <stop offset=".3" stop-color="#c9cccd"/>
-      <stop offset=".55" stop-color="#94989b"/>
-      <stop offset=".8" stop-color="#d6d8d8"/>
-      <stop offset="1" stop-color="#666a6d"/>
-    </linearGradient>
-    <linearGradient id="barrel" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#5b5f62"/>
-      <stop offset=".4" stop-color="#e6e8e8"/>
-      <stop offset=".75" stop-color="#7e8285"/>
-      <stop offset="1" stop-color="#54585b"/>
-    </linearGradient>
-  </defs>
-  <!-- 경첩 판(좌우 플레이트) -->
-  <rect x="1" y="1.5" width="14" height="27" rx="1.8" fill="url(#plate)"/>
-  <!-- 중앙 배럴(축) -->
-  <rect x="5.6" y=".6" width="4.8" height="28.8" rx="2.4" fill="url(#barrel)"/>
-  <!-- 마디(knuckle) 구분선 -->
-  <g stroke="#3f4346" stroke-width=".7" opacity=".55">
-    <line x1="5.8" y1="9.5" x2="10.2" y2="9.5"/>
-    <line x1="5.8" y1="20.5" x2="10.2" y2="20.5"/>
-  </g>
-  <!-- 배럴 하이라이트 -->
-  <line x1="7.2" y1="2" x2="7.2" y2="28" stroke="#f3f4f4" stroke-width=".7" opacity=".6"/>
-  <!-- 나사 -->
-  <g fill="#4c5053">
-    <circle cx="3.2" cy="5.5" r="1"/>
-    <circle cx="3.2" cy="24.5" r="1"/>
-    <circle cx="12.8" cy="5.5" r="1"/>
-    <circle cx="12.8" cy="24.5" r="1"/>
-  </g>
+  <rect x="1" y="1.5" width="14" height="27" rx="1.6" fill="#9ba0a3"/>
+  <rect x="6.6" y=".8" width="2.8" height="28.4" rx="1.4" fill="#74787b"/>
+  <path d="M1.3 15H14.7"/>
 </svg>

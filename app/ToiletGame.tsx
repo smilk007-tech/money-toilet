@@ -146,6 +146,8 @@ export default function ToiletGame() {
 
       {/* ===== 하단 스택 ===== */}
       <div className="bottom">
+        {/* 내 채팅/정산 말풍선 — 덱 바로 위 가운데(덱과 겹치지 않음) */}
+        <div className="myfeed" id="myFeed"></div>
         {/* 1row: [시계/내 월급] | [내 채팅/적립] | [총/물내리기] */}
         <div className="deck">
           <div className="deckcol deckcol--salary">
@@ -158,7 +160,6 @@ export default function ToiletGame() {
             </button>
           </div>
           <div className="deckcol deckcol--mid">
-            <div className="myfeed" id="myFeed"></div>
             <div className="readout">
               <span className="readout__amt" id="personalEarned">
                 0원
