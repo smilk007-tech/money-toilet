@@ -142,8 +142,8 @@ export default async function Image({
 
   // 이미지에 등장하는 모든 글자를 모아 서브셋 폰트를 받는다(작고 빠름, 한글 깨짐 방지).
   const glyphs =
-    "돈버는화장실급여명세서발급일성명지급항목금액회차물내림수당실수령액원이전종이모자라생략벌었어요총회물내림paidtoilet" +
-    "0123456789,. :·()⋮·💸👉" +
+    "돈버는화장실급여명세서발급일성명지급항목금액회차물내림수당실수령액원이전종이모자라생략벌었어요총회paidtoilet" +
+    "0123456789,. :·()⋮" +
     data.n +
     resolveReceiptSlogan(data.sl) +
     data.h.map((a) => `${a}`).join("") +
@@ -254,16 +254,26 @@ export default async function Image({
 
         {/* 하단: 명언 + CTA */}
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              display: "flex",
-              fontSize: 17,
-              color: "#5aab87",
-              borderLeft: "3px solid #2a5c42",
-              paddingLeft: 12,
-            }}
-          >
-            &quot;{resolveReceiptSlogan(data.sl)}&quot;
+          {/* borderLeft 대신 얇은 div + 텍스트 flex row로 구현 (Satori 호환) */}
+          <div style={{ display: "flex", flexDirection: "row" }}>
+            <div
+              style={{
+                display: "flex",
+                width: 3,
+                background: "#2a5c42",
+                marginRight: 12,
+                borderRadius: 2,
+              }}
+            />
+            <div
+              style={{
+                display: "flex",
+                fontSize: 17,
+                color: "#5aab87",
+              }}
+            >
+              &quot;{resolveReceiptSlogan(data.sl)}&quot;
+            </div>
           </div>
           <div
             style={{

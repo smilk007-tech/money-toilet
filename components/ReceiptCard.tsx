@@ -8,11 +8,12 @@ import {
   type ReceiptData,
 } from "@/lib/receiptShare";
 
-/* game.js readout__amt / .digit 와 동일 — 숫자마다 고정폭 셀을 써서 레이아웃 시프트 방지 */
+/* game.js readout__amt / .digit 와 동일 — 숫자마다 고정폭 셀을 써서 레이아웃 시프트 방지
+   Satori(OG 이미지)는 inline-block 미지원 → display:flex 사용 */
 const digitCell = {
-  display: "inline-block",
+  display: "flex" as const,
   width: "0.66em",
-  textAlign: "center" as const,
+  justifyContent: "center" as const,
 };
 
 function TabularText({
@@ -24,12 +25,13 @@ function TabularText({
   bold?: boolean;
   weight?: number;
 }) {
+  const fw = weight ?? (bold ? 700 : 400);
   return (
     <span
       style={{
         whiteSpace: "nowrap",
-        display: "inline-block",
-        fontWeight: weight ?? (bold ? 700 : undefined),
+        display: "flex",
+        fontWeight: fw,
       }}
     >
       {text.split("").map((ch, i) =>
@@ -38,7 +40,9 @@ function TabularText({
             {ch}
           </span>
         ) : (
-          <span key={i}>{ch}</span>
+          <span key={i} style={{ display: "flex" }}>
+            {ch}
+          </span>
         ),
       )}
     </span>
