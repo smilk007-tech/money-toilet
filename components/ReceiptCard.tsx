@@ -135,7 +135,7 @@ export default function ReceiptCard({
           gap: 5,
         }}
       >
-        <span style={{ fontSize: 18, fontWeight: 700 }}>📌 급여명세서</span>
+        <span style={{ fontSize: 14, fontWeight: 500 }}>🧻 급여명세서</span>
         <span
           style={{
             fontSize: 17,
@@ -170,7 +170,7 @@ export default function ReceiptCard({
           letterSpacing: 0.5,
         }}
       >
-        <span>물 내림</span>
+        <span>물 내림🚽</span>
         <span>금액</span>
       </div>
 
@@ -223,9 +223,10 @@ export default function ReceiptCard({
                 display: "flex",
                 fontSize: 10,
                 color: SUB,
+                fontStyle: "italic",
               }}
             >
-              (종이가 모자라 생략...😢)
+              휴지가 모자라 생략...
             </span>
           </div>
         )}
@@ -241,7 +242,7 @@ export default function ReceiptCard({
           lineHeight: 1.15,
         }}
       >
-        <span style={{ fontSize: 16, fontWeight: 700 }}>누적 수령액</span>
+        <span style={{ fontSize: 14, fontWeight: 500 }}>누적 수령액</span>
         <span style={{ fontSize: 22, fontWeight: 800, color: "#2f6b4e" }}>
           <TabularText text={fmtWon(hero)} weight={900} />
         </span>

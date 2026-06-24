@@ -183,7 +183,7 @@ export default function ToiletGame() {
             <div className="deckcol__top deckcol__total" id="totalEarned">
               총 0원
             </div>
-            <button className="flush" id="flushBtn" type="button">
+            <button className="flush btn-yellow" id="flushBtn" type="button">
               <div className="flush__fill" id="flushFill"></div>
               <span className="flush__icon">🚽</span>
               <span id="flushLabel">물내리기</span>
@@ -193,12 +193,15 @@ export default function ToiletGame() {
 
         {/* 2row: 채팅 */}
         <form className="chat" id="chatForm" autoComplete="off">
-          <input
-            type="text"
-            id="chatInput"
-            placeholder="옆 칸 모두에게 한마디"
-            maxLength={40}
-          />
+          <div className="chat__field">
+            <span className="chat__nick" id="chatNick"></span>
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="옆 칸 모두에게 한마디"
+              maxLength={40}
+            />
+          </div>
           <button type="submit">전송</button>
         </form>
       </div>

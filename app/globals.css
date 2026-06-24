@@ -1120,6 +1120,24 @@ body {
   white-space: nowrap;
 }
 
+.btn-yellow {
+  background: linear-gradient(#ffd84d, #f2a800);
+  color: #3a2700;
+  box-shadow:
+    0 3px 0 #c8920c,
+    0 4px 9px rgba(0, 0, 0, 0.3);
+}
+.btn-yellow:active,
+.btn-yellow:focus,
+.btn-yellow:focus-visible {
+  background: linear-gradient(#ffd84d, #f2a800);
+  outline: none;
+}
+.btn-yellow:active {
+  box-shadow:
+    0 0 0 #c8920c,
+    0 2px 5px rgba(0, 0, 0, 0.3);
+}
 .flush {
   position: relative;
   overflow: hidden;
@@ -1129,8 +1147,6 @@ body {
   border: none;
   border-radius: 13px;
   cursor: pointer;
-  background: linear-gradient(#ffd84d, #f2a800);
-  color: #3a2700;
   font-weight: 900;
   display: flex;
   flex-direction: column;
@@ -1138,9 +1154,6 @@ body {
   justify-content: center;
   gap: 1px;
   font-size: 19px;
-  box-shadow:
-    0 3px 0 #c8920c,
-    0 4px 9px rgba(0, 0, 0, 0.3);
   transition:
     transform 0.06s,
     box-shadow 0.06s;
@@ -1157,9 +1170,6 @@ body {
 }
 .flush:active {
   transform: translateY(3px);
-  box-shadow:
-    0 0 0 #c8920c,
-    0 2px 5px rgba(0, 0, 0, 0.3);
 }
 .flush__fill {
   position: absolute;
@@ -1187,20 +1197,50 @@ body {
   display: flex;
   gap: 7px;
 }
+.chat__field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 11px;
+  padding: 0 6px 0 10px;
+  transition: border-color 0.15s;
+}
+.chat__nick {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  background: rgba(0, 0, 0, 0.07);
+  border-radius: 7px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+.chat__field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(40, 167, 143, 0.15);
+}
 .chat input {
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.96);
-  border: 2px solid #111;
-  border-radius: 11px;
-  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
   font-size: 14px;
   font-weight: 600;
   color: #111;
 }
 .chat input:focus {
   outline: none;
-  border-color: var(--accent);
+}
+.chat input::placeholder {
+  color: #111;
+  opacity: 0.4;
+  font-weight: 500;
 }
 .chat button {
   flex: 0 0 auto;
@@ -1701,6 +1741,8 @@ body {
   max-width: 420px;
 }
 .receipt-btn {
+  position: relative;
+  overflow: hidden;
   flex: 1;
   border: none;
   border-radius: 11px;
@@ -1711,19 +1753,23 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   -webkit-appearance: none;
   appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.receipt-btn:active,
+.receipt-btn:focus,
+.receipt-btn:focus-visible {
+  background: inherit;
+  filter: none;
+  outline: none;
 }
 .receipt-btn:active {
   transform: translateY(1px);
 }
 .receipt-btn--share {
   flex: 1.6;
-  background: #3a2600;
-  color: #ffc726;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 .receipt-btn--share:active {
-  background: linear-gradient(180deg, #ffe98a, #ffc726);
-  color: #3a2600;
   transform: translateY(1px);
 }
 .receipt-btn--save {

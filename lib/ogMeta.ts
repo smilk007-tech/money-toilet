@@ -9,9 +9,9 @@ type ShareMetaInput = {
 
 /** 공유 페이지 title · description · og:description (길이 가이드 준수) */
 export function buildShareCopy({ nick, amount }: ShareMetaInput) {
-  const title = `${nick}님이 화장실에서 ${amount} 벌었어요💰`;
+  const title = `${nick}님이 변기위에서 ${amount} 벌었어요💰`;
 
-  const ogDescription = `근무시간에 싸서 번 돈 인증 · ${SITE_NAME}에서 너도 벌어봐 👇`;
+  const ogDescription = `이 사람 급여명세서 확인 👇`;
 
   const description = `근무 시간에 화장실에서 돈 벌기, 변기위의 월급루팡! 실시간 수입을 인증해 보세요`;
 

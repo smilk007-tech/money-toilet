@@ -6,7 +6,13 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8123/)",
       "Bash(open http://localhost:8123/)",
       "Bash(node --check lib/game.js)",
-      "Bash(node --check lib/fakeSocket.js)"
+      "Bash(node --check lib/fakeSocket.js)",
+      "Bash(gh auth *)",
+      "Read(//Users/dkchae/**)",
+      "Read(//Users/dkchae/.claude/**)",
+      "Bash(yarn --version)",
+      "Bash(corepack --version)",
+      "Bash(corepack enable *)"
     ]
   }
 }

@@ -164,10 +164,10 @@ export default function PayslipModal() {
               type="button"
               onClick={save}
             >
-              📷 저장
+              💾 저장
             </button>
             <button
-              className="receipt-btn receipt-btn--share"
+              className="receipt-btn receipt-btn--share btn-yellow"
               type="button"
               onClick={share}
             >
