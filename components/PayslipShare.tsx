@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { FakeToiletSocket } from "@/lib/fakeSocket";
 import {
   fmtWon,
@@ -24,7 +23,6 @@ export default function PayslipShare({
   data: ReceiptData;
   siteUrlHref: string;
 }) {
-  const router = useRouter();
   const [count, setCount] = useState(data.p || 0);
   const [liveWon, setLiveWon] = useState(data.g || 0);
   const countRef = useRef(count);
@@ -61,7 +59,7 @@ export default function PayslipShare({
   return (
     <main
       style={{ ...wrap, cursor: "pointer" }}
-      onClick={() => router.push("/")}
+      onClick={() => window.open("/", "_blank", "noopener,noreferrer")}
     >
       <div style={cardWrap}>
         <ReceiptCard
@@ -80,7 +78,7 @@ export default function PayslipShare({
         <div style={liveAmt}>{fmtWon(liveWon)}</div>
         <div style={liveSub}>
           지금 이 {count.toLocaleString("ko-KR")}명이 변기 위에서 실시간으로
-          쓸어담는 중 💸
+          쓸어담는 중 💰
         </div>
       </div>
 
