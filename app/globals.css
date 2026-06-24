@@ -908,7 +908,7 @@ body {
 .readout__rate {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(233, 244, 238, 0.62);
+  color: rgba(233, 244, 238, 0.74);
   white-space: nowrap;
 }
 
@@ -1036,11 +1036,11 @@ body {
 }
 .chat button {
   flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.1);
-  color: #d6ddd7;
-  font-weight: 700;
-  font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.22);
+  color: #f4f8f5;
+  font-weight: 800;
+  font-size: 13.5px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 11px;
   padding: 0 16px;
   cursor: pointer;
