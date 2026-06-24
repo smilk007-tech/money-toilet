@@ -164,6 +164,7 @@ export default function ToiletGame() {
               id="receiptBtn"
               type="button"
               aria-label="화장실 급여명세서 공유"
+              hidden
             >
               <span
                 className="flush-receipt__icon"

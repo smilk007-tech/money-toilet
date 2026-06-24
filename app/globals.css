@@ -764,6 +764,39 @@ body {
   }
 }
 
+/* 영수증 버튼 최초 등장 — 팝인 + 네온 글로우 링으로 주목 유도 */
+.flush-receipt--reveal {
+  animation:
+    receiptReveal 0.6s cubic-bezier(0.34, 1.56, 0.5, 1) both,
+    receiptGlow 1.1s ease-out 0.45s 3;
+}
+@keyframes receiptReveal {
+  0% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.3) rotate(10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+@keyframes receiptGlow {
+  0% {
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.35),
+      0 0 0 0 rgba(125, 255, 176, 0.75);
+  }
+  100% {
+    box-shadow:
+      0 4px 14px rgba(0, 0, 0, 0.35),
+      0 0 0 16px rgba(125, 255, 176, 0);
+  }
+}
+
 /* 시계/총 칩 — 컬럼(버튼) 폭에 맞춰 stretch */
 .deckcol__top {
   background: var(--panel);
@@ -791,6 +824,19 @@ body {
   white-space: nowrap;
   overflow: hidden;
   line-height: 1.2;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.deckcol__total--reveal {
+  opacity: 1;
+}
+@keyframes revealTotal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .ctrl-salary {
