@@ -553,17 +553,17 @@ body {
    - 나: .myfeed__msg — 하단 덱 '바로 위' 가운데. 꼬리는 아래(내 입력창)를 가리킴.
      타입 틴트 배경 + accent 보더로 '내 것' 구분. 덱과 겹치지 않음.
    ============================================================ */
-/* 내 채팅/정산 피드 — 덱 최상단(위) 가운데에 떠서 덱과 분리 */
+/* 내 채팅/정산 피드 — 적립칸(.readout) 바로 위 가운데에 떠서 덱과 분리 */
 .myfeed {
   position: relative;
   height: 0;
-  margin-bottom: -7px; /* .bottom flex gap(7px) 상쇄 → 덱 위치 유지 */
+  margin-bottom: -6px; /* deckcol 컬럼 gap(6px) 상쇄 → 적립칸 위치 유지 */
   z-index: 33;
   pointer-events: none;
 }
 .myfeed__msg {
   position: absolute;
-  bottom: 8px; /* 덱 상단보다 위로 띄움 — 적립칸과 겹치지 않게 */
+  bottom: 6px; /* 적립칸 바로 위에 붙임 — 꼬리가 적립칸을 향함 */
   left: 50%;
   transform: translateX(-50%);
   max-width: calc(100% - 12px);
