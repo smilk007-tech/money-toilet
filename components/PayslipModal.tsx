@@ -9,6 +9,7 @@ import {
   type ReceiptData,
 } from "@/lib/receiptShare";
 import ReceiptCard from "@/components/ReceiptCard";
+import { resolveShareOrigin } from "@/lib/siteUrl";
 import { shareCtaLook } from "@/lib/shareCta";
 
 const OPEN_EVENT = "ddong:payslip-open";
@@ -36,7 +37,7 @@ export default function PayslipModal() {
   const cardRef = useRef<HTMLDivElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
   const siteUrlHref =
-    typeof window !== "undefined" ? window.location.origin : undefined;
+    typeof window !== "undefined" ? resolveShareOrigin() : undefined;
 
   const close = useCallback(() => setData(null), []);
 
@@ -83,7 +84,7 @@ export default function PayslipModal() {
       }
     }
 
-    const url = `${location.origin}/r/${shareId}`;
+    const url = `${resolveShareOrigin()}/r/${shareId}`;
     const text = bragText(data);
     if (navigator.share) {
       try {

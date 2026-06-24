@@ -2,14 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { decodeReceipt, fmtWon, heroAmount } from "@/lib/receiptShare";
 import { SHORT_ID_RE, loadReceipt } from "@/lib/receiptStore";
+import { resolveSiteUrl } from "@/lib/siteUrl";
 import PayslipShare from "@/components/PayslipShare";
 
 type Props = { params: Promise<{ d: string }> };
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000");
+const siteUrl = resolveSiteUrl();
 async function resolveData(d: string) {
   return SHORT_ID_RE.test(d) ? await loadReceipt(d) : decodeReceipt(d);
 }
