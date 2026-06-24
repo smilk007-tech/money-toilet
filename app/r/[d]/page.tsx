@@ -1,6 +1,6 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { decodeReceipt, fmtWon, heroAmount } from "@/lib/receiptShare";
+import { buildShareMetadata } from "@/lib/ogMeta";
 import { SHORT_ID_RE, loadReceipt } from "@/lib/receiptStore";
 import { resolveSiteUrl } from "@/lib/siteUrl";
 import PayslipShare from "@/components/PayslipShare";
@@ -11,20 +11,12 @@ async function resolveData(d: string) {
   return SHORT_ID_RE.test(d) ? await loadReceipt(d) : decodeReceipt(d);
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props) {
   const { d } = await params;
   const data = await resolveData(d);
   const nick = data?.n || "익명의 볼일러";
   const hero = data ? heroAmount(data) : 0;
-  const title = `${nick}님이 화장실에서 ${fmtWon(hero)} 벌었어요💰`;
-  const description =
-    "근무시간에 싸서 번 돈 인증 · 돈버는 화장실에서 같이 벌자! 👇";
-  return {
-    title,
-    description,
-    openGraph: { title, description, type: "website" },
-    twitter: { card: "summary_large_image", title, description },
-  };
+  return buildShareMetadata({ nick, amount: fmtWon(hero) });
 }
 
 const wrap: React.CSSProperties = {
