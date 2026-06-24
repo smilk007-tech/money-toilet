@@ -85,14 +85,13 @@ export default function ToiletGame() {
           <img className="skin-latch" src="/skin/latch.svg" alt="" />
         </div>
 
-        {/* 좌측 휴지걸이 / 우측 옷걸이 */}
+        {/* 좌측 휴지걸이 */}
         <img
           className="skin-tp"
           src="/skin/toilet-paper.svg"
           alt=""
           aria-hidden
         />
-        <img className="skin-hook" src="/skin/hook.svg" alt="" aria-hidden />
 
         {/* 바닥(좌/중앙/우 원근) */}
         <div className="skin-floor" aria-hidden>
@@ -196,7 +195,7 @@ export default function ToiletGame() {
               maxLength={40}
             />
           </div>
-          <button type="submit" className="chat__send">✈️</button>
+          <button type="submit" className="chat__send">전송</button>
         </form>
       </div>
 
