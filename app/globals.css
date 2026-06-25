@@ -401,15 +401,18 @@ body {
 }
 .ad-a4__tag {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 7px;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  font-size: 8px;
   font-weight: 600;
   color: #1a1a1a;
   background: #d8d8d8;
-  padding: 1px 5px;
+  padding: 2px 8px;
   border-radius: 3px;
   letter-spacing: 0.5px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 .ad-a4__emoji {
   font-size: 28px;
@@ -423,11 +426,11 @@ body {
   line-height: 1.1;
 }
 .ad-a4__sub {
-  font-size: 8.5px;
-  font-weight: 700;
+  font-size: 8px;
+  font-weight: 500;
   color: #666;
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.4;
 }
 
 /* ---- 좌측 휴지걸이 (SVG) ---- */
@@ -672,6 +675,8 @@ body {
   gap: 6px;
 }
 .deckcol--salary {
+  position: relative;
+  z-index: 34;
   flex: 0 0 84px;
   min-width: 84px;
   max-width: 84px;
@@ -856,6 +861,7 @@ body {
   position: absolute;
   top: 50%;
   right: -9px;
+  z-index: 2;
   display: inline-block;
   font-size: 14px;
   line-height: 1;
