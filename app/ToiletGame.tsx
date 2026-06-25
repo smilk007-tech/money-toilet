@@ -152,7 +152,10 @@ export default function ToiletGame() {
             opacity=".12"
             filter="url(#tpShadow)"
           />
-          <path d="M8 23 56 5Q79 5 89 27L89 61 53 83 8 68Z" fill="url(#tpMetal)" />
+          <path
+            d="M8 23 56 5Q79 5 89 27L89 61 53 83 8 68Z"
+            fill="url(#tpMetal)"
+          />
           <circle cx="46" cy="61" r="27" fill="#efeeeb" />
           <circle cx="46" cy="61" r="9" fill="#76797b" />
           <path d="M8 23 46 52Q55 59 46 67L8 95Z" fill="#7e8285" />
@@ -232,7 +235,7 @@ export default function ToiletGame() {
                 0원
               </span>
               <span className="readout__rate" id="rateLabel">
-                1초에 5원 버는중
+                실시간 1초에 5원 버는중
               </span>
             </div>
           </div>
