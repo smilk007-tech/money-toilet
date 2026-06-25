@@ -989,13 +989,13 @@ body {
   background: linear-gradient(#ffd84d, #f2a800);
   color: #3a2700;
   box-shadow:
-    0 5px 0 #c8920c,
-    0 6px 12px rgba(0, 0, 0, 0.35);
+    0 3px 0 #c8920c,
+    0 4px 9px rgba(0, 0, 0, 0.3);
 }
 .btn-yellow:active,
 .btn-yellow:focus,
 .btn-yellow:focus-visible {
-  background: linear-gradient(#f5c93a, #e09800);
+  background: linear-gradient(#ffd84d, #f2a800);
   outline: none;
 }
 .btn-yellow:active {
@@ -1020,8 +1020,8 @@ body {
   gap: 1px;
   font-size: 19px;
   transition:
-    transform 0.08s cubic-bezier(0.2, 0, 0.4, 1),
-    box-shadow 0.08s cubic-bezier(0.2, 0, 0.4, 1);
+    transform 0.06s,
+    box-shadow 0.06s;
 }
 .flush span {
   position: relative;
@@ -1034,7 +1034,7 @@ body {
   font-size: 19px;
 }
 .flush:active {
-  transform: translateY(5px);
+  transform: translateY(3px);
 }
 .flush__fill {
   position: absolute;
@@ -1043,11 +1043,7 @@ body {
   bottom: 0;
   height: 0%;
   z-index: 0;
-  background: rgba(30, 30, 30, 0.45);
-  transition: background 0.08s;
-}
-.flush:active .flush__fill {
-  background: rgba(20, 20, 20, 0.65);
+  background: rgba(40, 40, 40, 0.55);
 }
 .flush--cooldown {
   background: #9a9d96;

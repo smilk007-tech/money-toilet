@@ -329,7 +329,7 @@ export default function ReceiptCard({
             alignItems: "center",
             justifyContent: "center",
             position: "absolute",
-            right: 2,
+            right: -12,
             width: 54,
             height: 54,
             borderRadius: 27,
@@ -338,6 +338,8 @@ export default function ReceiptCard({
             transform: "rotate(-13deg)",
             opacity: 0.92,
             lineHeight: 1,
+            backgroundColor: "#fbfaf3",
+            bottom: 10,
           }}
         >
           <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>
