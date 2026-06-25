@@ -86,7 +86,7 @@ export default async function Image() {
           justifyContent: "center",
           fontSize: 52,
           fontWeight: 800,
-          color: "#eafff5",
+          color: "#9fdcc9",
           lineHeight: 1.2,
           letterSpacing: -1,
         }}
