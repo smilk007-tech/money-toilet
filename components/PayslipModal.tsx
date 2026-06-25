@@ -9,6 +9,7 @@ import { resolveShareOrigin } from "@/lib/siteUrl";
 const OPEN_EVENT = "ddong:payslip-open";
 const TOAST_EVENT = "ddong:toast";
 const STAMP_EVENT = "ddong:payslip-stamped"; // 도장을 찍는 순간 game.js에 알림(영수증 버튼 즉시 노출용)
+const SHARED_EVENT = "ddong:payslip-shared"; // 저장/공유 성공 순간 — 만족 정점에서 홈화면 추가 유도(InstallPrompt가 수신)
 const STAMP_CONFIRM_KEY = "ddong_payslip_confirmed"; // 지급완료 확인 넛지 — 최초 1회만
 const CLICK_TO_STAMP_DELAY_MS = 500; // 확인 클릭 후 도장이 떨어지기 시작하기까지 대기
 const STAMP_SLAM_MS = 1350; // receiptStampSlam 애니메이션 길이와 동일하게 유지
@@ -25,6 +26,13 @@ const shareIdCache = new Map<string, string>(); // fingerprint → shareId
 
 function toast(msg: string) {
   window.dispatchEvent(new CustomEvent(TOAST_EVENT, { detail: msg }));
+}
+
+// 명세서를 저장하거나 공유한 "만족 정점" 순간을 알린다 — 이때만 홈화면 추가 배너를 띄운다.
+function notifyShared() {
+  try {
+    window.dispatchEvent(new CustomEvent(SHARED_EVENT));
+  } catch {}
 }
 
 /* 게임 미리보기 팝업 — 공유 페이지와 동일한 ReceiptCard 를 렌더한다. */
@@ -122,6 +130,7 @@ export default function PayslipModal() {
     if (navigator.share) {
       try {
         await navigator.share({ text });
+        notifyShared();
         return;
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") return;
@@ -130,9 +139,11 @@ export default function PayslipModal() {
     try {
       await navigator.clipboard.writeText(text);
       toast("공유 링크를 복사했어요! SNS에 붙여넣기 🔗");
+      notifyShared();
       return;
     } catch {}
     window.open(url, "_blank");
+    notifyShared();
   }
 
   async function save() {
@@ -149,6 +160,7 @@ export default function PayslipModal() {
       a.click();
       a.remove();
       toast("급여명세서 이미지를 저장했어요 🧾");
+      notifyShared();
     } catch {
       toast("이미지 저장에 실패했어요 🥲");
     }
