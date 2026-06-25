@@ -5,7 +5,7 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = `${SITE_NAME} · 변기위의 월급루팡`;
 
-const TAGLINE = "변기위의 월급루팡";
+const TAGLINE = "#변기위의 월급루팡";
 
 const TTF_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 8_0 like Mac OS X) AppleWebKit/600.1.3 (KHTML, like Gecko) Version/8.0 Mobile/12A4345d Safari/600.1.4";
@@ -68,7 +68,7 @@ export default async function Image() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 76,
+          fontSize: 128,
           fontWeight: 800,
           color: "#ffd84d",
           lineHeight: 1.1,
@@ -83,7 +83,7 @@ export default async function Image() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 52,
+          fontSize: 60,
           fontWeight: 700,
           color: "#eafff5",
           lineHeight: 1.2,
