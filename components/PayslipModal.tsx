@@ -17,10 +17,6 @@ function stableFingerprint(d: ReceiptData): string {
 // 세션 내 메모리 캐시 — fingerprint 동일하면 API 재호출 없이 기존 ID 재사용
 const shareIdCache = new Map<string, string>(); // fingerprint → shareId
 
-function shareText(url: string) {
-  return `돈버는 화장실 - ${url}`;
-}
-
 function toast(msg: string) {
   window.dispatchEvent(new CustomEvent(TOAST_EVENT, { detail: msg }));
 }
@@ -79,7 +75,7 @@ export default function PayslipModal() {
     }
 
     const url = `${resolveShareOrigin()}/r/${shareId}`;
-    const text = shareText(url);
+    const text = url;
     if (navigator.share) {
       try {
         await navigator.share({ text });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { DONATE_KAKAO_URL, donateQrUrl } from "@/lib/constants";
 import { initGame } from "@/lib/game";
 import PayslipModal from "@/components/PayslipModal";
 
@@ -126,7 +127,9 @@ export default function ToiletGame() {
 
         {/* 동적 A4 광고 — 문 가운데 포스터 자리(게임 로직 유지) */}
         <a className="ad-a4" id="adA4" href="#" target="_blank" rel="noopener">
-          <span className="ad-a4__tag">광고</span>
+          <span className="ad-a4__tag" id="adTag">
+            광고
+          </span>
           <div className="ad-a4__emoji" id="adEmoji">
             📢
           </div>
@@ -315,7 +318,7 @@ export default function ToiletGame() {
             </span>
             공유하기
           </button>
-          <button className="settings__link" type="button" data-action="donate">
+          <button className="settings__link" type="button" id="donateBtn">
             <span className="settings__link-ico" aria-hidden>
               💜
             </span>
@@ -372,6 +375,38 @@ export default function ToiletGame() {
             >
               초기화
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 개발자 후원 — PC 카카오페이 QR */}
+      <div className="donate-modal" id="donateModal" hidden>
+        <div className="donate-modal__backdrop" id="donateBackdrop"></div>
+        <div
+          className="donate-modal__sheet"
+          role="dialog"
+          aria-label="개발자 후원하기"
+        >
+          <button
+            className="donate-modal__close"
+            id="donateCloseBtn"
+            type="button"
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+          <h2 className="donate-modal__title">☕ 개발자 후원하기</h2>
+          <p className="donate-modal__sub">
+            스마트폰으로 QR을 스캔해 주세요
+          </p>
+          <div className="donate-qr">
+            <img
+              src={donateQrUrl(DONATE_KAKAO_URL)}
+              alt="카카오페이 송금 QR"
+              width={168}
+              height={168}
+            />
+            <span className="donate-qr__label">카카오페이</span>
           </div>
         </div>
       </div>
