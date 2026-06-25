@@ -1976,10 +1976,10 @@ body {
   transform: scaleY(0.16);
 }
 
-/* 뜯겨 바닥으로 떨어지는 휴지 한 장 — 광고/채팅/바닥보다 뒤(낮은 z) */
+/* 뜯겨 바닥으로 떨어지는 휴지 한 장 — 바닥 위에 떨어짐(채팅 아래, 광고와는 안 겹침) */
 .tp-sheet {
   position: absolute;
-  z-index: 10;
+  z-index: 19;
   width: 30px;
   height: 40px;
   background: #f5f4f1;
