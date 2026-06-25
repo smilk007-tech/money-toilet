@@ -395,7 +395,7 @@ export default function ToiletGame() {
             ✕
           </button>
           <h2 className="donate-modal__title">💜 개발자 후원하기</h2>
-          <p className="donate-modal__sub">화장실이 더 쾌적해집니다</p>
+          <p className="donate-modal__sub">화장실이 더 쾌적해져요</p>
           <div className="donate-qr">
             <div className="donate-qr__wrap">
               <img
