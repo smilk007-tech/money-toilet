@@ -139,7 +139,6 @@ export default function ToiletGame() {
           <div className="ad-a4__sub" id="adSub">
             A4 광고 영역 · 문의 환영
           </div>
-          <div className="ad-a4__foot">tap</div>
         </a>
 
         {/* 좌우 실시간 말풍선 (봇) */}
@@ -396,9 +395,7 @@ export default function ToiletGame() {
             ✕
           </button>
           <h2 className="donate-modal__title">☕ 개발자 후원하기</h2>
-          <p className="donate-modal__sub">
-            스마트폰으로 QR을 스캔해 주세요
-          </p>
+          <p className="donate-modal__sub">스마트폰으로 QR을 스캔해 주세요</p>
           <div className="donate-qr">
             <img
               src={donateQrUrl(DONATE_KAKAO_URL)}

@@ -404,7 +404,7 @@ body {
   top: 4px;
   left: 4px;
   font-size: 7px;
-  font-weight: 900;
+  font-weight: 600;
   color: #1a1a1a;
   background: #d8d8d8;
   padding: 1px 5px;
@@ -428,13 +428,6 @@ body {
   color: #666;
   text-align: center;
   line-height: 1.2;
-}
-.ad-a4__foot {
-  position: absolute;
-  bottom: 5px;
-  font-size: 7px;
-  font-weight: 800;
-  color: #aaa;
 }
 
 /* ---- 좌측 휴지걸이 (SVG) ---- */
