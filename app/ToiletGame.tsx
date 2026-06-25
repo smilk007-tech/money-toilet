@@ -95,16 +95,73 @@ export default function ToiletGame() {
             src="/skin/hinge.svg"
             alt=""
           />
-          <img className="skin-latch" src="/skin/latch.svg" alt="" />
+          {/* 문 잠금 — 인라인 SVG(이스터에그: 클릭 시 스위치 세로로 + 우측 걸쇠 슬라이드아웃) */}
+          <svg
+            className="skin-latch"
+            id="skinLatch"
+            viewBox="0 0 44 32"
+            role="button"
+            aria-label="문 잠금 토글"
+          >
+            <rect x="1" y="1" width="30" height="30" rx="6" fill="#989da0" />
+            <circle cx="16" cy="16" r="9" fill="#c1c4c5" />
+            <rect
+              className="latch__switch"
+              x="8"
+              y="13.6"
+              width="16"
+              height="4.8"
+              rx="2.4"
+              fill="#62676a"
+            />
+            <rect
+              className="latch__catch"
+              x="31"
+              y="7"
+              width="12"
+              height="18"
+              rx="2"
+              fill="#92979a"
+            />
+          </svg>
         </div>
 
-        {/* 좌측 휴지걸이 */}
-        <img
+        {/* 좌측 휴지걸이 — 인라인 SVG(이스터에그: 클릭 시 한 장 뜯겨 바닥으로, 몇 초 후 재충전) */}
+        <svg
           className="skin-tp"
-          src="/skin/toilet-paper.svg"
-          alt=""
-          aria-hidden
-        />
+          id="skinTp"
+          viewBox="0 0 96 132"
+          role="button"
+          aria-label="휴지 한 장 뜯기"
+        >
+          <defs>
+            <linearGradient id="tpMetal" x1="0" y1="0" x2="1" y2=".2">
+              <stop offset="0" stopColor="#55585b" />
+              <stop offset=".24" stopColor="#d4d6d7" />
+              <stop offset=".54" stopColor="#8c9093" />
+              <stop offset=".8" stopColor="#e3e4e4" />
+              <stop offset="1" stopColor="#686c6f" />
+            </linearGradient>
+            <filter id="tpShadow" x="-50%" y="-40%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="2" />
+            </filter>
+          </defs>
+          <path
+            d="M10 34 61 12 87 28 84 105 25 127 9 84Z"
+            fill="#1e2022"
+            opacity=".12"
+            filter="url(#tpShadow)"
+          />
+          <path d="M8 23 56 5Q79 5 89 27L89 61 53 83 8 68Z" fill="url(#tpMetal)" />
+          <circle cx="46" cy="61" r="27" fill="#efeeeb" />
+          <circle cx="46" cy="61" r="9" fill="#76797b" />
+          <path d="M8 23 46 52Q55 59 46 67L8 95Z" fill="#7e8285" />
+          <path
+            className="tp__hang"
+            d="M68 55H90V108L85 104 80 114 75 108 70 118 64 111V69Z"
+            fill="#f3f2ef"
+          />
+        </svg>
 
         {/* 바닥(좌/중앙/우 원근) */}
         <div className="skin-floor" aria-hidden>
