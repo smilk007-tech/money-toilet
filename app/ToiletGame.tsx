@@ -134,7 +134,7 @@ export default function ToiletGame() {
             여기에 광고
           </div>
           <div className="ad-a4__sub" id="adSub">
-            A4 광고 영역 · 문의 환영
+            문의 환영 ☺️
           </div>
           <span className="ad-a4__tag" id="adTag">
             click
@@ -394,8 +394,8 @@ export default function ToiletGame() {
           >
             ✕
           </button>
-          <h2 className="donate-modal__title">☕ 개발자 후원하기</h2>
-          <p className="donate-modal__sub">스마트폰으로 QR을 스캔해 주세요</p>
+          <h2 className="donate-modal__title">💜 개발자 후원하기</h2>
+          <p className="donate-modal__sub">화장실이 더 쾌적해집니다</p>
           <div className="donate-qr">
             <img
               src={donateQrUrl(DONATE_KAKAO_URL)}
@@ -403,7 +403,6 @@ export default function ToiletGame() {
               width={168}
               height={168}
             />
-            <span className="donate-qr__label">카카오페이</span>
           </div>
         </div>
       </div>

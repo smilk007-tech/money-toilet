@@ -413,6 +413,7 @@ body {
   letter-spacing: 0.5px;
   line-height: 1.2;
   white-space: nowrap;
+  display: none; /* 임시 숨김 */
 }
 .ad-a4__emoji {
   font-size: 28px;
@@ -426,7 +427,7 @@ body {
   line-height: 1.1;
 }
 .ad-a4__sub {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 500;
   color: #666;
   text-align: center;
@@ -553,8 +554,7 @@ body {
 .myfeed {
   position: relative;
   height: 0;
-  margin-bottom: -6px; /* deckcol 컬럼 gap(6px) 상쇄 → 적립칸 위치 유지 */
-  z-index: 33;
+  z-index: 1;
   pointer-events: none;
 }
 .myfeed__msg {
@@ -573,6 +573,7 @@ body {
   line-height: 1.25;
   backdrop-filter: blur(3px);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.38);
+  z-index: 1;
 }
 .myfeed__msg b {
   display: block;
@@ -580,39 +581,63 @@ body {
   font-weight: 600;
   margin-bottom: 1px;
 }
+.myfeed__msg::before,
 .myfeed__msg::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -7px;
   transform: translateX(-50%);
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 8px solid;
+  width: 0;
+  height: 0;
+  border-left: solid transparent;
+  border-right: solid transparent;
+  border-top: solid;
+}
+/* 바깥 삼각형 — 말풍선 보더 색으로 좌·우 변 표현 */
+.myfeed__msg::before {
+  bottom: -8px;
+  border-left-width: 7px;
+  border-right-width: 7px;
+  border-top-width: 8px;
+  z-index: 0;
+}
+/* 안쪽 삼각형 — 배경 채움, 1px 위에 올려서 좌·우만 보더처럼 보이게 */
+.myfeed__msg::after {
+  bottom: -6px;
+  border-left-width: 6px;
+  border-right-width: 6px;
+  border-top-width: 7px;
+  z-index: 1;
 }
 /* 직접 채팅 — 민트 */
 .myfeed__msg--chat {
-  background: rgba(10, 40, 30, 0.72);
+  background: rgba(8, 34, 26, 0.92);
   color: #e9fff5;
-  border: 1px solid rgba(125, 255, 176, 0.4);
+  border: 1px solid rgba(125, 255, 176, 0.5);
 }
 .myfeed__msg--chat b {
   color: #7fe6c2;
 }
+.myfeed__msg--chat::before {
+  border-top-color: rgba(125, 255, 176, 0.5);
+}
 .myfeed__msg--chat::after {
-  border-top-color: rgba(10, 40, 30, 0.72);
+  border-top-color: #082218;
 }
 /* 물내림 — 노랑 */
 .myfeed__msg--flush {
-  background: rgba(48, 38, 4, 0.72);
+  background: rgba(40, 32, 4, 0.92);
   color: #fff8e0;
-  border: 1px solid rgba(255, 216, 77, 0.45);
+  border: 1px solid rgba(255, 216, 77, 0.55);
 }
 .myfeed__msg--flush b {
   color: #ffe98a;
 }
+.myfeed__msg--flush::before {
+  border-top-color: rgba(255, 216, 77, 0.55);
+}
 .myfeed__msg--flush::after {
-  border-top-color: rgba(48, 38, 4, 0.72);
+  border-top-color: #2a2206;
 }
 .myfeed__msg:not(.myfeed__msg--out) {
   animation: myIn 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
@@ -682,6 +707,7 @@ body {
   max-width: 84px;
 } /* 월급 버튼 — 고정폭(긴 금액에도 안 늘어남) */
 .deckcol--mid {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
@@ -912,6 +938,8 @@ body {
 
 /* 적립 영역 — 금액 + 속도 (시계/총은 분리됨) */
 .readout {
+  position: relative;
+  z-index: 2;
   height: var(--ctrlH);
   box-sizing: border-box;
   background: var(--panel);
@@ -961,13 +989,13 @@ body {
   background: linear-gradient(#ffd84d, #f2a800);
   color: #3a2700;
   box-shadow:
-    0 3px 0 #c8920c,
-    0 4px 9px rgba(0, 0, 0, 0.3);
+    0 5px 0 #c8920c,
+    0 6px 12px rgba(0, 0, 0, 0.35);
 }
 .btn-yellow:active,
 .btn-yellow:focus,
 .btn-yellow:focus-visible {
-  background: linear-gradient(#ffd84d, #f2a800);
+  background: linear-gradient(#f5c93a, #e09800);
   outline: none;
 }
 .btn-yellow:active {
@@ -992,8 +1020,8 @@ body {
   gap: 1px;
   font-size: 19px;
   transition:
-    transform 0.06s,
-    box-shadow 0.06s;
+    transform 0.08s cubic-bezier(0.2, 0, 0.4, 1),
+    box-shadow 0.08s cubic-bezier(0.2, 0, 0.4, 1);
 }
 .flush span {
   position: relative;
@@ -1006,7 +1034,7 @@ body {
   font-size: 19px;
 }
 .flush:active {
-  transform: translateY(3px);
+  transform: translateY(5px);
 }
 .flush__fill {
   position: absolute;
@@ -1015,7 +1043,11 @@ body {
   bottom: 0;
   height: 0%;
   z-index: 0;
-  background: rgba(40, 40, 40, 0.55);
+  background: rgba(30, 30, 30, 0.45);
+  transition: background 0.08s;
+}
+.flush:active .flush__fill {
+  background: rgba(20, 20, 20, 0.65);
 }
 .flush--cooldown {
   background: #9a9d96;
@@ -1023,10 +1055,12 @@ body {
   cursor: not-allowed;
   border: 2px solid #8a8d86;
   box-shadow: none;
+  pointer-events: none;
 }
 .flush--cooldown:active {
   transform: none;
   box-shadow: none;
+  background: #9a9d96;
 }
 
 /* 2row: 채팅 (넓게) */
@@ -1240,7 +1274,7 @@ body {
   border-radius: 10px;
   padding: 0 12px;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
 }
 .settings__nick-row input::placeholder {
   color: rgba(159, 220, 201, 0.45);
@@ -1397,11 +1431,11 @@ body {
 .reset-confirm__sheet {
   position: relative;
   z-index: 1;
-  width: min(90%, 300px);
+  width: min(90%, 340px);
   background: rgba(12, 18, 14, 0.97);
   border: 1px solid rgba(125, 255, 176, 0.4);
   border-radius: 14px;
-  padding: 18px 16px 14px;
+  padding: 22px 16px 14px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1510,7 +1544,7 @@ body {
   background: rgba(12, 18, 14, 0.97);
   border: 1px solid rgba(125, 255, 176, 0.4);
   border-radius: 16px;
-  padding: 22px 18px 18px;
+  padding: 22px 18px 32px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1565,11 +1599,6 @@ body {
   background: #fff;
   padding: 6px;
   box-sizing: border-box;
-}
-.donate-qr__label {
-  font-size: 14px;
-  font-weight: 800;
-  color: #eafff5;
 }
 
 /* =====================  화장실 급여명세서 공유 모달  ===================== */
