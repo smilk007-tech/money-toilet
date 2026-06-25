@@ -397,12 +397,23 @@ export default function ToiletGame() {
           <h2 className="donate-modal__title">💜 개발자 후원하기</h2>
           <p className="donate-modal__sub">화장실이 더 쾌적해집니다</p>
           <div className="donate-qr">
-            <img
-              src={donateQrUrl(DONATE_KAKAO_URL)}
-              alt="카카오페이 송금 QR"
-              width={168}
-              height={168}
-            />
+            <div className="donate-qr__wrap">
+              <img
+                className="donate-qr__code"
+                src={donateQrUrl(DONATE_KAKAO_URL)}
+                alt="카카오페이 송금 QR"
+                width={200}
+                height={200}
+              />
+              <img
+                className="donate-qr__logo"
+                src="/assets/kakaobank-symbol-100.svg"
+                alt=""
+                aria-hidden
+                width={26}
+                height={26}
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -1587,7 +1587,12 @@ body {
   align-items: center;
   gap: 10px;
 }
-.donate-qr img {
+.donate-qr__wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+.donate-qr__code {
   display: block;
   width: 148px;
   height: 148px;
@@ -1595,6 +1600,17 @@ body {
   background: #fff;
   padding: 6px;
   box-sizing: border-box;
+}
+.donate-qr__logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  box-shadow: 0 0 0 3px #fff;
+  pointer-events: none;
 }
 
 /* =====================  화장실 급여명세서 공유 모달  ===================== */
