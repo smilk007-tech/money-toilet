@@ -153,11 +153,15 @@ export default function ToiletGame() {
               ⏰ <span id="timerVal">00:00</span>
             </div>
             <button className="ctrl-salary" id="salaryToggle" type="button">
+              <span
+                className="ctrl-salary__badge"
+                id="salaryChangeHint"
+                aria-hidden
+              >
+                ✏️
+              </span>
               <span className="ctrl-salary__cap">내 월급</span>
               <b id="salaryLabel">300만원</b>
-              <span className="ctrl-salary__hint" id="salaryChangeHint">
-                변경하기
-              </span>
             </button>
           </div>
           <div className="deckcol deckcol--mid">

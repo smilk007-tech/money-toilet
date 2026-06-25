@@ -827,12 +827,13 @@ body {
 }
 
 .ctrl-salary {
+  position: relative;
   width: 100%;
   height: var(--ctrlH);
   box-sizing: border-box;
   padding: 5px 6px;
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
   background: var(--panel);
   color: #eafff5;
   border: 1px solid rgba(125, 255, 176, 0.3);
@@ -858,16 +859,14 @@ body {
   text-overflow: ellipsis;
   max-width: 100%;
 }
-.ctrl-salary__hint {
-  font-size: 8px;
-  font-weight: 700;
-  color: #eafff5;
-  line-height: 8px;
-  min-height: 8px;
-}
-.ctrl-salary__hint[hidden] {
-  display: block;
-  visibility: hidden;
+.ctrl-salary__badge {
+  position: absolute;
+  top: -5px;
+  left: -3px;
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
 }
 
 /* 적립 영역 — 금액 + 속도 (시계/총은 분리됨) */
