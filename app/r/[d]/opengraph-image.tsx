@@ -96,7 +96,7 @@ function OgImage({
       <div
         style={{
           display: "flex",
-          fontSize: 30,
+          fontSize: 40,
           fontWeight: 800,
           color: "#9fdcc9",
           marginBottom: 28,
@@ -109,7 +109,7 @@ function OgImage({
         <div
           style={{
             display: "flex",
-            fontSize: 40,
+            fontSize: 48,
             fontWeight: 700,
             color: "#eafff5",
             marginBottom: 8,
@@ -152,8 +152,7 @@ function OgImage({
             display: "flex",
             justifyContent: "center",
             marginTop: 36,
-            maxWidth: 900,
-            fontSize: 34,
+            fontSize: 48,
             fontWeight: 800,
             color: "#9fdcc9",
             lineHeight: 1.35,

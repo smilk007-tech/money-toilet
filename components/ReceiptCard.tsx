@@ -145,7 +145,7 @@ export default function ReceiptCard({
   /* 근무 요약 항목 */
   const summary: [string, string][] = [
     ["물 내림 횟수", `${d.f.toLocaleString("ko-KR")}회`],
-    ["실 수령액 합계", fmtWon(d.t)],
+    ["실 수령액", fmtWon(d.t)],
   ];
 
   return (

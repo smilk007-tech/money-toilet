@@ -76,13 +76,10 @@ export default function PayslipShare({
           현재 접속자 {count.toLocaleString("ko-KR")}명
         </div>
         <div style={liveAmt}>{fmtWon(liveWon)}</div>
-        <div style={liveSub}>
-          지금 이 {count.toLocaleString("ko-KR")}명이 변기 위에서 실시간으로
-          쓸어담는 중 💰
-        </div>
+        <div style={liveSub}>다 같이 변기 위에서 실시간으로 쓸어담는 중 💰</div>
       </div>
 
-      <div style={cta}>🚽 함께 돈 벌러 가기</div>
+      <div style={cta}>🚽 돈버는 화장실 입장</div>
     </main>
   );
 }

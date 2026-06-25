@@ -2,12 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import {
-  encodeReceiptForShare,
-  fmtWon,
-  heroAmount,
-  type ReceiptData,
-} from "@/lib/receiptShare";
+import { encodeReceiptForShare, type ReceiptData } from "@/lib/receiptShare";
 import ReceiptCard from "@/components/ReceiptCard";
 import { resolveShareOrigin } from "@/lib/siteUrl";
 
@@ -22,8 +17,8 @@ function stableFingerprint(d: ReceiptData): string {
 // 세션 내 메모리 캐시 — fingerprint 동일하면 API 재호출 없이 기존 ID 재사용
 const shareIdCache = new Map<string, string>(); // fingerprint → shareId
 
-function bragText(d: ReceiptData) {
-  return `화장실에서 ${fmtWon(heroAmount(d))} 벌었다ㅋㅋ #변기위의 월루`;
+function shareText(url: string) {
+  return `돈버는 화장실 - ${url}`;
 }
 
 function toast(msg: string) {
@@ -84,17 +79,17 @@ export default function PayslipModal() {
     }
 
     const url = `${resolveShareOrigin()}/r/${shareId}`;
-    const text = bragText(data);
+    const text = shareText(url);
     if (navigator.share) {
       try {
-        await navigator.share({ title: "돈버는 화장실", text, url });
+        await navigator.share({ text });
         return;
       } catch (e) {
         if (e instanceof Error && e.name === "AbortError") return;
       }
     }
     try {
-      await navigator.clipboard.writeText(`${text}\n${url}`);
+      await navigator.clipboard.writeText(text);
       toast("공유 링크를 복사했어요! SNS에 붙여넣기 🔗");
       return;
     } catch {}
@@ -137,7 +132,7 @@ export default function PayslipModal() {
         <div
           className="receipt-modal__sheet"
           role="dialog"
-          aria-label="화장실 급여명세서 공유"
+          aria-label="급여명세서"
         >
           <div className="receipt-modal__preview" ref={cardRef}>
             <ReceiptCard

@@ -155,6 +155,9 @@ export default function ToiletGame() {
             <button className="ctrl-salary" id="salaryToggle" type="button">
               <span className="ctrl-salary__cap">내 월급</span>
               <b id="salaryLabel">300만원</b>
+              <span className="ctrl-salary__hint" id="salaryChangeHint">
+                변경하기
+              </span>
             </button>
           </div>
           <div className="deckcol deckcol--mid">
@@ -259,7 +262,7 @@ export default function ToiletGame() {
             className="settings__row settings__row--toggle"
             title="켜면 닉네임을 이 기기에 저장합니다"
           >
-            <span>닉네임 기기에 저장</span>
+            <span>기기에 닉네임 저장</span>
             <input type="checkbox" id="nickPinChk" className="sw" />
           </label>
         </div>
@@ -273,8 +276,8 @@ export default function ToiletGame() {
           </label>
         </div>
 
-        {/* 내 기록 */}
-        <div className="settings__group">
+        {/* 내 기록 — 총 N원 노출(ddong_total_visible) 시에만 표시 */}
+        <div className="settings__group" id="settingsHistoryGroup" hidden>
           <div className="settings__group-title">내 기록</div>
           <div className="settings__actions">
             <button
@@ -282,7 +285,7 @@ export default function ToiletGame() {
               id="receiptBtnSettings"
               type="button"
             >
-              🧾 돈 자랑하기
+              🧾 급여명세서
             </button>
             <button
               className="settings__btn settings__btn--reset"
@@ -297,6 +300,16 @@ export default function ToiletGame() {
         <div className="settings__divider"></div>
 
         <div className="settings__links">
+          <button
+            className="settings__link"
+            type="button"
+            id="settingsShareBtn"
+          >
+            <span className="settings__link-ico" aria-hidden>
+              🔗
+            </span>
+            공유하기
+          </button>
           <button className="settings__link" type="button" data-action="donate">
             <span className="settings__link-ico" aria-hidden>
               💜
