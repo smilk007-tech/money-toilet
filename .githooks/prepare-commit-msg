@@ -1,0 +1,24 @@
+#!/bin/sh
+# 커밋 메시지 자동 채번 — "commit" 또는 빈 메시지를 "commit<N>" (N=기존 최대+1)으로 바꾼다.
+# 다른 메시지를 직접 쓰면 그대로 둔다. 머지/스쿼시/되돌리기 등은 건드리지 않는다.
+
+msg_file="$1"
+source="$2"
+
+# 머지/스쿼시/amend(commit) 등 특수 상황은 손대지 않음
+case "$source" in
+  merge|squash|commit) exit 0 ;;
+esac
+
+first_line=$(head -n1 "$msg_file" | sed 's/[[:space:]]*$//')
+
+# 사용자가 의도적으로 다른 메시지를 넣었으면 그대로 둔다
+if [ -n "$first_line" ] && [ "$first_line" != "commit" ]; then
+  exit 0
+fi
+
+# 기존 커밋들에서 commit<숫자> 패턴의 최대값 +1
+max=$(git log --format=%s 2>/dev/null | grep -oE '^commit[0-9]+$' | grep -oE '[0-9]+' | sort -n | tail -1)
+next=$(( ${max:-0} + 1 ))
+
+printf 'commit%s\n' "$next" > "$msg_file"
