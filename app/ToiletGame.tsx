@@ -157,8 +157,9 @@ export default function ToiletGame() {
                 className="ctrl-salary__badge"
                 id="salaryChangeHint"
                 aria-hidden
+                hidden
               >
-                ✏️
+                🎚️
               </span>
               <span className="ctrl-salary__cap">내 월급</span>
               <b id="salaryLabel">300만원</b>
