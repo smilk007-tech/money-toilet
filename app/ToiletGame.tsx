@@ -134,7 +134,7 @@ export default function ToiletGame() {
             여기에 광고
           </div>
           <div className="ad-a4__sub" id="adSub">
-            문의 환영 ☺️
+            문의 환영
           </div>
           <span className="ad-a4__tag" id="adTag">
             click
