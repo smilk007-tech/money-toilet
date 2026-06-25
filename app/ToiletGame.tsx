@@ -159,7 +159,7 @@ export default function ToiletGame() {
                 aria-hidden
                 hidden
               >
-                🎚️
+                👇
               </span>
               <span className="ctrl-salary__cap">내 월급</span>
               <b id="salaryLabel">300만원</b>

@@ -861,28 +861,53 @@ body {
 }
 .ctrl-salary__badge {
   position: absolute;
-  top: -5px;
-  left: -3px;
+  top: -10px;
+  left: 50%;
   display: inline-block;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1;
   pointer-events: none;
   opacity: 0;
-  transform: rotate(-90deg);
+  transform: translateX(-50%);
   transform-origin: center center;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
 }
 .ctrl-salary__badge--show {
   animation: salary-badge-in 0.35s ease-out forwards;
 }
+.ctrl-salary__badge--bounce {
+  animation: salary-badge-bounce 0.85s ease-in-out infinite;
+}
+.ctrl-salary__badge--hide {
+  animation: salary-badge-out 0.28s ease-in forwards;
+}
 @keyframes salary-badge-in {
   from {
     opacity: 0;
-    transform: rotate(-90deg) scale(0.65);
+    transform: translateX(-50%) translateY(-6px) scale(0.7);
   }
   to {
     opacity: 1;
-    transform: rotate(-90deg) scale(1);
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+@keyframes salary-badge-bounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(5px);
+  }
+}
+@keyframes salary-badge-out {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.75);
   }
 }
 
