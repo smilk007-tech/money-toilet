@@ -284,7 +284,7 @@ export default function ToiletGame() {
         </div>
 
         {/* 내 기록 — 총 N원 노출(ddong_total_visible) 시에만 표시 */}
-        <div className="settings__group" id="settingsHistoryGroup" hidden>
+        <div className="settings__group" id="settingsHistoryGroup">
           <div className="settings__group-title">내 기록</div>
           <div className="settings__actions">
             <button
@@ -328,6 +328,21 @@ export default function ToiletGame() {
               📢
             </span>
             광고문의
+          </button>
+        </div>
+
+        {/* 개발 중 임시 도구 — 이 기기의 모든 로컬스토리지(저장 데이터)를 초기화 */}
+        <div className="settings__divider"></div>
+        <div className="settings__links">
+          <button
+            className="settings__link settings__link--danger"
+            type="button"
+            id="devWipeAllBtn"
+          >
+            <span className="settings__link-ico" aria-hidden>
+              🧨
+            </span>
+            기기 데이터 초기화
           </button>
         </div>
       </div>

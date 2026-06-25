@@ -8,6 +8,12 @@ import { resolveShareOrigin } from "@/lib/siteUrl";
 
 const OPEN_EVENT = "ddong:payslip-open";
 const TOAST_EVENT = "ddong:toast";
+const STAMP_EVENT = "ddong:payslip-stamped"; // 도장을 찍는 순간 game.js에 알림(영수증 버튼 즉시 노출용)
+const STAMP_CONFIRM_KEY = "ddong_payslip_confirmed"; // 지급완료 확인 넛지 — 최초 1회만
+const CLICK_TO_STAMP_DELAY_MS = 500; // 확인 클릭 후 도장이 떨어지기 시작하기까지 대기
+const STAMP_SLAM_MS = 1350; // receiptStampSlam 애니메이션 길이와 동일하게 유지
+const ACTIONS_REVEAL_DELAY_MS = 280; // 도장 착지 후 버튼이 등장하기까지 호흡
+const HINT_REVEAL_DELAY_MS = 380; // 버튼 등장 후 안내문구가 뒤따라 등장하기까지 호흡
 
 // ts·sl은 모달 열 때마다 바뀌므로 실제 게임 진행 상태만으로 fingerprint 생성
 function stableFingerprint(d: ReceiptData): string {
@@ -24,6 +30,12 @@ function toast(msg: string) {
 /* 게임 미리보기 팝업 — 공유 페이지와 동일한 ReceiptCard 를 렌더한다. */
 export default function PayslipModal() {
   const [data, setData] = useState<ReceiptData | null>(null);
+  // idle(확인 버튼) → waiting(클릭 후 도장 내려오기 전 대기) → stamping(도장 애니메이션)
+  // → revealed(저장/자랑하기 등장) → done(안내문구까지 등장)
+  const [stage, setStage] = useState<
+    "idle" | "waiting" | "stamping" | "revealed" | "done"
+  >("idle");
+  const [animateReveal, setAnimateReveal] = useState(false); // 최초 1회 도장 시퀀스에서만 등장 애니메이션 재생
   const cardRef = useRef<HTMLDivElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
   const siteUrlHref =
@@ -34,10 +46,41 @@ export default function PayslipModal() {
   useEffect(() => {
     const onOpen = (e: Event) => {
       setData((e as CustomEvent<ReceiptData>).detail);
+      let already = false;
+      try {
+        already = localStorage.getItem(STAMP_CONFIRM_KEY) === "1";
+      } catch {}
+      setStage(already ? "done" : "idle");
+      setAnimateReveal(false);
     };
     window.addEventListener(OPEN_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_EVENT, onOpen);
   }, []);
+
+  // 도장 착지 → 버튼 등장 → 안내문구 등장 순으로 한 단계씩 늦게 보여준다
+  useEffect(() => {
+    if (!animateReveal || stage !== "revealed") return;
+    const t = window.setTimeout(() => setStage("done"), HINT_REVEAL_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, [stage, animateReveal]);
+
+  function confirmStamp() {
+    if (stage !== "idle") return;
+    setAnimateReveal(true);
+    setStage("waiting");
+    window.setTimeout(() => {
+      setStage("stamping");
+      window.setTimeout(() => {
+        try {
+          localStorage.setItem(STAMP_CONFIRM_KEY, "1");
+        } catch {}
+        try {
+          window.dispatchEvent(new CustomEvent(STAMP_EVENT));
+        } catch {}
+        window.setTimeout(() => setStage("revealed"), ACTIONS_REVEAL_DELAY_MS);
+      }, STAMP_SLAM_MS);
+    }, CLICK_TO_STAMP_DELAY_MS);
+  }
 
   useEffect(() => {
     if (!data) return;
@@ -136,6 +179,8 @@ export default function PayslipModal() {
               siteUrlHref={siteUrlHref}
               footerMode="interactive"
               maxHeight="calc(100dvh - 176px)"
+              stampVisible={stage !== "idle" && stage !== "waiting"}
+              stampAnimate={stage === "stamping"}
             />
           </div>
           <div className="receipt-modal__export" aria-hidden>
@@ -150,22 +195,55 @@ export default function PayslipModal() {
             </div>
           </div>
           <div className="receipt-modal__actions">
-            <button
-              className="receipt-btn receipt-btn--save"
-              type="button"
-              onClick={save}
-            >
-              📷 저장
-            </button>
-            <button
-              className="receipt-btn receipt-btn--share btn-yellow"
-              type="button"
-              onClick={share}
-            >
-              🔗 자랑하기
-            </button>
+            {stage === "revealed" || stage === "done" ? (
+              <div
+                className={
+                  "receipt-modal__actions-row" +
+                  (animateReveal ? " receipt-modal__actions-row--in" : "")
+                }
+              >
+                <button
+                  className="receipt-btn receipt-btn--save"
+                  type="button"
+                  onClick={save}
+                >
+                  📷 저장
+                </button>
+                <button
+                  className="receipt-btn receipt-btn--share btn-yellow"
+                  type="button"
+                  onClick={share}
+                >
+                  🔗 자랑하기
+                </button>
+              </div>
+            ) : (
+              <button
+                className={
+                  "receipt-btn receipt-btn--save" +
+                  (stage === "waiting" || stage === "stamping"
+                    ? " receipt-btn--fading"
+                    : "")
+                }
+                type="button"
+                onClick={confirmStamp}
+                disabled={stage === "waiting" || stage === "stamping"}
+              >
+                위 내용이 틀림없음을 확인합니다 👈
+              </button>
+            )}
           </div>
-          <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
+          <p
+            className={
+              "receipt-modal__hint" +
+              (stage === "done" && animateReveal
+                ? " receipt-modal__hint--in"
+                : "")
+            }
+            style={stage === "done" ? undefined : { visibility: "hidden" }}
+          >
+            내 월급은 공개되지 않습니다
+          </p>
         </div>
       </div>
     </div>

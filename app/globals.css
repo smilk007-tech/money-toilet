@@ -815,6 +815,25 @@ body {
   color: #eef5f1;
   white-space: nowrap;
 }
+/* 타이머 표시 자동 ON(최초 1회) — 팝퍼가 닫히는 순간 아래에서 올라오듯 등장 */
+.deckcol__timer--auto-reveal {
+  transform-origin: bottom center;
+  animation: timerAutoReveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes timerAutoReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scaleY(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scaleY(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
 .deckcol__timer #timerVal {
   display: inline-block;
   min-width: 34px;
@@ -1043,20 +1062,22 @@ body {
   bottom: 0;
   height: 0%;
   z-index: 0;
-  background: rgba(40, 40, 40, 0.55);
+  background: rgba(54, 57, 49, 0.7); /* 차오르는 물 — 살짝 더 어둡게, 투명도 0.7 */
 }
+/* 물내리기 후 5초 쿨다운 동안만: 비어있는(아직 안 채워진) 버튼 배경엔 투명도를 줘서
+   "비어있는" 느낌을 내고, 위로 차오르는 .flush__fill은 불투명을 유지한다. */
 .flush--cooldown {
-  background: #9a9d96;
-  color: #3a3d37;
+  background: rgba(199, 202, 194, 0.4);
+  color: #6b6e66;
   cursor: not-allowed;
-  border: 2px solid #8a8d86;
+  border: 2px solid rgba(108, 111, 102, 0.3);
   box-shadow: none;
   pointer-events: none;
 }
 .flush--cooldown:active {
   transform: none;
   box-shadow: none;
-  background: #9a9d96;
+  background: rgba(199, 202, 194, 0.4);
 }
 
 /* 2row: 채팅 (넓게) */
@@ -1388,6 +1409,13 @@ body {
 }
 .settings__link:active {
   background: rgba(125, 255, 176, 0.1);
+}
+/* 개발용 임시 도구 — 위험 액션임을 색으로 표시 */
+.settings__link--danger {
+  color: #ff8a7a;
+}
+.settings__link--danger:active {
+  background: rgba(255, 110, 90, 0.12);
 }
 /* 토글 스위치 */
 .sw {
@@ -1742,7 +1770,7 @@ body {
   position: relative;
   overflow: hidden;
   flex: 1;
-  border: none;
+  border: 1px solid transparent; /* --save만 보더가 보이지만 두 버튼 높이는 항상 동일해야 함 */
   border-radius: 11px;
   padding: 11px 8px;
   font-size: 13.5px;
@@ -1771,7 +1799,7 @@ body {
 .receipt-btn--save {
   background: rgba(20, 30, 24, 0.95);
   color: #eafff5;
-  border: 1px solid rgba(125, 255, 176, 0.35);
+  border-color: rgba(125, 255, 176, 0.35);
 }
 .receipt-modal__hint {
   flex-shrink: 0;
@@ -1779,6 +1807,80 @@ body {
   font-weight: 600;
   color: #9fdcc9;
   text-align: center;
+}
+/* 최초 1회 — "위 사실이 틀림없음을 확인합니다" 클릭 시 지급완료 도장이 종이에 쾅 찍히는 연출
+   (높은 곳에서 내려와 박히고 두어 번 통통 튀며 자리를 잡는다 — JS의 STAMP_SLAM_MS와 길이를 맞출 것) */
+.receipt-stamp--slam {
+  animation: receiptStampSlam 1.35s cubic-bezier(0.18, 0.9, 0.32, 1) both;
+}
+@keyframes receiptStampSlam {
+  0% {
+    opacity: 0;
+    transform: rotate(8deg) scale(3.4) translateY(-26px);
+  }
+  38% {
+    opacity: 1;
+    transform: rotate(-18deg) scale(0.78) translateY(2px);
+  }
+  52% {
+    transform: rotate(-9deg) scale(1.22) translateY(0);
+  }
+  66% {
+    transform: rotate(-16deg) scale(0.94);
+  }
+  80% {
+    transform: rotate(-11deg) scale(1.06);
+  }
+  90% {
+    transform: rotate(-14deg) scale(0.99);
+  }
+  100% {
+    opacity: 0.92;
+    transform: rotate(-13deg) scale(1);
+  }
+}
+
+/* 확인 버튼 — 도장 찍히는 동안 자연스럽게 사라짐 */
+.receipt-btn--fading {
+  opacity: 0.25;
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+/* 도장 착지 후 저장/자랑하기 버튼이 뒤따라 등장 */
+.receipt-modal__actions-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.receipt-modal__actions-row--in {
+  animation: receiptActionsIn 0.38s cubic-bezier(0.22, 1.1, 0.4, 1) both;
+}
+@keyframes receiptActionsIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 버튼 등장 후 안내문구가 한 박자 늦게 등장 */
+.receipt-modal__hint--in {
+  animation: receiptHintIn 0.32s ease both;
+}
+@keyframes receiptHintIn {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* =====================  물내림 컨페티  ===================== */
@@ -1841,9 +1943,8 @@ body {
   .ctrl-salary {
     min-width: 54px;
   }
-  .flush {
+  .deckcol--flush {
     flex-basis: 68px;
-    font-size: 19px;
   }
   .chat input {
     font-size: 13px;

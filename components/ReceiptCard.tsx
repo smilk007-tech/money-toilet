@@ -79,12 +79,16 @@ export default function ReceiptCard({
   footerMode = "interactive",
   maxHeight,
   maxHistoryRows = RECEIPT_HISTORY_MAX_MODAL,
+  stampVisible = true,
+  stampAnimate = false,
 }: {
   d: ReceiptData;
   siteUrlHref?: string;
   footerMode?: "interactive" | "snapshot";
   maxHeight?: string;
   maxHistoryRows?: number;
+  stampVisible?: boolean;
+  stampAnimate?: boolean;
 }) {
   const hero = heroAmount(d);
   const dt = new Date(d.ts || Date.now());
@@ -322,33 +326,36 @@ export default function ReceiptCard({
         >
           &quot;{resolveReceiptSlogan(d.sl)}&quot;
         </span>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            position: "absolute",
-            right: -12,
-            width: 54,
-            height: 54,
-            borderRadius: 27,
-            border: `2.5px solid ${STAMP}`,
-            color: STAMP,
-            transform: "rotate(-13deg)",
-            opacity: 0.92,
-            lineHeight: 1,
-            backgroundColor: "#fbfaf3",
-            bottom: 10,
-          }}
-        >
-          <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>
-            지급
-          </span>
-          <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>
-            완료
-          </span>
-        </div>
+        {stampVisible && (
+          <div
+            className={stampAnimate ? "receipt-stamp--slam" : undefined}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "absolute",
+              right: -12,
+              width: 54,
+              height: 54,
+              borderRadius: 27,
+              border: `2.5px solid ${STAMP}`,
+              color: STAMP,
+              transform: "rotate(-13deg)",
+              opacity: 0.92,
+              lineHeight: 1,
+              backgroundColor: "#fbfaf3",
+              bottom: 10,
+            }}
+          >
+            <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>
+              지급
+            </span>
+            <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>
+              완료
+            </span>
+          </div>
+        )}
       </div>
 
       <div style={{ ...center, marginTop: 4 }}>
