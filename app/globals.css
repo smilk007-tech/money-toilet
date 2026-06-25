@@ -405,14 +405,11 @@ body {
   left: 4px;
   font-size: 7px;
   font-weight: 900;
-  color: #fff;
-  background: #e8453a;
+  color: #1a1a1a;
+  background: #d8d8d8;
   padding: 1px 5px;
   border-radius: 3px;
   letter-spacing: 0.5px;
-}
-.ad-a4__tag--donate {
-  background: #7c5cff;
 }
 .ad-a4__emoji {
   font-size: 28px;
