@@ -68,7 +68,7 @@ export default async function Image() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 128,
+          fontSize: 100,
           fontWeight: 800,
           color: "#ffd84d",
           lineHeight: 1.1,
@@ -80,11 +80,12 @@ export default async function Image() {
       </div>
       <div
         style={{
+          marginTop: 18,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 60,
-          fontWeight: 700,
+          fontSize: 52,
+          fontWeight: 800,
           color: "#eafff5",
           lineHeight: 1.2,
           letterSpacing: -1,
