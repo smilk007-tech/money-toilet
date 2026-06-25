@@ -1,0 +1,31 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f4136"/>
+      <stop offset="1" stop-color="#121a15"/>
+    </linearGradient>
+    <radialGradient id="coin" cx="42%" cy="38%" r="68%">
+      <stop offset="0" stop-color="#ffe27a"/>
+      <stop offset="55%" stop-color="#ffd84d"/>
+      <stop offset="100%" stop-color="#f0a91f"/>
+    </radialGradient>
+    <linearGradient id="seat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dfe7e3"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+
+  <circle cx="256" cy="256" r="196" fill="url(#seat)"/>
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#c2cec8" stroke-width="6"/>
+
+  <circle cx="256" cy="256" r="150" fill="url(#bg)"/>
+
+  <circle cx="256" cy="256" r="132" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="132" fill="none" stroke="#c98a14" stroke-width="9"/>
+  <circle cx="256" cy="256" r="112" fill="none" stroke="#e3a82a" stroke-width="6" opacity="0.7"/>
+
+  <text x="256" y="262" font-size="172" text-anchor="middle" dominant-baseline="central"
+        font-family="Arial, Helvetica, sans-serif" font-weight="900" fill="#7a4e07">₩</text>
+</svg>
