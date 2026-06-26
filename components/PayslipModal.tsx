@@ -18,10 +18,10 @@ const STAMP_TIMING = {
     hint: 300,
   },
   repeat: {
-    click: 100,
-    slam: 300,
-    actions: 150,
-    hint: 200,
+    click: 0,
+    slam: 400,
+    actions: 250,
+    hint: 300,
   },
 } as const;
 
