@@ -62,7 +62,6 @@
 html,
 body {
   height: 100%;
-  width: 100%;
 }
 body {
   font-family:
@@ -73,22 +72,14 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
-/* 게임 화면 — 키보드가 레이아웃을 줄이거나 밀어올리지 않게 고정 */
-body:has(#app) {
-  position: fixed;
-  inset: 0;
-}
 #app {
   position: fixed;
   inset: 0;
-  height: var(--app-h, 100%);
-  max-height: var(--app-h, 100%);
   max-width: 520px;
   margin: 0 auto;
   overflow: hidden;
   background: #161d18;
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
-  transform: translateY(var(--vv-offset, 0px));
 }
 
 /* 공유 페이지(/r/*) — body overflow:hidden 우회, 세로 스크롤 허용 */
@@ -455,13 +446,13 @@ body:has(#app) {
   pointer-events: none;
 }
 
-/* =====================  옆칸(봇) 말풍선 — HUD~하단덱 사이, 키보드 시 JS로 영역 재계산  ===================== */
+/* =====================  옆칸(봇) 말풍선 (어두운 반투명, 긴 꼬리)  ===================== */
 .bubbles {
   position: absolute;
   top: 16%;
   bottom: 42%;
   width: 30%;
-  z-index: 25;
+  z-index: 12;
   pointer-events: none;
 }
 .bubbles--left {
@@ -554,7 +545,7 @@ body:has(#app) {
 
 /* ============================================================
    말풍선 정책
-   - 남(옆칸): .bubble — 화면 좌/우 벽에 뜸. 꼬리는 벽(바깥)을 가리킴.
+   - 남(옆칸): .bubble — 씬 좌/우 벽에 뜸. 꼬리는 벽(바깥)을 가리킴.
      중립 다크 배경 + 이름색만 민트(채팅)/골드(물내림). 작게(원근감).
    - 나: .myfeed__msg — 하단 덱 '바로 위' 가운데. 꼬리는 아래(내 입력창)를 가리킴.
      타입 틴트 배경 + accent 보더로 '내 것' 구분. 덱과 겹치지 않음.
