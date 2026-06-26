@@ -206,9 +206,9 @@ export default function ReceiptCard({
         >
           {d.n}
         </span>
-        {/* <span style={{ display: "flex", fontSize: 10, color: SUB }}>
-          (주)돈버는화장실
-        </span> */}
+        <span style={{ display: "flex", fontSize: 10, color: SUB }}>
+          발행일 {issued}
+        </span>
       </div>
 
       {/* 근무 요약 */}
@@ -267,13 +267,13 @@ export default function ReceiptCard({
             </div>
           ),
         )}
-        {/* {omitted && (
+        {omitted && (
           <div style={{ ...center, marginTop: 5 }}>
             <span style={{ display: "flex", fontSize: 10, color: SUB }}>
               (종이가 모자라 생략..😢)
             </span>
           </div>
-        )} */}
+        )}
       </div>
 
       {/* 합계(헤드라인) */}
@@ -387,20 +387,6 @@ export default function ReceiptCard({
             </span>
           </div>
         )}
-      </div>
-
-      <div style={{ ...center, marginTop: 4 }}>
-        <span
-          style={{
-            display: "flex",
-            fontSize: 10,
-            letterSpacing: 1.5,
-            color: SUB,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          NO. {docNo}
-        </span>
       </div>
     </div>
   );
