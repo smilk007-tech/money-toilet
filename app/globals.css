@@ -1813,7 +1813,7 @@ body {
   color: #9fdcc9;
   text-align: center;
 }
-/* 지급완료 도장 — 크게 내려와 찍히고(작아짐) → 끝 무렵 다시 원래 크기 */
+/* 지급완료 도장 — 위에서 크게 내려와 작아지며 찍힘 */
 .receipt-stamp--slam {
   animation: receiptStampSlam 1.35s cubic-bezier(0.18, 0.9, 0.32, 1) both;
 }
@@ -1822,12 +1822,9 @@ body {
     opacity: 0;
     transform: rotate(8deg) scale(3.4) translateY(-26px);
   }
-  38% {
+  40% {
     opacity: 1;
-    transform: rotate(-18deg) scale(0.78) translateY(2px);
-  }
-  72% {
-    transform: rotate(-15deg) scale(0.78) translateY(0);
+    transform: rotate(-15deg) scale(1.08) translateY(0);
   }
   100% {
     opacity: 0.92;
