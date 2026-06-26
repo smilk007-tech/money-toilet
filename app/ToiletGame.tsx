@@ -252,7 +252,7 @@ export default function ToiletGame() {
                 id="receiptBtnIcon"
                 aria-hidden
               >
-                🧾
+                🧻
               </span>
             </button>
             <div className="deckcol__top deckcol__total" id="totalEarned">
@@ -356,7 +356,7 @@ export default function ToiletGame() {
               id="receiptBtnSettings"
               type="button"
             >
-              🧾 급여명세서
+              🧻 급여명세서
             </button>
             <button
               className="settings__btn settings__btn--reset"

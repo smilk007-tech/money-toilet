@@ -10,6 +10,9 @@
   --beyond: #2b322c;
   --gapdark: #1b211c;
 
+  /* 급여명세서(휴지) 카드 모서리 — 휴지는 각진 종이라 0(필요시 1~2px) */
+  --receipt-card-radius: 0px;
+
   --floor-tile: #b9c0b6;
   --floor-grout: #98a094;
 
@@ -1798,10 +1801,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  background: #fbfaf3;
-  border-radius: 16px;
+  /* 무대(컨테이너)는 형태 없음 — 둥근 프레임/클리핑을 두지 않아 휴지 종이만 떠 보이게 한다.
+     스크롤은 카드(.receipt-card) 자체가 담당하므로 여기서 overflow 클리핑은 불필요. */
+  background: transparent;
   filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.5));
+}
+/* 급여명세서(휴지) 카드 본체 — 모서리는 변수로 일원화 관리 */
+.receipt-card {
+  border-radius: var(--receipt-card-radius);
 }
 
 .receipt-modal__export {

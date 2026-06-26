@@ -105,7 +105,19 @@ export default function ReceiptCard({
   const LINE = "#c9ccc0";
   const BRAND = "#2f6b4e";
   const STAMP = "#c2453a";
-  const ZEBRA = "#f2f0e3";
+  const ZEBRA = "#f3f1ea";
+  const PAPER = "#fdfcf7"; // 휴지톤 — A4보다 부드럽고 따뜻한 흰색
+  const PERF = "#bcc0b6"; // 절취선(점선) 색
+
+  // 두루마리 휴지 절취선 — 상·하단을 가로지르는 점선 시접
+  const perforation = {
+    display: "flex",
+    height: 0,
+    width: "calc(100% + 48px)",
+    marginLeft: -24,
+    borderTop: `2px dotted ${PERF}`,
+    flex: "0 0 auto",
+  } as const;
 
   const dash = {
     display: "flex",
@@ -148,15 +160,19 @@ export default function ReceiptCard({
 
   return (
     <div
+      className="receipt-card"
       style={{
         display: "flex",
         flexDirection: "column",
         width: "100%",
-        background: "#fbfaf3",
+        background: PAPER,
+        // 휴지 특유의 은은한 엠보싱 결(quilting) — 가상요소 없이 배경 그라데이션만 사용(PNG 저장 호환)
+        backgroundImage:
+          "radial-gradient(rgba(120,128,112,0.06) 1.1px, transparent 1.3px)",
+        backgroundSize: "13px 13px",
         color: INK,
         padding: "20px 24px",
         border: `1px solid ${LINE}`,
-        borderRadius: 16,
         fontFamily: '"Noto Sans KR"',
         lineHeight: 1.25,
         boxSizing: "border-box",
@@ -173,6 +189,9 @@ export default function ReceiptCard({
           : {}),
       }}
     >
+      {/* 상단 절취선 — 휴지 한 칸 뜯어낸 시접 */}
+      <div style={{ ...perforation, marginTop: -8, marginBottom: 16 }} />
+
       {/* 헤더 */}
       <div
         style={{
@@ -182,7 +201,7 @@ export default function ReceiptCard({
           gap: 4,
         }}
       >
-        <span style={{ fontSize: 15, fontWeight: 700 }}>🧾 급여명세서</span>
+        <span style={{ fontSize: 15, fontWeight: 700 }}>🧻 급여명세서</span>
         <span
           style={{
             fontSize: 18,
@@ -259,7 +278,7 @@ export default function ReceiptCard({
         {omitted && (
           <div style={{ ...center, marginTop: 5 }}>
             <span style={{ display: "flex", fontSize: 10, color: SUB }}>
-              (종이가 모자라 생략..😢)
+              (휴지가 모자라 생략..😢)
             </span>
           </div>
         )}
@@ -338,7 +357,7 @@ export default function ReceiptCard({
               transform: "rotate(-13deg)",
               opacity: 0.92,
               lineHeight: 1,
-              backgroundColor: "#fbfaf3",
+              backgroundColor: PAPER,
               bottom: 8,
               ...(stampAnimate && stampSlamMs
                 ? { animationDuration: `${stampSlamMs}ms` }
@@ -378,6 +397,9 @@ export default function ReceiptCard({
           </div>
         )}
       </div>
+
+      {/* 하단 절취선 — 다음 칸으로 이어지는 시접 */}
+      <div style={{ ...perforation, marginTop: 16, marginBottom: -8 }} />
     </div>
   );
 }
