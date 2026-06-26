@@ -11,13 +11,13 @@ import { resolveShareOrigin } from "@/lib/siteUrl";
 const STAMP_CONFIRM_KEY = STORAGE_KEY.payslipConfirmed;
 
 const FIRST_STAMP_TIMING = {
-  click: 400,
-  slam: 1000,
+  click: 500,
+  slam: 1200,
   actions: 250,
   hint: 300,
 } as const;
-const REPEAT_STAMP_DELAY_MS = 400;
-const REPEAT_STAMP_SLAM_MS = 1000;
+const REPEAT_STAMP_DELAY_MS = 500;
+const REPEAT_STAMP_SLAM_MS = 1200;
 
 // ts·sl은 모달 열 때마다 바뀌므로 실제 게임 진행 상태만으로 fingerprint 생성
 function stableFingerprint(d: ReceiptData): string {
@@ -351,17 +351,17 @@ export default function PayslipModal() {
               </button>
             ) : null}
           </div>
-          {animateReveal && (
-            <p
-              className={
-                "receipt-modal__hint" +
-                (stage === "done" ? " receipt-modal__hint--in" : "")
-              }
-              style={stage === "done" ? undefined : { visibility: "hidden" }}
-            >
-              내 월급은 공개되지 않습니다
-            </p>
-          )}
+          <p
+            className={
+              "receipt-modal__hint" +
+              (stage === "done" && animateReveal
+                ? " receipt-modal__hint--in"
+                : "")
+            }
+            style={stage === "done" ? undefined : { visibility: "hidden" }}
+          >
+            내 월급은 공개되지 않습니다
+          </p>
         </div>
       </div>
     </div>
