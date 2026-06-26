@@ -200,11 +200,11 @@ export default function ToiletGame() {
             click
           </span>
         </a>
-
-        {/* 좌우 실시간 말풍선 (봇) */}
-        <div className="bubbles bubbles--left" id="bubblesLeft"></div>
-        <div className="bubbles bubbles--right" id="bubblesRight"></div>
       </div>
+
+      {/* 좌우 실시간 말풍선 — 씬 밖(#app 직속): 키보드 올라와도 가시 영역에 맞춤 */}
+      <div className="bubbles bubbles--left" id="bubblesLeft"></div>
+      <div className="bubbles bubbles--right" id="bubblesRight"></div>
 
       {/* ===== 하단 스택 ===== */}
       <div className="bottom">

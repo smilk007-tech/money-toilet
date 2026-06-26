@@ -60,6 +60,13 @@ export function resolveReceiptSlogan(sl: number): string {
   return RECEIPT_SLOGANS[randomSloganIndex()];
 }
 
+/** 명세서 문서번호 — NO. 뒤 YYYYMMDD-HHmm */
+export function receiptDocNo(d: ReceiptData): string {
+  const dt = new Date(d.ts || Date.now());
+  const z = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}${z(dt.getMonth() + 1)}${z(dt.getDate())}-${z(dt.getHours())}${z(dt.getMinutes())}`;
+}
+
 const clampNum = (x: unknown) =>
   Math.max(0, Math.min(Math.floor(Number(x) || 0), 1e15));
 

@@ -3,6 +3,7 @@ import {
   heroAmount,
   hasOmittedLines,
   RECEIPT_HISTORY_MAX_MODAL,
+  receiptDocNo,
   resolveReceiptSlogan,
   visibleHistoryRows,
   type ReceiptData,
@@ -98,7 +99,7 @@ export default function ReceiptCard({
   const issued = `${dt.getFullYear()}.${z(dt.getMonth() + 1)}.${z(dt.getDate())} ${z(dt.getHours())}:${z(dt.getMinutes())}`;
   const omitted = hasOmittedLines(d, maxHistoryRows);
   const empNo = empNoOf(d.n);
-  const docNo = `${dt.getFullYear()}${z(dt.getMonth() + 1)}${z(dt.getDate())}-${z(dt.getHours())}${z(dt.getMinutes())}`;
+  const docNo = receiptDocNo(d);
 
   const INK = "#20271f";
   const SUB = "#717a6f";

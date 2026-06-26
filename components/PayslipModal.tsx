@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
-import { encodeReceiptForShare, type ReceiptData } from "@/lib/receiptShare";
+import {
+  encodeReceiptForShare,
+  receiptDocNo,
+  type ReceiptData,
+} from "@/lib/receiptShare";
 import { LS as STORAGE_KEY } from "@/lib/storageKeys";
 import { APP_EVENTS } from "@/lib/appEvents";
 import ReceiptCard from "@/components/ReceiptCard";
@@ -13,8 +17,8 @@ const STAMP_CONFIRM_KEY = STORAGE_KEY.payslipConfirmed;
 const FIRST_STAMP_TIMING = {
   click: 500,
   slam: 1200,
-  actions: 250,
-  hint: 300,
+  actions: 350,
+  hint: 400,
 } as const;
 const REPEAT_STAMP_DELAY_MS = 500;
 const REPEAT_STAMP_SLAM_MS = 1200;
@@ -243,7 +247,7 @@ export default function PayslipModal() {
   }
 
   async function save() {
-    if (!exportCardRef.current) return;
+    if (!exportCardRef.current || !data) return;
     try {
       const dataUrl = await toPng(exportCardRef.current, {
         pixelRatio: Math.max(2, window.devicePixelRatio || 1),
@@ -251,11 +255,11 @@ export default function PayslipModal() {
       });
       const a = document.createElement("a");
       a.href = dataUrl;
-      a.download = "money-toilet.png";
+      a.download = `돈버는화장실-${receiptDocNo(data)}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast("급여명세서 이미지를 저장했어요 🧾");
+      toast("급여명세서를 저장했어요 🧾");
     } catch {
       toast("이미지 저장에 실패했어요 🥲");
     }
@@ -275,8 +279,7 @@ export default function PayslipModal() {
 
   const showHint =
     stage === "done" ||
-    (repeatStampRef.current &&
-      (stage === "waiting" || stage === "stamping"));
+    (repeatStampRef.current && (stage === "waiting" || stage === "stamping"));
 
   return (
     <div className="receipt-modal" role="presentation">
