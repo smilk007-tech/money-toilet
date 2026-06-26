@@ -11,6 +11,7 @@ import { LS as STORAGE_KEY } from "@/lib/storageKeys";
 import { APP_EVENTS } from "@/lib/appEvents";
 import ReceiptCard from "@/components/ReceiptCard";
 import { resolveShareOrigin } from "@/lib/siteUrl";
+import { isPC } from "@/lib/device";
 
 const STAMP_CONFIRM_KEY = STORAGE_KEY.payslipConfirmed;
 
@@ -22,6 +23,24 @@ const FIRST_STAMP_TIMING = {
 } as const;
 const REPEAT_STAMP_DELAY_MS = 500;
 const REPEAT_STAMP_SLAM_MS = 1200;
+// 슬램 애니메이션(receiptStampSlam)에서 도장이 종이에 "딱" 닿는 순간 = 38% 키프레임.
+// 그 타이밍에 도장 효과음을 재생한다.
+const STAMP_IMPACT_RATIO = 0.16;
+
+// 도장 효과음(종이 착지 순간 1회). 모듈 싱글톤으로 재사용.
+let stampAudio: HTMLAudioElement | null = null;
+function playStampSound() {
+  if (typeof window === "undefined") return;
+  try {
+    if (!stampAudio) {
+      stampAudio = new Audio("/sound/moneytoilet-stamp-sound.mp3");
+      stampAudio.preload = "auto";
+    }
+    stampAudio.currentTime = 0;
+    const p = stampAudio.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch {}
+}
 
 // ts·sl은 모달 열 때마다 바뀌므로 실제 게임 진행 상태만으로 fingerprint 생성
 function stableFingerprint(d: ReceiptData): string {
@@ -125,6 +144,8 @@ export default function PayslipModal() {
         try {
           window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
         } catch {}
+        // 도장이 종이에 닿는 순간(슬램 38%)에 효과음
+        pushTimer(playStampSound, FIRST_STAMP_TIMING.slam * STAMP_IMPACT_RATIO);
         pushTimer(() => {
           pushTimer(() => setStage("revealed"), FIRST_STAMP_TIMING.actions);
         }, FIRST_STAMP_TIMING.slam);
@@ -150,6 +171,8 @@ export default function PayslipModal() {
         try {
           window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
         } catch {}
+        // 도장이 종이에 닿는 순간(슬램 38%)에 효과음
+        pushTimer(playStampSound, REPEAT_STAMP_SLAM_MS * STAMP_IMPACT_RATIO);
         pushTimer(() => setStage("done"), REPEAT_STAMP_SLAM_MS);
       }, REPEAT_STAMP_DELAY_MS);
     },
@@ -230,7 +253,8 @@ export default function PayslipModal() {
 
     const url = `${resolveShareOrigin()}/r/${shareId}`;
     const text = url;
-    if (navigator.share) {
+    // PC는 네이티브 공유시트 대신 클립보드 복사. 모바일은 공유시트 우선.
+    if (!isPC() && navigator.share) {
       try {
         await navigator.share({ text });
         return;
@@ -303,7 +327,7 @@ export default function PayslipModal() {
               d={data}
               siteUrlHref={siteUrlHref}
               footerMode="interactive"
-              maxHeight="calc(100dvh - 176px)"
+              maxHeight="calc(var(--app-h, 100dvh) - 176px)"
               stampVisible={stage !== "idle" && stage !== "waiting"}
               stampAnimate={stage === "stamping"}
               stampSlamMs={stampSlamMs}

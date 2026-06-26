@@ -3,13 +3,19 @@
 import { useEffect } from "react";
 import { DONATE_KAKAO_URL, donateQrUrl } from "@/lib/constants";
 import { initGame } from "@/lib/game";
+import { initStage } from "@/lib/stage";
 import PayslipModal from "@/components/PayslipModal";
 
 export default function ToiletGame() {
   useEffect(() => {
+    // 무대 스케일러(고정 비율 + 레터박스) — 리사이즈 추적.
+    const stopStage = initStage();
     // 게임 엔진(명령형 DOM/canvas 로직)을 마운트 후 1회 실행. 반환값은 cleanup.
     const cleanup = initGame();
-    return cleanup;
+    return () => {
+      cleanup();
+      stopStage();
+    };
   }, []);
 
   return (

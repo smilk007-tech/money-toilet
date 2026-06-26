@@ -72,6 +72,7 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
+/* 기본(가로 ≤520px): 기존 그대로 — 가변 폭 컬럼이 화면을 꽉 채운다. */
 #app {
   position: fixed;
   inset: 0;
@@ -80,6 +81,32 @@ body {
   overflow: hidden;
   background: #161d18;
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+/* 가로 >520px(태블릿/PC): 520 설계를 통째로 확대.
+   폭·요소가 함께 커지고, 세로는 항상 꽉 채우며(--app-h=뷰포트/확대율),
+   큰 모니터에선 좌우 검정 여백이 남는다. 변수는 stage.js/부트스트랩이 세팅. */
+@media (min-width: 521px) {
+  #app {
+    inset: auto;
+    left: 50%;
+    top: 50%;
+    width: 520px;
+    max-width: none;
+    height: var(--app-h, 100dvh);
+    margin: 0;
+    transform: translate(-50%, -50%) scale(var(--stage-scale, 1));
+    transform-origin: center center;
+    will-change: transform;
+  }
+  /* 무대가 확대되면 svh(=뷰포트 기준)는 무대보다 커져버린다.
+     확대 모드에선 무대 높이 기준(%)으로 바꿔 균일하게 따라 커지도록. */
+  .skin-floor {
+    height: 13.5%;
+  }
+  .skin-light {
+    top: 2%;
+  }
 }
 
 /* 공유 페이지(/r/*) — body overflow:hidden 우회, 세로 스크롤 허용 */
@@ -1756,7 +1783,7 @@ body {
 .receipt-modal__sheet {
   position: relative;
   width: 100%;
-  max-height: calc(100dvh - 96px);
+  max-height: calc(var(--app-h, 100dvh) - 96px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1885,24 +1912,8 @@ body {
     transform: rotate(8deg) scale(3.4) translateY(-26px);
   }
   38% {
-    opacity: 1;
+    opacity: 0.8;
     transform: rotate(-18deg) scale(0.78) translateY(2px);
-  }
-  52% {
-    transform: rotate(-9deg) scale(1.22) translateY(0);
-  }
-  66% {
-    transform: rotate(-16deg) scale(0.94);
-  }
-  80% {
-    transform: rotate(-11deg) scale(1.06);
-  }
-  90% {
-    transform: rotate(-14deg) scale(0.99);
-  }
-  100% {
-    opacity: 0.92;
-    transform: rotate(-13deg) scale(1);
   }
 }
 
@@ -1980,7 +1991,7 @@ body {
   left: 50%;
   bottom: 48%;
   transform: translateX(-50%);
-  z-index: 40;
+  z-index: 80; /* 모든 팝업(명세서60·기록65·후원66) 위에서 보이도록 */
   background: var(--panel);
   color: #eafff5;
   border: 1px solid rgba(125, 255, 176, 0.3);
@@ -1994,6 +2005,11 @@ body {
 }
 .toast[hidden] {
   display: none;
+}
+/* 자랑하기 팝업(명세서)이 열려 있을 땐 토스트를 하단으로 내려
+   카드 가운데를 가리지 않게 한다(팝업은 열렸을 때만 DOM에 존재). */
+#app:has(.receipt-modal) .toast {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
 }
 
 /* =====================  아주 좁은 화면 보정 (≤370px)  ===================== */

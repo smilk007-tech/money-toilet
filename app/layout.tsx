@@ -1,7 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { SITE_NAME } from "@/lib/ogMeta";
 import { resolveSiteUrl } from "@/lib/siteUrl";
+import { STAGE_MAX_W, STAGE_REF_H, MAX_SCALE } from "@/lib/stage";
 import "./globals.css";
+
+// 첫 페인트 전에 무대 확대율을 미리 세팅(FOUC/팝 방지). stage.js와 동일 공식.
+const stageBootstrap = `(function(){try{var d=document.documentElement,w=innerWidth,h=innerHeight,` +
+  `s=Math.max(1,Math.min(Math.min(w/${STAGE_MAX_W},h/${STAGE_REF_H}),${MAX_SCALE}));` +
+  `d.style.setProperty('--stage-scale',String(s));` +
+  `d.style.setProperty('--app-h',(h/s)+'px');}catch(e){}})();`;
 
 const siteUrl = resolveSiteUrl();
 
@@ -41,7 +48,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: stageBootstrap }} />
+      </head>
       <body>{children}</body>
     </html>
   );
