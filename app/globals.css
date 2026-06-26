@@ -818,7 +818,7 @@ body {
 /* 타이머 표시 자동 ON(최초 1회) — 팝퍼 닫힌 뒤 0.5초 후 아래에서 올라오듯 등장 */
 .deckcol__timer--auto-reveal {
   transform-origin: bottom center;
-  animation: timerAutoReveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both;
+  animation: timerAutoReveal 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
 }
 @keyframes timerAutoReveal {
   0% {

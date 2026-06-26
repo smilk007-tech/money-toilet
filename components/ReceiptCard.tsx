@@ -81,6 +81,7 @@ export default function ReceiptCard({
   maxHistoryRows = RECEIPT_HISTORY_MAX_MODAL,
   stampVisible = true,
   stampAnimate = false,
+  stampSlamMs,
 }: {
   d: ReceiptData;
   siteUrlHref?: string;
@@ -89,6 +90,7 @@ export default function ReceiptCard({
   maxHistoryRows?: number;
   stampVisible?: boolean;
   stampAnimate?: boolean;
+  stampSlamMs?: number;
 }) {
   const hero = heroAmount(d);
   const dt = new Date(d.ts || Date.now());
@@ -346,6 +348,9 @@ export default function ReceiptCard({
               lineHeight: 1,
               backgroundColor: "#fbfaf3",
               bottom: 10,
+              ...(stampAnimate && stampSlamMs
+                ? { animationDuration: `${stampSlamMs}ms` }
+                : {}),
             }}
           >
             <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>

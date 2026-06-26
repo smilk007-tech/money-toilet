@@ -9,10 +9,23 @@ import ReceiptCard from "@/components/ReceiptCard";
 import { resolveShareOrigin } from "@/lib/siteUrl";
 
 const STAMP_CONFIRM_KEY = STORAGE_KEY.payslipConfirmed;
-const CLICK_TO_STAMP_DELAY_MS = 400; // 확인 클릭 후 도장이 떨어지기 시작하기까지 대기
-const STAMP_SLAM_MS = 1000; // receiptStampSlam 애니메이션 길이와 동일하게 유지
-const ACTIONS_REVEAL_DELAY_MS = 250; // 도장 착지 후 버튼이 등장하기까지 호흡
-const HINT_REVEAL_DELAY_MS = 300; // 버튼 등장 후 안내문구가 뒤따라 등장하기까지 호흡
+
+const STAMP_TIMING = {
+  first: {
+    click: 400,
+    slam: 1000,
+    actions: 250,
+    hint: 300,
+  },
+  repeat: {
+    click: 100,
+    slam: 300,
+    actions: 150,
+    hint: 200,
+  },
+} as const;
+
+type StampTiming = (typeof STAMP_TIMING)[keyof typeof STAMP_TIMING];
 
 // ts·sl은 모달 열 때마다 바뀌므로 실제 게임 진행 상태만으로 fingerprint 생성
 function stableFingerprint(d: ReceiptData): string {
@@ -48,6 +61,24 @@ function saveConfirmedFlushCount(flushCount: number) {
   } catch {}
 }
 
+function hasEverStamped() {
+  try {
+    return localStorage.getItem(STORAGE_KEY.payslipStampEver) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markEverStamped() {
+  try {
+    localStorage.setItem(STORAGE_KEY.payslipStampEver, "1");
+  } catch {}
+}
+
+function getStampTiming(): StampTiming {
+  return hasEverStamped() ? STAMP_TIMING.repeat : STAMP_TIMING.first;
+}
+
 /* 게임 미리보기 팝업 — 공유 페이지와 동일한 ReceiptCard 를 렌더한다. */
 export default function PayslipModal() {
   const [data, setData] = useState<ReceiptData | null>(null);
@@ -57,6 +88,10 @@ export default function PayslipModal() {
     "idle" | "waiting" | "stamping" | "revealed" | "done"
   >("idle");
   const [animateReveal, setAnimateReveal] = useState(false); // 최초 1회 도장 시퀀스에서만 등장 애니메이션 재생
+  const [stampSlamMs, setStampSlamMs] = useState<number>(
+    STAMP_TIMING.first.slam,
+  );
+  const hintDelayRef = useRef<number>(STAMP_TIMING.first.hint);
   const cardRef = useRef<HTMLDivElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
   const siteUrlHref =
@@ -78,25 +113,29 @@ export default function PayslipModal() {
   // 도장 착지 → 버튼 등장 → 안내문구 등장 순으로 한 단계씩 늦게 보여준다
   useEffect(() => {
     if (!animateReveal || stage !== "revealed") return;
-    const t = window.setTimeout(() => setStage("done"), HINT_REVEAL_DELAY_MS);
+    const t = window.setTimeout(() => setStage("done"), hintDelayRef.current);
     return () => window.clearTimeout(t);
   }, [stage, animateReveal]);
 
   function confirmStamp() {
     if (stage !== "idle" || !data) return;
     const flushCount = data.f;
+    const timing = getStampTiming();
+    hintDelayRef.current = timing.hint;
+    setStampSlamMs(timing.slam);
     setAnimateReveal(true);
     setStage("waiting");
     window.setTimeout(() => {
       setStage("stamping");
       window.setTimeout(() => {
         saveConfirmedFlushCount(flushCount);
+        markEverStamped();
         try {
           window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
         } catch {}
-        window.setTimeout(() => setStage("revealed"), ACTIONS_REVEAL_DELAY_MS);
-      }, STAMP_SLAM_MS);
-    }, CLICK_TO_STAMP_DELAY_MS);
+        window.setTimeout(() => setStage("revealed"), timing.actions);
+      }, timing.slam);
+    }, timing.click);
   }
 
   useEffect(() => {
@@ -198,6 +237,7 @@ export default function PayslipModal() {
               maxHeight="calc(100dvh - 176px)"
               stampVisible={stage !== "idle" && stage !== "waiting"}
               stampAnimate={stage === "stamping"}
+              stampSlamMs={stampSlamMs}
             />
           </div>
           <div className="receipt-modal__export" aria-hidden>
@@ -266,4 +306,3 @@ export default function PayslipModal() {
     </div>
   );
 }
-
