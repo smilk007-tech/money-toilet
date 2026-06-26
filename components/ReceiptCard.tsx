@@ -206,9 +206,9 @@ export default function ReceiptCard({
         >
           {d.n}
         </span>
-        <span style={{ display: "flex", fontSize: 10, color: SUB }}>
+        {/* <span style={{ display: "flex", fontSize: 10, color: SUB }}>
           (주)돈버는화장실
-        </span>
+        </span> */}
       </div>
 
       {/* 근무 요약 */}
@@ -267,13 +267,13 @@ export default function ReceiptCard({
             </div>
           ),
         )}
-        {omitted && (
+        {/* {omitted && (
           <div style={{ ...center, marginTop: 5 }}>
             <span style={{ display: "flex", fontSize: 10, color: SUB }}>
               (종이가 모자라 생략..😢)
             </span>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* 합계(헤드라인) */}
@@ -287,7 +287,7 @@ export default function ReceiptCard({
         }}
       >
         <span style={{ display: "flex", fontSize: 11, color: SUB }}>
-          앉아서 번 돈
+          변기위에서 번 돈
         </span>
         <span
           style={{
@@ -337,28 +337,53 @@ export default function ReceiptCard({
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
+              gap: 2,
               position: "absolute",
-              right: -12,
-              width: 54,
-              height: 54,
-              borderRadius: 27,
+              right: -14,
+              width: 64,
+              height: 64,
+              borderRadius: 32,
               border: `2.5px solid ${STAMP}`,
               color: STAMP,
               transform: "rotate(-13deg)",
               opacity: 0.92,
               lineHeight: 1,
               backgroundColor: "#fbfaf3",
-              bottom: 10,
+              bottom: 8,
               ...(stampAnimate && stampSlamMs
                 ? { animationDuration: `${stampSlamMs}ms` }
                 : {}),
             }}
           >
-            <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>
-              지급
+            <span
+              style={{
+                display: "flex",
+                fontSize: 13,
+                fontWeight: 900,
+                letterSpacing: -0.5,
+              }}
+            >
+              지급완료
             </span>
-            <span style={{ display: "flex", fontSize: 12, fontWeight: 800 }}>
-              완료
+            <div
+              style={{
+                display: "flex",
+                width: "80%",
+                borderTop: `1px solid ${STAMP}`,
+                opacity: 0.5,
+              }}
+            />
+            <span
+              style={{
+                display: "flex",
+                fontSize: 7.5,
+                fontWeight: 700,
+                letterSpacing: -0.2,
+                textAlign: "center",
+                lineHeight: 1.3,
+              }}
+            >
+              (주)돈버는화장실
             </span>
           </div>
         )}
