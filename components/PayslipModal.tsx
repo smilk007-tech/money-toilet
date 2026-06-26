@@ -273,6 +273,11 @@ export default function PayslipModal() {
     stage === "done" ||
     (repeatStampRef.current && (stage === "waiting" || stage === "stamping"));
 
+  const showHint =
+    stage === "done" ||
+    (repeatStampRef.current &&
+      (stage === "waiting" || stage === "stamping"));
+
   return (
     <div className="receipt-modal" role="presentation">
       <div className="receipt-modal__backdrop" onClick={close} aria-hidden />
@@ -358,7 +363,7 @@ export default function PayslipModal() {
                 ? " receipt-modal__hint--in"
                 : "")
             }
-            style={stage === "done" ? undefined : { visibility: "hidden" }}
+            style={showHint ? undefined : { visibility: "hidden" }}
           >
             내 월급은 공개되지 않습니다
           </p>
