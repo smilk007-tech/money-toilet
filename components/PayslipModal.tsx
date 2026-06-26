@@ -25,7 +25,7 @@ const REPEAT_STAMP_DELAY_MS = 500;
 const REPEAT_STAMP_SLAM_MS = 1200;
 // 슬램 애니메이션(receiptStampSlam)에서 도장이 종이에 "딱" 닿는 순간 = 38% 키프레임.
 // 그 타이밍에 도장 효과음을 재생한다.
-const STAMP_IMPACT_RATIO = 0.16;
+const STAMP_IMPACT_RATIO = 0.1;
 
 // 도장 효과음(종이 착지 순간 1회). 모듈 싱글톤으로 재사용.
 let stampAudio: HTMLAudioElement | null = null;
