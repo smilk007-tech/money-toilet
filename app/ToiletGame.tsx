@@ -343,7 +343,7 @@ export default function ToiletGame() {
           </label>
         </div>
 
-        {/* 내 기록 — 총 N원 노출(ddong_total_visible) 시에만 표시 */}
+        {/* 내 기록 — 총 N원 노출(mt_total_visible) 시에만 표시 */}
         <div className="settings__group" id="settingsHistoryGroup">
           <div className="settings__group-title">내 기록</div>
           <div className="settings__actions">

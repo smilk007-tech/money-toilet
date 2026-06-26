@@ -3,7 +3,7 @@ export function resolveSiteUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
   if (explicit) return explicit;
 
-  // Vercel 프로덕션 alias (money-toilet.vercel.app) — VERCEL_URL 배포 URL보다 우선
+  // Vercel 프로덕션 alias (money-toilet.kr) — VERCEL_URL 배포 URL보다 우선
   const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   if (production) return `https://${production}`;
 

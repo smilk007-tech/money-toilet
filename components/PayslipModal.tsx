@@ -3,17 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import { encodeReceiptForShare, type ReceiptData } from "@/lib/receiptShare";
+import { LS as STORAGE_KEY } from "@/lib/storageKeys";
+import { APP_EVENTS } from "@/lib/appEvents";
 import ReceiptCard from "@/components/ReceiptCard";
 import { resolveShareOrigin } from "@/lib/siteUrl";
 
-const OPEN_EVENT = "ddong:payslip-open";
-const TOAST_EVENT = "ddong:toast";
-const STAMP_EVENT = "ddong:payslip-stamped"; // 도장을 찍는 순간 game.js에 알림(영수증 버튼 즉시 노출용)
-const STAMP_CONFIRM_KEY = "ddong_payslip_confirmed"; // 지급완료 확인 넛지 — 최초 1회만
-const CLICK_TO_STAMP_DELAY_MS = 500; // 확인 클릭 후 도장이 떨어지기 시작하기까지 대기
-const STAMP_SLAM_MS = 1350; // receiptStampSlam 애니메이션 길이와 동일하게 유지
-const ACTIONS_REVEAL_DELAY_MS = 280; // 도장 착지 후 버튼이 등장하기까지 호흡
-const HINT_REVEAL_DELAY_MS = 380; // 버튼 등장 후 안내문구가 뒤따라 등장하기까지 호흡
+const STAMP_CONFIRM_KEY = STORAGE_KEY.payslipConfirmed;
+const CLICK_TO_STAMP_DELAY_MS = 400; // 확인 클릭 후 도장이 떨어지기 시작하기까지 대기
+const STAMP_SLAM_MS = 1000; // receiptStampSlam 애니메이션 길이와 동일하게 유지
+const ACTIONS_REVEAL_DELAY_MS = 250; // 도장 착지 후 버튼이 등장하기까지 호흡
+const HINT_REVEAL_DELAY_MS = 300; // 버튼 등장 후 안내문구가 뒤따라 등장하기까지 호흡
 
 // ts·sl은 모달 열 때마다 바뀌므로 실제 게임 진행 상태만으로 fingerprint 생성
 function stableFingerprint(d: ReceiptData): string {
@@ -24,7 +23,29 @@ function stableFingerprint(d: ReceiptData): string {
 const shareIdCache = new Map<string, string>(); // fingerprint → shareId
 
 function toast(msg: string) {
-  window.dispatchEvent(new CustomEvent(TOAST_EVENT, { detail: msg }));
+  window.dispatchEvent(new CustomEvent(APP_EVENTS.toast, { detail: msg }));
+}
+
+function readConfirmedFlushCount(): number | null {
+  try {
+    const raw = localStorage.getItem(STAMP_CONFIRM_KEY);
+    if (raw === null) return null;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function isStampConfirmedFor(flushCount: number): boolean {
+  const confirmed = readConfirmedFlushCount();
+  return confirmed !== null && confirmed === flushCount;
+}
+
+function saveConfirmedFlushCount(flushCount: number) {
+  try {
+    localStorage.setItem(STAMP_CONFIRM_KEY, String(flushCount));
+  } catch {}
 }
 
 /* 게임 미리보기 팝업 — 공유 페이지와 동일한 ReceiptCard 를 렌더한다. */
@@ -45,16 +66,13 @@ export default function PayslipModal() {
 
   useEffect(() => {
     const onOpen = (e: Event) => {
-      setData((e as CustomEvent<ReceiptData>).detail);
-      let already = false;
-      try {
-        already = localStorage.getItem(STAMP_CONFIRM_KEY) === "1";
-      } catch {}
-      setStage(already ? "done" : "idle");
+      const detail = (e as CustomEvent<ReceiptData>).detail;
+      setData(detail);
+      setStage(isStampConfirmedFor(detail.f) ? "done" : "idle");
       setAnimateReveal(false);
     };
-    window.addEventListener(OPEN_EVENT, onOpen);
-    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+    window.addEventListener(APP_EVENTS.payslipOpen, onOpen);
+    return () => window.removeEventListener(APP_EVENTS.payslipOpen, onOpen);
   }, []);
 
   // 도장 착지 → 버튼 등장 → 안내문구 등장 순으로 한 단계씩 늦게 보여준다
@@ -65,17 +83,16 @@ export default function PayslipModal() {
   }, [stage, animateReveal]);
 
   function confirmStamp() {
-    if (stage !== "idle") return;
+    if (stage !== "idle" || !data) return;
+    const flushCount = data.f;
     setAnimateReveal(true);
     setStage("waiting");
     window.setTimeout(() => {
       setStage("stamping");
       window.setTimeout(() => {
+        saveConfirmedFlushCount(flushCount);
         try {
-          localStorage.setItem(STAMP_CONFIRM_KEY, "1");
-        } catch {}
-        try {
-          window.dispatchEvent(new CustomEvent(STAMP_EVENT));
+          window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
         } catch {}
         window.setTimeout(() => setStage("revealed"), ACTIONS_REVEAL_DELAY_MS);
       }, STAMP_SLAM_MS);
@@ -250,4 +267,3 @@ export default function PayslipModal() {
   );
 }
 
-export { OPEN_EVENT };
