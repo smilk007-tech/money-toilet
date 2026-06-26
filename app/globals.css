@@ -1813,8 +1813,7 @@ body {
   color: #9fdcc9;
   text-align: center;
 }
-/* 최초 1회 — "위 사실이 틀림없음을 확인합니다" 클릭 시 지급완료 도장이 종이에 쾅 찍히는 연출
-   (높은 곳에서 내려와 박히고 두어 번 통통 튀며 자리를 잡는다 — JS의 STAMP_SLAM_MS와 길이를 맞출 것) */
+/* "위 사실이 틀림없음을 확인합니다" 클릭 시 지급완료 도장 — 위에서 내려와 크기만 줄어들며 찍힘 */
 .receipt-stamp--slam {
   animation: receiptStampSlam 1.35s cubic-bezier(0.18, 0.9, 0.32, 1) both;
 }
@@ -1823,21 +1822,9 @@ body {
     opacity: 0;
     transform: rotate(8deg) scale(3.4) translateY(-26px);
   }
-  38% {
+  40% {
     opacity: 1;
-    transform: rotate(-18deg) scale(0.78) translateY(2px);
-  }
-  52% {
-    transform: rotate(-9deg) scale(1.22) translateY(0);
-  }
-  66% {
-    transform: rotate(-16deg) scale(0.94);
-  }
-  80% {
-    transform: rotate(-11deg) scale(1.06);
-  }
-  90% {
-    transform: rotate(-14deg) scale(0.99);
+    transform: rotate(-15deg) scale(1.08) translateY(0);
   }
   100% {
     opacity: 0.92;
