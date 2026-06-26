@@ -7,9 +7,9 @@ const siteUrl = resolveSiteUrl();
 
 const title = `${SITE_NAME}`;
 const description =
-  "근무시간에 싸서 번 돈 인증 · 돈버는 화장실에서 너도 벌어봐 👇";
+  "실시간 1초마다 번 돈 인증 · 돈버는 화장실에서 너도 벌어봐 👇";
 const ogDescription =
-  "근무시간에 싸서 번 돈 인증 · 돈버는 화장실에서 너도 벌어봐 👇";
+  "실시간 1초마다 번 돈 인증 · 돈버는 화장실에서 너도 벌어봐 👇";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

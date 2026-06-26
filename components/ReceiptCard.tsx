@@ -74,6 +74,16 @@ function barcodeBars(seed: string): { w: number; on: boolean }[] {
   return bars;
 }
 
+/** 슬로건 끝 이모지 — 이탤릭 제외용으로 본문과 분리 */
+function splitSloganEmoji(slogan: string): { text: string; emoji: string } {
+  const lastSpace = slogan.lastIndexOf(" ");
+  if (lastSpace < 0) return { text: slogan, emoji: "" };
+  return {
+    text: slogan.slice(0, lastSpace),
+    emoji: slogan.slice(lastSpace + 1),
+  };
+}
+
 /* 급여명세서 카드 */
 export default function ReceiptCard({
   d,
@@ -139,6 +149,8 @@ export default function ReceiptCard({
   const fmtRound = (n: number) => `${n.toLocaleString("ko-KR")}회차`;
   const rows = visibleHistoryRows(d, maxHistoryRows);
   const bars = barcodeBars(`${empNo}${docNo}${hero}`);
+  const slogan = resolveReceiptSlogan(d.sl);
+  const { text: sloganText, emoji: sloganEmoji } = splitSloganEmoji(slogan);
 
   /* 근무 요약 항목 */
   const summary: [string, string][] = [
@@ -308,16 +320,25 @@ export default function ReceiptCard({
         <span
           style={{
             display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "center",
             fontSize: 13,
             fontWeight: 600,
-            fontStyle: "italic",
             lineHeight: 1.5,
             textAlign: "center",
             color: "#3d4a3e",
             maxWidth: "76%",
           }}
         >
-          &quot;{resolveReceiptSlogan(d.sl)}&quot;
+          <span style={{ fontStyle: "italic" }}>
+            &quot;{sloganText}
+            {sloganEmoji ? " " : ""}
+          </span>
+          {sloganEmoji ? (
+            <span style={{ fontStyle: "normal" }}>{sloganEmoji}</span>
+          ) : null}
+          <span style={{ fontStyle: "italic" }}>&quot;</span>
         </span>
         {stampVisible && (
           <div

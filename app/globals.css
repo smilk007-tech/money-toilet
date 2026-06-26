@@ -1485,15 +1485,15 @@ body {
   height: 15px;
   margin: 0;
   border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(125, 255, 176, 0.14);
   background: rgba(255, 255, 255, 0.08);
   cursor: pointer;
   box-sizing: border-box;
   position: relative;
 }
 .nick-save-chk:checked {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--neon);
+  border-color: var(--neon);
 }
 .nick-save-chk:checked::after {
   content: "";
