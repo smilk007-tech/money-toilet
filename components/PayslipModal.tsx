@@ -259,7 +259,7 @@ export default function PayslipModal() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast("급여명세서를 저장했어요 🧻");
+      toast("급여명세서를 저장했어요 🧾");
     } catch {
       toast("이미지 저장에 실패했어요 🥲");
     }
