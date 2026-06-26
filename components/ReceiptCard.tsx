@@ -310,11 +310,11 @@ export default function ReceiptCard({
           style={{
             display: "flex",
             fontSize: 13,
-            fontWeight: 400,
+            fontWeight: 600,
             fontStyle: "italic",
             lineHeight: 1.5,
             textAlign: "center",
-            color: SUB,
+            color: "#3d4a3e",
             maxWidth: "76%",
           }}
         >
