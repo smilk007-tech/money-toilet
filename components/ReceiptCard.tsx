@@ -137,14 +137,6 @@ export default function ReceiptCard({
     fontSize: 10.5,
     marginTop: 3,
   } as const;
-  const sectionLabel = {
-    display: "flex",
-    fontSize: 9.5,
-    fontWeight: 700,
-    letterSpacing: 1,
-    color: BRAND,
-    marginBottom: 4,
-  } as const;
   const fmtRound = (n: number) => `${n.toLocaleString("ko-KR")}회차`;
   const rows = visibleHistoryRows(d, maxHistoryRows);
   const bars = barcodeBars(`${empNo}${docNo}${hero}`);
@@ -207,13 +199,12 @@ export default function ReceiptCard({
           {d.n}
         </span>
         <span style={{ display: "flex", fontSize: 10, color: SUB }}>
-          발행일 {issued}
+          지급일 {issued}
         </span>
       </div>
 
       {/* 근무 요약 */}
       <div style={{ ...solid, margin: "10px 0" }} />
-      <span style={sectionLabel}>근무 요약</span>
       <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
         {summary.map(([label, value], i) => (
           <div
@@ -228,7 +219,6 @@ export default function ReceiptCard({
 
       {/* 지급 내역 */}
       <div style={{ ...dash, margin: "9px 0" }} />
-      <span style={sectionLabel}>지급 내역</span>
       <div
         style={{
           ...row,
@@ -287,7 +277,7 @@ export default function ReceiptCard({
         }}
       >
         <span style={{ display: "flex", fontSize: 11, color: SUB }}>
-          변기위에서 번 돈
+          변기 위에서 번 돈
         </span>
         <span
           style={{
@@ -319,11 +309,12 @@ export default function ReceiptCard({
         <span
           style={{
             display: "flex",
-            fontSize: 13.5,
-            fontWeight: 700,
-            lineHeight: 1.4,
+            fontSize: 13,
+            fontWeight: 400,
+            fontStyle: "italic",
+            lineHeight: 1.5,
             textAlign: "center",
-            color: INK,
+            color: SUB,
             maxWidth: "76%",
           }}
         >
