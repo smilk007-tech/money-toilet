@@ -60,12 +60,55 @@ export function resolveReceiptSlogan(sl: number): string {
   return RECEIPT_SLOGANS[randomSloganIndex()];
 }
 
-/** 명세서 문서번호 — NO. 뒤 YYMMDD-HHmm */
+/* 발급 시각 표기는 항상 KST(Asia/Seoul) 기준으로 고정한다.
+   — 서버(UTC)와 클라이언트(로컬)가 같은 ts를 다르게 렌더링해 생기는
+     hydration mismatch(지급일/문서번호 깜빡임)를 방지. */
+const SEOUL_DATE_FMT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+const SEOUL_WEEKDAY_FMT = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  weekday: "short",
+});
+
+export interface ReceiptDateParts {
+  year: string;
+  month: string;
+  day: string;
+  hour: string;
+  minute: string;
+}
+
+export function receiptDateParts(d: ReceiptData): ReceiptDateParts {
+  const parts = SEOUL_DATE_FMT.formatToParts(new Date(d.ts || 0));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
+}
+
+/** 명세서 발급일 — YYYY.MM.DD (요일) HH:mm (KST 고정) */
+export function receiptIssuedAt(d: ReceiptData): string {
+  const { year, month, day, hour, minute } = receiptDateParts(d);
+  const weekday = SEOUL_WEEKDAY_FMT.format(new Date(d.ts || 0));
+  return `${year}.${month}.${day} (${weekday}) ${hour}:${minute}`;
+}
+
+/** 명세서 문서번호 — NO. 뒤 YYMMDD-HHmm (KST 고정) */
 export function receiptDocNo(d: ReceiptData): string {
-  const dt = new Date(d.ts || Date.now());
-  const z = (n: number) => String(n).padStart(2, "0");
-  const yy = String(dt.getFullYear()).slice(2);
-  return `${yy}${z(dt.getMonth() + 1)}${z(dt.getDate())}-${z(dt.getHours())}${z(dt.getMinutes())}`;
+  const { year, month, day, hour, minute } = receiptDateParts(d);
+  return `${year.slice(2)}${month}${day}-${hour}${minute}`;
 }
 
 const clampNum = (x: unknown) =>

@@ -4,6 +4,7 @@ import {
   hasOmittedLines,
   RECEIPT_HISTORY_MAX_MODAL,
   receiptDocNo,
+  receiptIssuedAt,
   resolveReceiptSlogan,
   visibleHistoryRows,
   type ReceiptData,
@@ -94,9 +95,7 @@ export default function ReceiptCard({
   stampSlamMs?: number;
 }) {
   const hero = heroAmount(d);
-  const dt = new Date(d.ts || Date.now());
-  const z = (n: number) => String(n).padStart(2, "0");
-  const issued = `${dt.getFullYear()}.${z(dt.getMonth() + 1)}.${z(dt.getDate())} ${z(dt.getHours())}:${z(dt.getMinutes())}`;
+  const issued = receiptIssuedAt(d);
   const omitted = hasOmittedLines(d, maxHistoryRows);
   const empNo = empNoOf(d.n);
   const docNo = receiptDocNo(d);
@@ -374,7 +373,7 @@ export default function ReceiptCard({
                 lineHeight: 1.3,
               }}
             >
-              (주)돈버는화장실
+              by 돈버는화장실
             </span>
           </div>
         )}

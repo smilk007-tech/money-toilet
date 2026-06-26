@@ -601,7 +601,7 @@ body {
   border-top-width: 8px;
   z-index: 0;
 }
-/* 안쪽 삼각형 — 배경 채움, 1px 위에 올려서 좌·우만 보더처럼 보이게 */
+/* 안쪽 삼각형 — 불투명 배경으로 채워 바깥(보더) 삼각형이 비치지 않게 함 */
 .myfeed__msg::after {
   bottom: -6px;
   border-left-width: 6px;
@@ -611,7 +611,7 @@ body {
 }
 /* 직접 채팅 — 민트 */
 .myfeed__msg--chat {
-  background: rgba(8, 34, 26, 0.92);
+  background: rgba(8, 34, 26, 0.62);
   color: #e9fff5;
   border: 1px solid rgba(125, 255, 176, 0.5);
 }
@@ -622,11 +622,11 @@ body {
   border-top-color: rgba(125, 255, 176, 0.5);
 }
 .myfeed__msg--chat::after {
-  border-top-color: #082218;
+  border-top-color: #0b2a20;
 }
 /* 물내림 — 노랑 */
 .myfeed__msg--flush {
-  background: rgba(40, 32, 4, 0.92);
+  background: rgba(40, 32, 4, 0.62);
   color: #fff8e0;
   border: 1px solid rgba(255, 216, 77, 0.55);
 }
@@ -637,7 +637,7 @@ body {
   border-top-color: rgba(255, 216, 77, 0.55);
 }
 .myfeed__msg--flush::after {
-  border-top-color: #2a2206;
+  border-top-color: #2f2608;
 }
 .myfeed__msg:not(.myfeed__msg--out) {
   animation: myIn 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
@@ -1302,8 +1302,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
 }
-.settings__nick-row input {
+.settings__nick-row input[type="text"] {
   flex: 1;
   min-width: 0;
   height: 38px;
@@ -1315,11 +1316,11 @@ body {
   font-size: 14px;
   font-weight: 600;
 }
-.settings__nick-row input::placeholder {
+.settings__nick-row input[type="text"]::placeholder {
   color: rgba(159, 220, 201, 0.45);
   font-weight: 600;
 }
-.settings__nick-row input:focus {
+.settings__nick-row input[type="text"]:focus {
   outline: none;
   border-color: rgba(125, 255, 176, 0.5);
   box-shadow: 0 0 0 2px rgba(40, 167, 143, 0.22);
@@ -1382,6 +1383,16 @@ body {
   background: rgba(255, 120, 120, 0.08);
   color: #ffb4b4;
   border: 1px solid rgba(255, 120, 120, 0.34);
+}
+.settings__btn--no-record {
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(160, 175, 168, 0.4);
+  border: 1px solid rgba(160, 175, 168, 0.18);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.settings__btn--no-record:active {
+  transform: none;
 }
 .settings__divider {
   height: 1px;
@@ -1453,6 +1464,57 @@ body {
 }
 .sw:checked::after {
   left: 21px;
+}
+
+/* 닉네임 저장 체크박스 (nick-row 인라인) */
+.nick-save-label {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding-right: 4px;
+  user-select: none;
+  line-height: 1;
+}
+.nick-save-chk {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  box-sizing: border-box;
+  position: relative;
+}
+.nick-save-chk:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.nick-save-chk:checked::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 8px;
+  border: solid #0d1f16;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+  box-sizing: border-box;
+}
+.nick-save-text {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(200, 230, 215, 0.7);
+  white-space: nowrap;
+  line-height: 15px;
 }
 
 /* =====================  기록 초기화 확인 모달  ===================== */

@@ -273,7 +273,7 @@ export default function ToiletGame() {
             <input
               type="text"
               id="chatInput"
-              placeholder="옆 칸 모두에게 한마디"
+              placeholder="옆 칸 모두에게 한마디..."
               maxLength={40}
             />
           </div>
@@ -306,9 +306,9 @@ export default function ToiletGame() {
 
       {/* 설정 팝오버 */}
       <div className="settings-panel" id="settingsPanel" hidden>
-        {/* 프로필 */}
+        {/* 닉네임 */}
         <div className="settings__group">
-          <div className="settings__group-title">프로필</div>
+          <div className="settings__group-title">닉네임</div>
           <div className="settings__nick-row">
             <button
               className="nick-random"
@@ -324,14 +324,18 @@ export default function ToiletGame() {
               maxLength={10}
               placeholder="닉네임"
             />
+            <label
+              className="nick-save-label"
+              title="켜면 닉네임을 이 기기에 저장합니다"
+            >
+              <input
+                type="checkbox"
+                id="nickPinChk"
+                className="nick-save-chk"
+              />
+              <span className="nick-save-text">저장</span>
+            </label>
           </div>
-          <label
-            className="settings__row settings__row--toggle"
-            title="켜면 닉네임을 이 기기에 저장합니다"
-          >
-            <span>기기에 닉네임 저장</span>
-            <input type="checkbox" id="nickPinChk" className="sw" />
-          </label>
         </div>
 
         {/* 표시 */}
@@ -359,7 +363,7 @@ export default function ToiletGame() {
               id="resetTotalBtn"
               type="button"
             >
-              기록 초기화
+              초기화
             </button>
           </div>
         </div>
