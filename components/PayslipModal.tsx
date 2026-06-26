@@ -39,25 +39,27 @@ function toast(msg: string) {
   window.dispatchEvent(new CustomEvent(APP_EVENTS.toast, { detail: msg }));
 }
 
-function readConfirmedFlushCount(): number | null {
+function readConfirmedVersion(): string | null {
   try {
     const raw = localStorage.getItem(STAMP_CONFIRM_KEY);
-    if (raw === null) return null;
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) && n >= 0 ? n : null;
+    return raw === null || raw === "" ? null : raw;
   } catch {
     return null;
   }
 }
 
-function isStampConfirmedFor(flushCount: number): boolean {
-  const confirmed = readConfirmedFlushCount();
-  return confirmed !== null && confirmed === flushCount;
+// 물내림 1회 = 명세서 1버전 (회차 + 마지막 물내림 시각)
+function receiptVersionKey(d: ReceiptData): string {
+  return `${d.f}|${d.ts ?? 0}`;
 }
 
-function saveConfirmedFlushCount(flushCount: number) {
+function isStampConfirmedFor(d: ReceiptData): boolean {
+  return readConfirmedVersion() === receiptVersionKey(d);
+}
+
+function saveConfirmedVersion(d: ReceiptData) {
   try {
-    localStorage.setItem(STAMP_CONFIRM_KEY, String(flushCount));
+    localStorage.setItem(STAMP_CONFIRM_KEY, receiptVersionKey(d));
   } catch {}
 }
 
@@ -75,10 +77,6 @@ function markEverStamped() {
   } catch {}
 }
 
-function getStampTiming(): StampTiming {
-  return hasEverStamped() ? STAMP_TIMING.repeat : STAMP_TIMING.first;
-}
-
 /* 게임 미리보기 팝업 — 공유 페이지와 동일한 ReceiptCard 를 렌더한다. */
 export default function PayslipModal() {
   const [data, setData] = useState<ReceiptData | null>(null);
@@ -92,23 +90,68 @@ export default function PayslipModal() {
     STAMP_TIMING.first.slam,
   );
   const hintDelayRef = useRef<number>(STAMP_TIMING.first.hint);
+  const stampTimersRef = useRef<number[]>([]);
   const cardRef = useRef<HTMLDivElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
   const siteUrlHref =
     typeof window !== "undefined" ? resolveShareOrigin() : undefined;
 
-  const close = useCallback(() => setData(null), []);
+  const clearStampTimers = useCallback(() => {
+    stampTimersRef.current.forEach((id) => window.clearTimeout(id));
+    stampTimersRef.current = [];
+  }, []);
+
+  const close = useCallback(() => {
+    clearStampTimers();
+    setData(null);
+    setStage("idle");
+    setAnimateReveal(false);
+  }, [clearStampTimers]);
+
+  const startStampSequence = useCallback(
+    (receipt: ReceiptData, timing: StampTiming) => {
+      clearStampTimers();
+      hintDelayRef.current = timing.hint;
+      setStampSlamMs(timing.slam);
+      setAnimateReveal(true);
+      setStage("waiting");
+      const pushTimer = (fn: () => void, ms: number) => {
+        stampTimersRef.current.push(window.setTimeout(fn, ms));
+      };
+      pushTimer(() => {
+        setStage("stamping");
+        saveConfirmedVersion(receipt);
+        markEverStamped();
+        try {
+          window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
+        } catch {}
+        pushTimer(() => {
+          pushTimer(() => setStage("revealed"), timing.actions);
+        }, timing.slam);
+      }, timing.click);
+    },
+    [clearStampTimers],
+  );
 
   useEffect(() => {
     const onOpen = (e: Event) => {
       const detail = (e as CustomEvent<ReceiptData>).detail;
+      clearStampTimers();
       setData(detail);
-      setStage(isStampConfirmedFor(detail.f) ? "done" : "idle");
       setAnimateReveal(false);
+      if (isStampConfirmedFor(detail)) {
+        setStage("done");
+        return;
+      }
+      if (hasEverStamped()) {
+        startStampSequence(detail, STAMP_TIMING.repeat);
+        return;
+      }
+      setStage("idle");
     };
     window.addEventListener(APP_EVENTS.payslipOpen, onOpen);
     return () => window.removeEventListener(APP_EVENTS.payslipOpen, onOpen);
-  }, []);
+  }, [clearStampTimers, startStampSequence]);
 
   // 도장 착지 → 버튼 등장 → 안내문구 등장 순으로 한 단계씩 늦게 보여준다
   useEffect(() => {
@@ -119,23 +162,7 @@ export default function PayslipModal() {
 
   function confirmStamp() {
     if (stage !== "idle" || !data) return;
-    const flushCount = data.f;
-    const timing = getStampTiming();
-    hintDelayRef.current = timing.hint;
-    setStampSlamMs(timing.slam);
-    setAnimateReveal(true);
-    setStage("waiting");
-    window.setTimeout(() => {
-      setStage("stamping");
-      window.setTimeout(() => {
-        saveConfirmedFlushCount(flushCount);
-        markEverStamped();
-        try {
-          window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
-        } catch {}
-        window.setTimeout(() => setStage("revealed"), timing.actions);
-      }, timing.slam);
-    }, timing.click);
+    startStampSequence(data, STAMP_TIMING.first);
   }
 
   useEffect(() => {
@@ -146,6 +173,8 @@ export default function PayslipModal() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [data, close]);
+
+  useEffect(() => () => clearStampTimers(), [clearStampTimers]);
 
   async function share() {
     if (!data) return;
@@ -274,21 +303,15 @@ export default function PayslipModal() {
                   🔗 자랑하기
                 </button>
               </div>
-            ) : (
+            ) : stage === "idle" ? (
               <button
-                className={
-                  "receipt-btn receipt-btn--save" +
-                  (stage === "waiting" || stage === "stamping"
-                    ? " receipt-btn--fading"
-                    : "")
-                }
+                className="receipt-btn receipt-btn--save"
                 type="button"
                 onClick={confirmStamp}
-                disabled={stage === "waiting" || stage === "stamping"}
               >
                 위 내용이 틀림없음을 확인합니다 👈
               </button>
-            )}
+            ) : null}
           </div>
           <p
             className={
