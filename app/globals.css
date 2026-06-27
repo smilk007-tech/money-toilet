@@ -100,10 +100,8 @@ body {
     will-change: transform;
   }
   /* 무대가 확대되면 svh(=뷰포트 기준)는 무대보다 커져버린다.
-     확대 모드에선 무대 높이 기준(%)으로 바꿔 균일하게 따라 커지도록. */
-  .skin-floor {
-    height: 13.5%;
-  }
+     확대 모드에선 무대 높이 기준(%)으로 바꿔 균일하게 따라 커지도록.
+     (바닥 .skin-floor 는 inset:0 + %기반 clip-path 라 별도 보정 불필요) */
   .skin-light {
     top: 2%;
   }
@@ -279,6 +277,15 @@ body {
 /* =====================  SVG 스킨 (1인칭 화장실 칸)  ===================== */
 :root {
   --skin-side: 82px;
+  /* ===== 1점 투시 바닥 원근 (벽/문 SVG 기하와 일치) =====
+     벽 SVG viewBox 856 기준:
+       - 벽/문 하단 안쪽(뒤쪽 접합선) y=701 → 701/856 = 81.9%
+       - 벽 하단 바깥쪽(화면 끝, 앞쪽) y=840 → 840/856 = 98.1%
+     '빨간 변'(바닥 앞모서리)은 '보라 변'(벽 하단)을 아래로 --floor-gap 만큼
+     평행 이동한 것 → 좌/우/윗변 모두 항상 평행, 간격(녹색) 일정. */
+  --persp-back: 81.89%; /* 701/856 */
+  --persp-front: 98.13%; /* 840/856 */
+  --floor-gap: 3%; /* 보라↔빨강 사이 녹색 간격(H 대비 %) */
 }
 
 /* 좌/우 가벽 */
@@ -357,30 +364,36 @@ body {
   pointer-events: none;
 }
 
-/* 바닥(좌/중앙/우 원근) */
+/* 바닥(1점 투시) — 씬 전체를 덮고 clip-path 로 '빨간 사다리꼴'만 남긴다.
+   빨간 변 = 보라 변(벽 하단)을 아래로 --floor-gap 평행 이동 → 항상 평행·간격 일정.
+   네 꼭짓점의 x 는 px(0 / --skin-side / 100% / 100%-side)로 벽과 동일,
+   y 는 모두 H 대비 % + 동일한 --floor-gap 오프셋이라 창 크기와 무관하게 평행. */
 .skin-floor {
   position: absolute;
+  inset: 0;
   z-index: 18;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: grid;
-  grid-template-columns: var(--skin-side) minmax(0, 1fr) var(--skin-side);
-  width: 100%;
-  height: clamp(86px, 15svh, 140px);
   pointer-events: none;
-}
-.skin-floor img {
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
+  background:
+    radial-gradient(
+      130% 90% at 50% 100%,
+      rgba(255, 255, 255, 0.05),
+      transparent 62%
+    ),
+    linear-gradient(#5b5f5f 0%, #626666 46%, #3e4243 100%);
+  clip-path: polygon(
+    var(--skin-side) calc(var(--persp-back) + var(--floor-gap)),
+    calc(100% - var(--skin-side)) calc(var(--persp-back) + var(--floor-gap)),
+    100% calc(var(--persp-front) + var(--floor-gap)),
+    100% 100%,
+    0 100%,
+    0 calc(var(--persp-front) + var(--floor-gap))
+  );
 }
 
-/* 톤 보정 — 벽/문/바닥의 따뜻한 베이지를 살짝 탈채도·쿨하게 보정해
-   네온그린 HUD/하단 덱과 톤을 맞춤(흰 광고지·크롬 비품은 미적용) */
+/* 톤 보정 — 벽/문/바닥을 살짝 탈채도·쿨하게 보정해 HUD/덱과 톤을 맞춤 */
 .skin-side,
 .skin-center__base,
-.skin-floor img {
+.skin-floor {
   filter: saturate(0.58) hue-rotate(8deg);
 }
 
@@ -1989,12 +2002,12 @@ body {
 .toast {
   position: absolute;
   left: 50%;
-  bottom: 48%;
+  bottom: calc(var(--bottom-h, 188px) + 8px); /* .bottom(덱+채팅) 블록 바로 위 */
   transform: translateX(-50%);
   z-index: 80; /* 모든 팝업(명세서60·기록65·후원66) 위에서 보이도록 */
-  background: var(--panel);
+  background: rgba(16, 24, 18, 0.88);
   color: #eafff5;
-  border: 1px solid rgba(125, 255, 176, 0.3);
+  border: 1px solid rgba(125, 255, 176, 0.28);
   border-radius: 20px;
   padding: 9px 16px;
   font-size: 13px;
@@ -2002,6 +2015,8 @@ body {
   white-space: nowrap;
   animation: fadeIn 0.25s ease;
   max-width: 92%;
+  cursor: pointer;
+  backdrop-filter: blur(3px);
 }
 .toast[hidden] {
   display: none;

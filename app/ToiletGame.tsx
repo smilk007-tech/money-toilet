@@ -172,24 +172,8 @@ export default function ToiletGame() {
           />
         </svg>
 
-        {/* 바닥(좌/중앙/우 원근) */}
-        <div className="skin-floor" aria-hidden>
-          <img
-            className="skin-floor__side skin-floor__side--left"
-            src="/skin/floor-left.svg"
-            alt=""
-          />
-          <img
-            className="skin-floor__center"
-            src="/skin/floor-center.svg"
-            alt=""
-          />
-          <img
-            className="skin-floor__side skin-floor__side--right"
-            src="/skin/floor-right.svg"
-            alt=""
-          />
-        </div>
+        {/* 바닥(1점 투시) — clip-path 사다리꼴(globals.css .skin-floor) */}
+        <div className="skin-floor" aria-hidden></div>
 
         {/* 동적 A4 광고 — 문 가운데 포스터 자리(게임 로직 유지) */}
         <a className="ad-a4" id="adA4" href="#" target="_blank" rel="noopener">
