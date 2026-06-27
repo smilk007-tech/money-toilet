@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { decodeReceipt, fmtWon, heroAmount } from "@/lib/receiptShare";
+import { decodeReceipt, fmtWon, heroAmount } from "@/lib/receipt/receiptShare";
 import { buildShareMetadata } from "@/lib/ogMeta";
-import { SHORT_ID_RE, loadReceipt } from "@/lib/receiptStore";
+import { SHORT_ID_RE, loadReceipt } from "@/lib/receipt/receiptStore";
 import { resolveSiteUrl } from "@/lib/siteUrl";
 import PayslipShare from "@/components/PayslipShare";
 

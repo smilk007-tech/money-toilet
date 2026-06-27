@@ -6,12 +6,12 @@ import {
   encodeReceiptForShare,
   receiptDocNo,
   type ReceiptData,
-} from "@/lib/receiptShare";
+} from "@/lib/receipt/receiptShare";
 import { LS as STORAGE_KEY } from "@/lib/storageKeys";
 import { APP_EVENTS } from "@/lib/appEvents";
 import ReceiptCard from "@/components/ReceiptCard";
 import { resolveShareOrigin } from "@/lib/siteUrl";
-import { isPC } from "@/lib/device";
+import { isPC } from "@/lib/engine/device";
 
 const STAMP_CONFIRM_KEY = STORAGE_KEY.payslipConfirmed;
 

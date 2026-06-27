@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FakeToiletSocket } from "@/lib/fakeSocket";
+import { FakeToiletSocket } from "@/lib/engine/fakeSocket";
 import {
   fmtWon,
   RECEIPT_HISTORY_MAX_SHARE,
   type ReceiptData,
-} from "@/lib/receiptShare";
-import { shareCtaLook } from "@/lib/shareCta";
+} from "@/lib/receipt/receiptShare";
+import { shareCtaLook } from "@/lib/receipt/shareCta";
 import ReceiptCard from "@/components/ReceiptCard";
 
 /* 공유받은 사람이 링크 타고 들어왔을 때 보는 화면.

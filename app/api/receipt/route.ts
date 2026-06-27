@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { decodeReceipt, encodeReceiptForShare } from "@/lib/receiptShare";
-import { saveReceipt } from "@/lib/receiptStore";
+import { decodeReceipt, encodeReceiptForShare } from "@/lib/receipt/receiptShare";
+import { saveReceipt } from "@/lib/receipt/receiptStore";
 
 export async function POST(req: Request) {
   let body: unknown;

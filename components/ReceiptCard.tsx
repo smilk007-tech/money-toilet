@@ -8,7 +8,7 @@ import {
   resolveReceiptSlogan,
   visibleHistoryRows,
   type ReceiptData,
-} from "@/lib/receiptShare";
+} from "@/lib/receipt/receiptShare";
 
 /* game.js readout__amt / .digit 와 동일 — 숫자마다 고정폭 셀을 써서 레이아웃 시프트 방지
    html-to-image(PNG 저장)·일반 HTML 양쪽에서 렌더되므로

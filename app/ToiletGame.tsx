@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { DONATE_KAKAO_URL, donateQrUrl } from "@/lib/constants";
-import { initGame } from "@/lib/game";
-import { initStage } from "@/lib/stage";
+import { initGame } from "@/lib/engine/game";
+import { initStage } from "@/lib/engine/stage";
 import PayslipModal from "@/components/PayslipModal";
 
 export default function ToiletGame() {

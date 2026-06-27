@@ -5,9 +5,9 @@ import {
   heroAmount,
   resolveReceiptSlogan,
   type ReceiptData,
-} from "@/lib/receiptShare";
+} from "@/lib/receipt/receiptShare";
 import { SITE_NAME } from "@/lib/ogMeta";
-import { SHORT_ID_RE, loadReceipt } from "@/lib/receiptStore";
+import { SHORT_ID_RE, loadReceipt } from "@/lib/receipt/receiptStore";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

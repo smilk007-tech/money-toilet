@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SITE_NAME } from "@/lib/ogMeta";
 import { resolveSiteUrl } from "@/lib/siteUrl";
-import { STAGE_MAX_W, STAGE_REF_H, MAX_SCALE } from "@/lib/stage";
+import { STAGE_MAX_W, STAGE_REF_H, MAX_SCALE } from "@/lib/engine/stage";
 import "./globals.css";
 
 // 첫 페인트 전에 무대 확대율을 미리 세팅(FOUC/팝 방지). stage.js와 동일 공식.

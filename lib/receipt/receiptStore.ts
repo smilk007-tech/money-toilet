@@ -5,7 +5,7 @@
    =================================================================== */
 
 import { Redis } from "@upstash/redis";
-import type { ReceiptData } from "@/lib/receiptShare";
+import type { ReceiptData } from "@/lib/receipt/receiptShare";
 
 const TTL_SECONDS = 60 * 60 * 24 * 30; // 30일
 
