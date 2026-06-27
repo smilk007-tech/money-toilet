@@ -374,12 +374,13 @@ body {
       transparent 62%
     ),
     linear-gradient(#5b5f5f 0%, #626666 46%, #3e4243 100%);
+  /* 깨끗한 4점 사다리꼴 — 측면은 벽 하단과 평행한 대각선 그대로.
+     화면 밑모서리(100% 100% / 0 100%) 점을 빼서 코너 삼각형(사선 틀어짐)을 제거 →
+     밑변 좌/우 꼭짓점이 대각선 교차점(중앙쪽)으로 자연스럽게 살짝 당겨진다. */
   clip-path: polygon(
     var(--skin-side) calc(var(--persp-back) + var(--floor-gap)),
     calc(100% - var(--skin-side)) calc(var(--persp-back) + var(--floor-gap)),
     100% calc(var(--persp-front) + var(--floor-gap)),
-    100% 100%,
-    0 100%,
     0 calc(var(--persp-front) + var(--floor-gap))
   );
 }
