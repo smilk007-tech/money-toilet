@@ -366,14 +366,14 @@ export default function ReceiptCard({
             <span
               style={{
                 display: "flex",
-                fontSize: 7.5,
+                fontSize: 8.5,
                 fontWeight: 700,
                 letterSpacing: -0.2,
                 textAlign: "center",
                 lineHeight: 1.3,
               }}
             >
-              by 돈버는화장실
+              돈버는화장실
             </span>
           </div>
         )}
