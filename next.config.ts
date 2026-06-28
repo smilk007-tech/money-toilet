@@ -7,6 +7,24 @@ const nextConfig: NextConfig = {
   // 같은 와이파이의 폰 등에서 LAN IP로 개발 서버에 접속할 때
   // Next의 cross-origin 차단으로 클라이언트 요청이 막히는 것을 허용.
   allowedDevOrigins: ["192.168.0.91"],
+  // 검색엔진 비노출 belt-and-suspenders(질문 20) — 어드민/어드민API에 헤더로도 차단.
+  async headers() {
+    return [
+      {
+        // 어드민 비밀 경로 — 헤더로도 noindex(슬러그는 robots.txt에 노출 안 함)
+        source: "/ctrl-9x7k2p3f/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/ctrl-9x7k2p3f",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/api/admin/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

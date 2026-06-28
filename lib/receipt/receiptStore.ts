@@ -4,22 +4,10 @@
    - 환경변수 미설정 시 null 반환 → 호출부에서 base64url 폴백
    =================================================================== */
 
-import { Redis } from "@upstash/redis";
 import type { ReceiptData } from "@/lib/receipt/receiptShare";
+import { getRedis } from "@/lib/redis";
 
 const TTL_SECONDS = 60 * 60 * 24 * 30; // 30일
-
-let _redis: Redis | null = null;
-
-function getRedis(): Redis | null {
-  // Vercel KV(대시보드 연결)와 Upstash 직접 연결 둘 다 지원
-  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
-  const token =
-    process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-  if (!_redis) _redis = new Redis({ url, token });
-  return _redis;
-}
 
 // 6자리 [a-zA-Z0-9] 알파뉴메릭 ID
 const CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

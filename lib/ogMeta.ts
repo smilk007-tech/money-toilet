@@ -23,6 +23,9 @@ export function buildShareMetadata(input: ShareMetaInput): Metadata {
   return {
     title,
     description,
+    // 검색엔진 비노출(질문 20). generateMetadata 반환에 직접 포함해야
+    // layout robots가 덮어써지는 문제를 피한다. OG/twitter는 유지 → 카톡 미리보기 정상.
+    robots: { index: false, follow: false },
     openGraph: {
       title,
       description: ogDescription,
