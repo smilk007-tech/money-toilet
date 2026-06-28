@@ -46,11 +46,18 @@ function ipHashKey(ip) {
   return createHash("sha256").update(ip + salt, "utf8").digest("hex").slice(0, 24);
 }
 
+const GLOBAL_FAIL_KEY = ak.loginFail("_global");
+const GLOBAL_MAX_FAILS = 30; // 분산/위조 공격 백스톱
+
 export async function isLoginLocked(ip) {
   const r = getRedis();
   if (!r) return false;
-  const n = await r.get(ak.loginFail(ipHashKey(ip)));
-  return (n ?? 0) >= LOGIN_MAX_FAILS;
+  // 신뢰 가능한 req.ip(아래 trust proxy) 기준 + 전역 백스톱(XFF 위조 대비)
+  const [perIp, global] = await Promise.all([
+    r.get(ak.loginFail(ipHashKey(ip))),
+    r.get(GLOBAL_FAIL_KEY),
+  ]);
+  return (perIp ?? 0) >= LOGIN_MAX_FAILS || (global ?? 0) >= GLOBAL_MAX_FAILS;
 }
 
 export async function recordLoginFail(ip) {
@@ -59,6 +66,8 @@ export async function recordLoginFail(ip) {
   const key = ak.loginFail(ipHashKey(ip));
   const n = await r.incr(key);
   if (n === 1) await r.expire(key, TTL.loginLock);
+  const g = await r.incr(GLOBAL_FAIL_KEY);
+  if (g === 1) await r.expire(GLOBAL_FAIL_KEY, TTL.loginLock);
 }
 
 export async function clearLoginFail(ip) {
