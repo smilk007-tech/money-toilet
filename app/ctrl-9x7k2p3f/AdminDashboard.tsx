@@ -31,10 +31,31 @@ const won = (n: number) => (n || 0).toLocaleString("ko-KR") + "원";
 const when = (ts: number) =>
   new Date(ts).toLocaleString("ko-KR", { hour12: false });
 
+// 어드민 백엔드 = 소켓서버(Railway). 크로스오리진이라 쿠키 대신 Bearer 토큰(localStorage).
+const SOCKET_BASE = (
+  process.env.NEXT_PUBLIC_SOCKET_URL ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:4000"
+    : "")
+).replace(/\/$/, "");
+const TOKEN_KEY = "mt_admin_token";
+
+function getToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
 async function api(path: string, opts?: RequestInit) {
-  const res = await fetch(`/api/admin/${path}`, {
+  const token = getToken();
+  const res = await fetch(`${SOCKET_BASE}/admin/${path}`, {
     cache: "no-store",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     ...opts,
   });
   return { status: res.status, data: await res.json().catch(() => ({})) };
@@ -84,6 +105,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     (async () => {
+      if (!getToken()) return setAuthed(false);
       const { status } = await api("me");
       setAuthed(status === 200);
     })();
@@ -96,11 +118,16 @@ export default function AdminDashboard() {
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
-    const { status } = await api("login", {
+    const { status, data } = await api("login", {
       method: "POST",
       body: JSON.stringify({ password: pw }),
     });
-    if (status === 200) {
+    if (status === 200 && data.token) {
+      try {
+        localStorage.setItem(TOKEN_KEY, data.token);
+      } catch {
+        /* noop */
+      }
       setAuthed(true);
       setPw("");
     } else if (status === 429)
@@ -131,6 +158,11 @@ export default function AdminDashboard() {
   };
   const logout = async () => {
     await api("logout", { method: "POST", body: "{}" });
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {
+      /* noop */
+    }
     setAuthed(false);
   };
 

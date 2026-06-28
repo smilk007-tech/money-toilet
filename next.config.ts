@@ -19,10 +19,6 @@ const nextConfig: NextConfig = {
         source: "/ctrl-9x7k2p3f",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
-      {
-        source: "/api/admin/:path*",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
-      },
     ];
   },
 };

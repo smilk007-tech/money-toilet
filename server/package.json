@@ -1,0 +1,21 @@
+{
+  "name": "money-toilet-socket",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "돈버는 화장실 실시간 소켓 서버 (Railway)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.38.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
