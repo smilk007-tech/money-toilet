@@ -173,7 +173,8 @@ export default function AdminDashboard() {
         <div>
           {dayCards.map((d) => {
             const key = dateOf(d.ago);
-            const totals = d.hours ? sumDay(d.hours) : EMPTY;
+            // 오늘은 서버의 실제 today 사용, 어제/엊그제는 hours 합계
+            const totals = d.ago === 0 && live?.today ? live.today : (d.hours ? sumDay(d.hours) : EMPTY);
             return (
               <div key={key} style={s.card}>
                 <div style={s.cardHead} onClick={() => setExpand(expand === key ? null : key)}>
