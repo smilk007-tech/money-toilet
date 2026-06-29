@@ -57,14 +57,13 @@ export default function AdminDashboard() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
-  const [tab, setTab] = useState<"stats" | "online" | "chatlog" | "bans">("stats");
-  const [chatSub, setChatSub] = useState<0 | 1 | 2 | 3>(0); // 0실시간 1오늘 2어제 3엊그제
+  const [tab, setTab] = useState<"stats" | "online" | "liveChat" | "chatlog" | "bans">("stats");
   const [live, setLive] = useState<Live | null>(null);
   const [liveChats, setLiveChats] = useState<ChatRow[]>([]);
   const [histChats, setHistChats] = useState<Record<string, ChatRow[]>>({});
   const [histHours, setHistHours] = useState<Record<string, Bucket[]>>({});
   const [bans, setBans] = useState<BanRow[]>([]);
-  const [expand, setExpand] = useState<string | null>(null);
+  const [expandDates, setExpandDates] = useState<Set<string>>(new Set(["오늘"])); // 여러 날짜 동시 expand
   const [dur, setDur] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
   // 정렬/검색/공지
@@ -73,6 +72,7 @@ export default function AdminDashboard() {
   const [onSort, setOnSort] = useState<"new" | "old">("new");
   const [onQ, setOnQ] = useState("");
   const [bc, setBc] = useState("");
+  const [bcSent, setBcSent] = useState(false);
   const sockRef = useRef<Socket | null>(null);
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
@@ -101,16 +101,17 @@ export default function AdminDashboard() {
   }, [authed, loadBans]);
 
   // 채팅로그 과거: 오늘(sub1)=5분마다, 어제/엊그제=1회. daysAgo = sub-1
-  const loadChatlog = useCallback(async (sub: number) => {
-    const date = dateOf(sub - 1);
+  const loadChatlog = useCallback(async (ago: number) => {
+    const date = dateOf(ago);
     const { data } = await vercel(`chatlog?date=${date}`);
     if (data.ok) setHistChats((p) => ({ ...p, [date]: data.chats || [] }));
   }, []);
   useEffect(() => {
-    if (!authed || tab !== "chatlog" || chatSub === 0) return;
-    loadChatlog(chatSub);
-    if (chatSub === 1) { const id = setInterval(() => loadChatlog(1), 300000); return () => clearInterval(id); }
-  }, [authed, tab, chatSub, loadChatlog]);
+    if (!authed || tab !== "chatlog") return;
+    for (const ago of [0, 1, 2]) loadChatlog(ago);
+    const id = setInterval(() => loadChatlog(0), 300000); // 오늘만 5분마다
+    return () => clearInterval(id);
+  }, [authed, tab, loadChatlog]);
 
   const login = async (e: React.FormEvent) => {
     e.preventDefault(); setErr("");
@@ -123,7 +124,15 @@ export default function AdminDashboard() {
   const ban = async (vid: string) => { const { data } = await rail("ban", { method: "POST", body: JSON.stringify({ vid, duration: dur[vid] ?? "1d" }) }); if (data.ok) { flash("차단됨"); loadBans(); } else flash("실패"); };
   const unban = async (vid: string) => { const { data } = await rail("unban", { method: "POST", body: JSON.stringify({ vid }) }); if (data.ok) { flash("해제됨"); loadBans(); } };
   const reset = async () => { if (!confirm("통계·채팅로그 전체 초기화? (밴은 유지)")) return; await rail("reset", { method: "POST", body: "{}" }); flash("초기화됨"); };
-  const sendBc = async () => { const t = bc.trim(); if (!t) return; await rail("broadcast", { method: "POST", body: JSON.stringify({ text: t }) }); setBc(""); flash("관리자 공지 전송"); };
+  const sendBc = async () => {
+    const t = bc.trim();
+    if (!t) return;
+    await rail("broadcast", { method: "POST", body: JSON.stringify({ text: t }) });
+    setBc("");
+    setBcSent(true);
+    setTimeout(() => setBcSent(false), 2000);
+    flash("관리자 채팅 전송");
+  };
 
   if (authed === null) return <div style={s.wrap}>{css}로딩중…</div>;
   if (!authed) return (
@@ -144,7 +153,7 @@ export default function AdminDashboard() {
   ];
 
   // 채팅로그 필터/정렬
-  const baseChats = chatSub === 0 ? liveChats : (histChats[dateOf(chatSub - 1)] || []);
+  const baseChats = tab === "liveChat" ? liveChats : (histChats[dateOf(0)] || []);
   const q1 = chatQ.trim().toLowerCase();
   const chats = [...baseChats]
     .filter((c) => !q1 || c.text.toLowerCase().includes(q1) || (c.nick || "").toLowerCase().includes(q1) || c.vid.toLowerCase().includes(q1))
@@ -155,6 +164,15 @@ export default function AdminDashboard() {
     .filter((o) => !q2 || (o.nick || "").toLowerCase().includes(q2) || o.vid.toLowerCase().includes(q2))
     .sort((a, b) => (onSort === "new" ? b.since - a.since : a.since - b.since));
 
+  const toggleExpandDate = (label: string) => {
+    setExpandDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
+
   return (
     <div style={s.wrap}>{css}
       <header style={s.top}>
@@ -163,7 +181,7 @@ export default function AdminDashboard() {
         <button onClick={logout} style={s.btnGhost}>로그아웃</button>
       </header>
       <nav style={s.tabs}>
-        {([["stats", "통계"], ["online", "실시간접속"], ["chatlog", "채팅로그"], ["bans", "블랙"]] as const).map(([k, t]) => (
+        {([["stats", "통계"], ["online", "동접자"], ["liveChat", "현재채팅"], ["chatlog", "채팅로그"], ["bans", "블랙"]] as const).map(([k, t]) => (
           <button key={k} onClick={() => setTab(k)} style={{ ...s.tab, ...(tab === k ? s.tabOn : {}) }}>{t}</button>
         ))}
       </nav>
@@ -172,21 +190,22 @@ export default function AdminDashboard() {
       {tab === "stats" && (
         <div>
           {dayCards.map((d) => {
-            const key = dateOf(d.ago);
+            const key = d.label;
+            const isExpanded = expandDates.has(key);
             // 오늘은 서버의 실제 today 사용, 어제/엊그제는 hours 합계
             const totals = d.ago === 0 && live?.today ? live.today : (d.hours ? sumDay(d.hours) : EMPTY);
             return (
               <div key={key} style={s.card}>
-                <div style={s.cardHead} onClick={() => setExpand(expand === key ? null : key)}>
-                  <b>{d.label}</b><span style={s.dim2}>{key}{d.live ? " · LIVE" : ""}</span>
-                  <span style={s.chevron}>{expand === key ? "▲시간별" : "▼시간별"}</span>
+                <div style={s.cardHead} onClick={() => toggleExpandDate(key)}>
+                  <b>{d.label}</b><span style={s.dim2}>{dateOf(d.ago)}{d.live ? " · LIVE" : ""}</span>
+                  <span style={s.chevron}>{isExpanded ? "▲시간별" : "▼시간별"}</span>
                 </div>
                 <div style={s.stats}>
                   <Stat l="방문" v={won(totals.visits)} /><Stat l="신규" v={won(totals.newVisitors)} />
                   <Stat l="채팅" v={won(totals.chat)} /><Stat l="물내림" v={won(totals.flush)} />
                   <Stat l="번 돈" v={won(totals.money)} />
                 </div>
-                {expand === key && (
+                {isExpanded && (
                   <table style={s.htable}>
                     <thead><tr>{["시", "방문", "신규", "채팅", "물내림", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                     <tbody>
@@ -223,29 +242,53 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {tab === "chatlog" && (
+      {tab === "liveChat" && (
         <div>
-          <nav style={s.subtabs}>
-            {["실시간", "오늘", "어제", "엊그제"].map((l, i) => (
-              <button key={i} onClick={() => setChatSub(i as 0 | 1 | 2 | 3)} style={{ ...s.subtab, ...(chatSub === i ? s.tabOn : {}) }}>{l}</button>
-            ))}
-          </nav>
-          {chatSub === 0 && (
-            <div style={s.bcBox}>
-              <input style={s.bcInput} placeholder="관리자 공지 보내기 (모든 사용자에게)" value={bc}
-                onChange={(e) => setBc(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendBc(); }} maxLength={120} />
-              <button style={s.sendBtn} onClick={sendBc}>📢 전송</button>
-            </div>
-          )}
+          <div style={s.bcBox}>
+            {!bcSent ? (
+              <>
+                <input style={s.bcInput} placeholder="관리자 채팅 보내기 (모든 사용자에게)" value={bc}
+                  onChange={(e) => setBc(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendBc(); }} maxLength={120} />
+                <button style={s.sendBtn} onClick={sendBc}>📢 전송</button>
+              </>
+            ) : (
+              <div style={s.bcSentMsg}>✓ 관리자 채팅 전송됨</div>
+            )}
+          </div>
           <div style={s.ctrlRow}>
             <input style={s.search} placeholder="검색: 메시지 / 닉네임 / UUID" value={chatQ} onChange={(e) => setChatQ(e.target.value)} />
             <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
           </div>
-          <div style={s.note}>{chats.length}건{chatSub === 0 ? " (접속 후 수신분)" : ""}</div>
+          <div style={s.note}>{chats.length}건 (접속 후 수신분)</div>
           {chats.length === 0 && <Empty />}
           {chats.map((c, i) => (
             <div key={i} style={s.crow}>
-              <div style={s.cline}><span style={s.time}>{hhmm(c.ts)}</span><b style={s.nb}>{c.nick || "익명"}</b><span style={s.ctx}>{c.text}</span></div>
+              <div style={s.clineNew}>
+                <span style={s.time}>{hhmm(c.ts)}</span>
+                <span style={s.nick}>{c.nick || "익명"}</span>
+                <span style={s.msg}>{c.text}</span>
+              </div>
+              <div style={s.cfoot}><code style={s.uuid}>{c.vid}</code><BanCtl vid={c.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "chatlog" && (
+        <div>
+          <div style={s.ctrlRow}>
+            <input style={s.search} placeholder="검색: 메시지 / 닉네임 / UUID" value={chatQ} onChange={(e) => setChatQ(e.target.value)} />
+            <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
+          </div>
+          <div style={s.note}>{chats.length}건</div>
+          {chats.length === 0 && <Empty />}
+          {chats.map((c, i) => (
+            <div key={i} style={s.crow}>
+              <div style={s.clineNew}>
+                <span style={s.time}>{hhmm(c.ts)}</span>
+                <span style={s.nick}>{c.nick || "익명"}</span>
+                <span style={s.msg}>{c.text}</span>
+              </div>
               <div style={s.cfoot}><code style={s.uuid}>{c.vid}</code><BanCtl vid={c.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
             </div>
           ))}
@@ -289,10 +332,8 @@ const s: Record<string, React.CSSProperties> = {
   err: { color: "#ff8a8a", textAlign: "center" },
   top: { display: "flex", alignItems: "center", gap: 10, padding: "4px 2px 10px", position: "sticky", top: 0, background: "#0f1512", zIndex: 10 },
   liveN: { color: "#7ff0b0", fontSize: 13, marginLeft: "auto" },
-  tabs: { display: "flex", gap: 6, marginBottom: 10 },
-  tab: { flex: 1, padding: "10px 4px", borderRadius: 9, borderWidth: 1, borderStyle: "solid", borderColor: "#2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 13 },
-  subtabs: { display: "flex", gap: 5, marginBottom: 8 },
-  subtab: { flex: 1, padding: "7px 4px", borderRadius: 7, borderWidth: 1, borderStyle: "solid", borderColor: "#2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12 },
+  tabs: { display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" },
+  tab: { flex: 1, padding: "10px 4px", borderRadius: 9, borderWidth: 1, borderStyle: "solid", borderColor: "#2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12, whiteSpace: "nowrap" },
   tabOn: { background: "#ffd233", color: "#1a1a1a", borderColor: "#ffd233", fontWeight: 700 },
   toast: { position: "sticky", top: 44, background: "#1f6b45", padding: "7px 12px", borderRadius: 8, marginBottom: 8, textAlign: "center", zIndex: 9 },
   note: { color: "#8fa89a", fontSize: 12, margin: "0 2px 8px" },
@@ -302,6 +343,7 @@ const s: Record<string, React.CSSProperties> = {
   bcBox: { display: "flex", gap: 6, marginBottom: 8 },
   bcInput: { flex: 1, padding: "9px 11px", borderRadius: 8, border: "1px solid #5a4a1a", background: "#211c0e", color: "#ffe7a0", fontSize: 13 },
   sendBtn: { padding: "9px 13px", borderRadius: 8, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" },
+  bcSentMsg: { flex: 1, padding: "9px 11px", borderRadius: 8, background: "rgba(127, 240, 176, 0.15)", color: "#7ff0b0", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center" },
   card: { background: "#16201b", border: "1px solid #243029", borderRadius: 12, padding: 12, marginBottom: 10 },
   cardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" },
   cardTitle: { fontSize: 13, color: "#8fa89a", marginBottom: 8 },
@@ -316,13 +358,16 @@ const s: Record<string, React.CSSProperties> = {
   btnPrimary: { padding: 14, borderRadius: 10, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 16, fontWeight: 700 },
   btnGhost: { padding: "7px 11px", borderRadius: 8, border: "1px solid #2c3a32", background: "transparent", color: "#9fb3a6", fontSize: 12 },
   btnDanger: { padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
-  // 컴팩트 행 (2줄: 내용 / uuid+차단)
-  crow: { background: "#141d18", border: "1px solid #1f2a23", borderRadius: 7, padding: "5px 8px", marginBottom: 4 },
+  // 채팅 행 — 개선된 레이아웃
+  crow: { background: "#141d18", border: "1px solid #1f2a23", borderRadius: 7, padding: "8px", marginBottom: 4 },
   cline: { display: "flex", alignItems: "baseline", gap: 6, fontSize: 13, flexWrap: "wrap", lineHeight: 1.35 },
-  time: { fontSize: 11, color: "#7ff0b0", whiteSpace: "nowrap" },
+  clineNew: { display: "flex", alignItems: "baseline", gap: 8, fontSize: 12.5, lineHeight: 1.4 },
+  time: { fontSize: 10, color: "#7ff0b0", whiteSpace: "nowrap", minWidth: 42, fontVariantNumeric: "tabular-nums" },
+  nick: { fontSize: 12.5, color: "#ffd84d", fontWeight: 600, whiteSpace: "nowrap", minWidth: 60, borderRight: "1px solid #2c3a32", paddingRight: 8 },
+  msg: { flex: 1, color: "#e7efe9", wordBreak: "break-word" },
   nb: { fontSize: 12.5, color: "#cfe5d8", whiteSpace: "nowrap" },
   ctx: { wordBreak: "break-word", color: "#e7efe9", flex: 1 },
-  cfoot: { display: "flex", alignItems: "center", gap: 6, marginTop: 3 },
+  cfoot: { display: "flex", alignItems: "center", gap: 6, marginTop: 5 },
   uuid: { fontSize: 10, color: "#6f8378", background: "#0f1512", padding: "1px 5px", borderRadius: 4, wordBreak: "break-all", flex: 1, userSelect: "all" },
   tag: { fontSize: 10, background: "#3a2f12", color: "#ffd233", padding: "1px 5px", borderRadius: 4 },
   banTag: { fontSize: 10, background: "#3a1f12", color: "#ffb27f", padding: "1px 5px", borderRadius: 4 },
