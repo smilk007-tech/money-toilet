@@ -1,14 +1,15 @@
-/* 영속 스토어 — Upstash Redis. 이벤트마다 쓰지 않고 "5분 배치"로만 기록.
-   · 일일 통계 = 날짜키 1개에 JSON 스냅샷(SET, 5분마다)
-   · 채팅로그 = 날짜별 LIST에 버퍼 append(RPUSH, 5분마다), 3일 TTL 자동삭제
-   · 밴/경고 = 변경 시에만 즉시 write(드묾) */
+/* 영속 스토어 — Upstash Redis. 5분 배치로만 기록(이벤트마다 write 금지).
+   - mt:today        : SET 러닝합계 (TTL 없음)
+   - mt:hours:<date> : HSET 시간별(바뀐 시간만), 95일 TTL
+   - mt:chatlog:<date>: RPUSH 배치, 3일 TTL
+   - 밴: 변경 시에만 즉시 write */
 
 import { getRedis } from "./redis.js";
 import {
-  K, vk, dayKey, chatLogKey, TTL, DEFAULTS, DURATION_SEC, CHATLOG_MAX, lastDateKeys,
+  K, vk, hoursKey, chatLogKey, TTL, DEFAULTS, DURATION_SEC, CHATLOG_MAX,
+  emptyBucket, lastDateKeys,
 } from "./keys.js";
 
-const MAX_NICK = 16;
 export function clean(s, max) {
   return String(s ?? "")
     // eslint-disable-next-line no-control-regex
@@ -46,28 +47,46 @@ export async function setConfig(patch) {
   if (Object.keys(out).length) await r.hset(K.adminCfg, out);
 }
 
-/* ---------- 일일 통계 스냅샷 ---------- */
-// blob: { date, updatedAt, day:{visitors,chat,flush,money}, hours:[{visitors,chat,flush,money}×24] }
-export async function persistDay(date, blob) {
+/* ---------- 오늘 러닝합계 + 시간별 영속 ---------- */
+// running: {date, visits, newVisitors, chat, flush, money}
+export async function persistToday(running) {
   const r = getRedis();
   if (!r) return;
-  await r.set(dayKey(date), blob, { ex: TTL.dayBlob });
+  await r.set(K.today, running); // TTL 없음
 }
-export async function loadDay(date) {
+export async function loadToday() {
   const r = getRedis();
   if (!r) return null;
-  return (await r.get(dayKey(date))) || null;
+  return (await r.get(K.today)) || null;
 }
-/** 어드민용 — 여러 날짜 한 번에 */
-export async function loadDays(dates) {
+// hours: 24개 버킷 배열 — 비어있지 않은 시간만 HSET
+export async function persistHours(date, hours) {
   const r = getRedis();
-  if (!r) return dates.map(() => null);
-  const res = await r.mget(...dates.map(dayKey));
-  return res.map((x) => x || null);
+  if (!r) return;
+  const obj = {};
+  hours.forEach((h, i) => {
+    if (h.visits || h.newVisitors || h.chat || h.flush || h.money) obj[i] = h;
+  });
+  if (!Object.keys(obj).length) return;
+  const p = r.pipeline();
+  p.hset(hoursKey(date), obj);
+  p.expire(hoursKey(date), TTL.hours);
+  await p.exec();
+}
+export async function loadHours(date) {
+  const r = getRedis();
+  if (!r) return Array.from({ length: 24 }, emptyBucket);
+  const raw = (await r.hgetall(hoursKey(date))) || {};
+  const arr = Array.from({ length: 24 }, emptyBucket);
+  for (const [k, v] of Object.entries(raw)) {
+    const i = Number(k);
+    if (i >= 0 && i < 24 && v) arr[i] = { ...emptyBucket(), ...v };
+  }
+  return arr;
 }
 
 /* ---------- 채팅로그(배치 append) ---------- */
-// rows: [{ts, hour, vid, nick, text}]  (날짜는 호출부가 같은 날 것으로 그룹)
+// rows: [{ts, hour, vid, nick, text}]
 export async function appendChatLog(date, rows) {
   const r = getRedis();
   if (!r || !rows.length) return;
@@ -77,20 +96,8 @@ export async function appendChatLog(date, rows) {
   p.expire(chatLogKey(date), TTL.chatLog);
   await p.exec();
 }
-export async function loadChatLog(date) {
-  const r = getRedis();
-  if (!r) return [];
-  const rows = (await r.lrange(chatLogKey(date), 0, -1)) || [];
-  if (rows.length === 0) return rows;
-  // 경고횟수 조회시 합류(채팅당 read 회피)
-  const vids = [...new Set(rows.map((x) => x.vid).filter((v) => v && v !== "system"))];
-  if (!vids.length) return rows.map((x) => ({ ...x, warnCount: 0 }));
-  const counts = await r.mget(...vids.map((v) => vk.warn(v)));
-  const map = Object.fromEntries(vids.map((v, i) => [v, Number(counts[i]) || 0]));
-  return rows.map((x) => ({ ...x, warnCount: map[x.vid] || 0 }));
-}
 
-/* ---------- 밴/경고 ---------- */
+/* ---------- 밴 ---------- */
 export async function loadActiveBans() {
   const r = getRedis();
   if (!r) return [];
@@ -124,14 +131,6 @@ export async function unbanVid(vid) {
   await Promise.all([r.del(vk.ban(vid)), r.zrem(K.bansIndex, vid)]);
   return true;
 }
-export async function warnVid(vid) {
-  const r = getRedis();
-  if (!r || !vid) return 0;
-  const n = await r.incr(vk.warn(vid));
-  if (n === 1) await r.expire(vk.warn(vid), TTL.warn);
-  await r.zadd(K.warnedIndex, { score: n, member: vid });
-  return n;
-}
 export async function listBans() {
   const r = getRedis();
   if (!r) return [];
@@ -146,20 +145,12 @@ export async function listBans() {
   if (stale.length) await r.zrem(K.bansIndex, ...stale);
   return rows;
 }
-export async function listWarned(limit = 100) {
-  const r = getRedis();
-  if (!r) return [];
-  const raw = await r.zrange(K.warnedIndex, 0, limit - 1, { rev: true, withScores: true });
-  const rows = [];
-  for (let i = 0; i < raw.length; i += 2) rows.push({ vid: String(raw[i]), warnCount: Number(raw[i + 1]) });
-  return rows;
-}
 
-/* ---------- 초기화 ---------- */
-export async function resetAll() {
+/* ---------- 초기화 (통계/채팅로그만, 밴은 유지) ---------- */
+export async function resetStats() {
   const r = getRedis();
   if (!r) return;
-  const days = lastDateKeys(95);
-  const keys = [...days.map(dayKey), ...lastDateKeys(3).map(chatLogKey), K.warnedIndex];
-  await r.del(...keys);
+  const dates = lastDateKeys(95);
+  const logDates = lastDateKeys(3);
+  await r.del(K.today, ...dates.map(hoursKey), ...logDates.map(chatLogKey));
 }

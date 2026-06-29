@@ -1,12 +1,9 @@
 /* ===================================================================
    돈버는 화장실 · 실시간 소켓 서버 (Railway, 단일 인스턴스)
-   -------------------------------------------------------------------
-   라이브(메모리): 동접 presence · 오늘 카운터(방문자/채팅/물내림/다같이번돈)
-                   · 시간별 24버킷 · 밴캐시 · rate-limit · 채팅 버퍼
-   영속(Redis, 5분 배치): 날짜키 1개에 일일 스냅샷(JSON) + 시간별
-                          채팅로그는 날짜별 LIST에 append(3일 TTL)
-                          밴/경고는 변경 시에만 즉시 write
-   → Upstash 무료 500k/월 보호 (대략 월 2~3만 commands).
+   라이브(메모리): presence(실유저만) · 오늘 러닝합계 · 시간별 24버킷 · 밴 · rate
+   영속(Redis, 5분 배치): mt:today(러닝) + mt:hours:<date>(시간별 HASH) + 채팅로그
+   어드민: 소켓 'admins' 룸으로 라이브 push(presence/오늘/online/채팅), presence 제외
+           과거 데이터는 Vercel이 Redis 직접 조회(토큰 검증). 단일 ADMIN_SECRET(Railway).
    =================================================================== */
 
 import http from "http";
@@ -14,13 +11,10 @@ import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
 
+import { DEFAULTS, FLUSH_CAP, MAX_PER_SEC, kstDateKey, kstHour, emptyBucket } from "./lib/keys.js";
 import {
-  DEFAULTS, FLUSH_CAP, MAX_PER_SEC, kstDateKey, kstHour, lastDateKeys,
-} from "./lib/keys.js";
-import {
-  loadConfig, setConfig, persistDay, loadDay, loadDays,
-  appendChatLog, loadChatLog, loadActiveBans,
-  banVid, unbanVid, warnVid, listBans, listWarned, resetAll, clean,
+  loadConfig, setConfig, persistToday, loadToday, persistHours, loadHours,
+  appendChatLog, loadActiveBans, banVid, unbanVid, listBans, resetStats, clean,
 } from "./lib/store.js";
 import {
   passwordMatches, createSession, destroySession, isValidSession,
@@ -31,44 +25,31 @@ const PORT = process.env.PORT || 4000;
 
 /* ===================== 인메모리 상태 ===================== */
 let cfg = { ...DEFAULTS };
-const presence = new Map(); // vid -> { sockets:Set, nick, since }
+const presence = new Map(); // vid -> { sockets:Set, nick, since }  (실유저만, 어드민 제외)
 const bans = new Map(); // vid -> expiry(ms)|Infinity
-const chatBuf = []; // [{date,ts,hour,vid,nick,text}] 5분마다 flush
-let day = null; // 오늘 라이브 카운터
+const chatBuf = []; // [{date,ts,hour,vid,nick,text}]
+let today = null; // { date, visits, newVisitors, chat, flush, money }
+let hours = null; // [24] of bucket
 
-function emptyHours() {
-  return Array.from({ length: 24 }, () => ({ visitors: 0, chat: 0, flush: 0, money: 0 }));
-}
-function newDay(date) {
-  return {
-    date,
-    day: { visitors: 0, chat: 0, flush: 0, money: 0 },
-    hours: emptyHours(),
-    seen: new Set(), // 일 단위 dedup(라이브)
-    seenHour: Array.from({ length: 24 }, () => new Set()),
-  };
+function freshToday(date) {
+  return { date, visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0 };
 }
 function ensureDay() {
   const d = kstDateKey();
-  if (day && day.date === d) return;
-  if (day) flushPersist().catch(() => {}); // 자정 롤오버 — 이전 날 저장
-  day = newDay(d);
-}
-function markVisitor(vid) {
-  ensureDay();
-  const h = kstHour();
-  if (!day.seen.has(vid)) { day.seen.add(vid); day.day.visitors++; }
-  if (!day.seenHour[h].has(vid)) { day.seenHour[h].add(vid); day.hours[h].visitors++; }
+  if (today && today.date === d) return;
+  if (today) flushPersist().catch(() => {}); // 자정 롤오버 — 이전 날 저장
+  today = freshToday(d);
+  hours = Array.from({ length: 24 }, emptyBucket);
 }
 
-/* ---------- 어뷰징 게이트 ---------- */
+/* ---------- 어뷰징 ---------- */
 function isBanned(vid) {
   const exp = bans.get(vid);
   if (exp === undefined) return false;
   if (exp !== Infinity && Date.now() > exp) { bans.delete(vid); return false; }
   return true;
 }
-const rate = new Map(); // vid -> [ts...]
+const rate = new Map();
 function rateOk(vid) {
   const now = Date.now();
   const arr = (rate.get(vid) || []).filter((t) => now - t < cfg.rateWindowMs);
@@ -90,16 +71,25 @@ function broadcastPresence() {
   }, cfg.presenceBroadcastMs);
 }
 
+/* ---------- 어드민 라이브 push ---------- */
+function onlineList() {
+  return [...presence.entries()].map(([vid, info]) => ({
+    vid, nick: info.nick || "", conns: info.sockets.size, since: info.since, banned: isBanned(vid),
+  })).sort((a, b) => a.since - b.since);
+}
+function adminSnapshot() {
+  ensureDay();
+  return { presence: presence.size, today: { ...today }, hours: hours.map((h) => ({ ...h })), online: onlineList() };
+}
+function adminsConnected() {
+  return (io.sockets.adapter.rooms.get("admins")?.size || 0) > 0;
+}
+
 /* ---------- 5분 배치 영속 ---------- */
 async function flushPersist() {
-  if (day) {
-    const blob = {
-      date: day.date,
-      updatedAt: Date.now(),
-      day: { ...day.day },
-      hours: day.hours.map((h) => ({ ...h })),
-    };
-    await persistDay(day.date, blob);
+  if (today) {
+    await persistToday(today);
+    await persistHours(today.date, hours);
   }
   if (chatBuf.length) {
     const byDate = {};
@@ -110,10 +100,10 @@ async function flushPersist() {
   }
 }
 
-/* ===================== Express (어드민 REST) ===================== */
+/* ===================== Express (어드민 REST: 로그인/밴/제어) ===================== */
 const app = express();
-app.set("trust proxy", true); // Railway 엣지 뒤 — req.ip 신뢰
-app.use(cors()); // 공개 채팅 + 토큰 인증이라 오리진 전부 허용(연결 문제 원천 제거)
+app.set("trust proxy", true);
+app.use(cors());
 app.use(express.json({ limit: "16kb" }));
 app.get("/", (_req, res) => res.send("ok"));
 
@@ -134,52 +124,11 @@ app.post("/admin/login", async (req, res) => {
 });
 app.get("/admin/me", requireAdmin, (_req, res) => res.json({ ok: true }));
 app.post("/admin/logout", requireAdmin, async (req, res) => { await destroySession(bearer(req)); res.json({ ok: true }); });
-
-// 오늘(메모리·라이브) + 어제·엊그제(Redis) + 시간별
-app.get("/admin/stats", requireAdmin, async (_req, res) => {
-  ensureDay();
-  const [today, ...prevDates] = lastDateKeys(3); // [오늘, 어제, 엊그제]
-  const prev = await loadDays(prevDates);
-  const liveToday = {
-    date: today, source: "live",
-    day: { ...day.day },
-    hours: day.hours.map((h) => ({ ...h })),
-  };
-  const history = prevDates.map((date, i) => {
-    const b = prev[i];
-    return b
-      ? { date, source: "redis", day: b.day, hours: b.hours }
-      : { date, source: "empty", day: { visitors: 0, chat: 0, flush: 0, money: 0 }, hours: emptyHours() };
-  });
-  res.json({ ok: true, presence: presence.size, days: [liveToday, ...history] });
-});
-
-// 실시간 접속자 리스트
-app.get("/admin/online", requireAdmin, (_req, res) => {
-  const list = [...presence.entries()].map(([vid, info]) => ({
-    vid, nick: info.nick || "", conns: info.sockets.size, since: info.since,
-    banned: isBanned(vid),
-  }));
-  list.sort((a, b) => a.since - b.since);
-  res.json({ ok: true, online: list });
-});
-
-// 날짜별 채팅로그 (오늘은 메모리 버퍼까지 합쳐 최신 반영)
-app.get("/admin/chatlog", requireAdmin, async (req, res) => {
-  const date = String(req.query.date || kstDateKey());
-  const stored = await loadChatLog(date);
-  const buffered = chatBuf.filter((r) => r.date === date)
-    .map(({ ts, hour, vid, nick, text }) => ({ ts, hour, vid, nick, text, warnCount: 0 }));
-  res.json({ ok: true, date, chats: [...stored, ...buffered] });
-});
-
 app.get("/admin/bans", requireAdmin, async (_req, res) => res.json({ ok: true, bans: await listBans() }));
-app.get("/admin/warned", requireAdmin, async (_req, res) => res.json({ ok: true, warned: await listWarned() }));
-
 app.post("/admin/ban", requireAdmin, async (req, res) => {
   const vid = String(req.body?.vid ?? "");
   const r = await banVid(vid, String(req.body?.duration ?? "1d"));
-  if (r.ok) bans.set(vid, r.expiry); // 즉시 라이브 반영(다음 채팅부터 섀도밴)
+  if (r.ok) bans.set(vid, r.expiry);
   res.json({ ok: r.ok });
 });
 app.post("/admin/unban", requireAdmin, async (req, res) => {
@@ -187,8 +136,6 @@ app.post("/admin/unban", requireAdmin, async (req, res) => {
   await unbanVid(vid); bans.delete(vid);
   res.json({ ok: true });
 });
-app.post("/admin/warn", requireAdmin, async (req, res) =>
-  res.json({ ok: true, count: await warnVid(String(req.body?.vid ?? "")) }));
 app.post("/admin/broadcast", requireAdmin, (req, res) => {
   const text = clean(req.body?.text ?? "", 120);
   if (text) io.emit("chat", { name: "공지", text, kind: "bot" });
@@ -198,27 +145,36 @@ app.post("/admin/config", requireAdmin, async (req, res) => {
   await setConfig(req.body ?? {}); cfg = await loadConfig();
   res.json({ ok: true, config: cfg });
 });
-app.post("/admin/reset", requireAdmin, async (req, res) => {
-  const scope = String(req.body?.scope ?? "all");
-  await resetAll();
-  day = newDay(kstDateKey()); chatBuf.length = 0;
+app.post("/admin/reset", requireAdmin, async (_req, res) => {
+  await resetStats();
+  today = freshToday(kstDateKey()); hours = Array.from({ length: 24 }, emptyBucket); chatBuf.length = 0;
   io.emit("global", { total: 0 });
-  res.json({ ok: true, scope });
+  res.json({ ok: true });
 });
 
 /* ===================== socket.io ===================== */
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: true, methods: ["GET", "POST"] } });
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
+  // 어드민 전용 접속 — 토큰 검증 → admins 룸, presence 제외, 라이브 push만
+  const adminToken = socket.handshake.auth?.adminToken;
+  if (adminToken && (await isValidSession(String(adminToken)))) {
+    socket.data.isAdmin = true;
+    socket.join("admins");
+    socket.emit("adminStats", adminSnapshot());
+    return; // 어드민은 view-only — 유저 핸들러 미부착, 동접 제외
+  }
+
   socket.data.vid = null;
   socket.data.nick = "";
+  socket.data.counted = false;
   socket.data.lastFlushAt = Date.now();
 
   socket.on("hello", (p = {}) => {
     const incoming = String(p.vid ?? "").slice(0, 64);
     if (!incoming) return;
-    if (!socket.data.vid) socket.data.vid = incoming; // vid 소켓당 고정(회전 차단)
+    if (!socket.data.vid) socket.data.vid = incoming; // vid 소켓당 고정
     const vid = socket.data.vid;
     socket.data.nick = clean(p.nick, 16);
 
@@ -226,10 +182,17 @@ io.on("connection", (socket) => {
     if (!info) presence.set(vid, (info = { sockets: new Set(), nick: "", since: Date.now() }));
     info.sockets.add(socket.id);
     info.nick = socket.data.nick || info.nick;
-    markVisitor(vid);
 
-    socket.emit("backfill", { chats: [] });
-    socket.emit("global", { total: day.day.money });
+    // 방문 카운트 — 소켓당 1회, 새 페이지진입(fresh)일 때만(재연결 제외)
+    if (!socket.data.counted && p.fresh) {
+      socket.data.counted = true;
+      ensureDay();
+      const h = kstHour();
+      today.visits++; hours[h].visits++;
+      if (p.isNew) { today.newVisitors++; hours[h].newVisitors++; } // 신규 UUID
+    }
+
+    socket.emit("global", { total: today ? today.money : 0 });
     socket.emit("presence", { count: presence.size });
     broadcastPresence();
   });
@@ -241,13 +204,15 @@ io.on("connection", (socket) => {
     const text = clean(p.text, cfg.maxMsgLen);
     if (!text || cfg.chatDisabled) return;
     if (isBanned(vid)) return; // 섀도밴
-    if (!rateOk(vid)) { bans.set(vid, Date.now() + cfg.autoBlockSec * 1000); return; } // 10초 자동차단
+    if (!rateOk(vid)) { bans.set(vid, Date.now() + cfg.autoBlockSec * 1000); return; }
     const nick = socket.data.nick || "익명의 볼일러";
     ensureDay();
     const h = kstHour();
-    day.day.chat++; day.hours[h].chat++;
-    chatBuf.push({ date: day.date, ts: Date.now(), hour: h, vid, nick, text });
-    socket.broadcast.emit("chat", { name: nick, text, kind: "bot" });
+    today.chat++; hours[h].chat++;
+    const ts = Date.now();
+    chatBuf.push({ date: today.date, ts, hour: h, vid, nick, text });
+    socket.broadcast.emit("chat", { name: nick, text, kind: "bot" }); // 일반 유저(나 제외)
+    if (adminsConnected()) io.to("admins").emit("adminChat", { ts, hour: h, vid, nick, text }); // 어드민 라이브
   });
 
   socket.on("flush", (p = {}) => {
@@ -257,7 +222,6 @@ io.on("connection", (socket) => {
     let amount = Math.floor(Number(p.amount) || 0);
     if (amount < 1) return;
     if (cfg.chatDisabled || isBanned(vid) || !rateOk(vid)) return;
-    // 서버측 적립 클램프 — 경과시간 × 최대초당 (금액 조작/그리핑 방지)
     const now = Date.now();
     const accrued = Math.ceil((MAX_PER_SEC * (now - socket.data.lastFlushAt)) / 1000) + MAX_PER_SEC;
     amount = Math.min(amount, accrued, FLUSH_CAP);
@@ -266,15 +230,15 @@ io.on("connection", (socket) => {
 
     ensureDay();
     const h = kstHour();
-    day.day.money += amount; day.hours[h].money += amount;
-    day.day.flush++; day.hours[h].flush++;
+    today.money += amount; hours[h].money += amount;
+    today.flush++; hours[h].flush++;
 
     const nick = socket.data.nick || "익명의 볼일러";
     if (p.broadcast !== false) {
       const text = clean(p.text, cfg.maxMsgLen);
-      socket.broadcast.emit("flush", { name: nick, amount, total: day.day.money, me: false, chat: true, text });
+      socket.broadcast.emit("flush", { name: nick, amount, total: today.money, me: false, chat: true, text });
     }
-    io.emit("global", { total: day.day.money });
+    io.emit("global", { total: today.money });
   });
 
   socket.on("disconnect", () => {
@@ -292,25 +256,22 @@ io.on("connection", (socket) => {
 /* ===================== 부팅 / 종료 ===================== */
 async function boot() {
   cfg = await loadConfig();
-  day = newDay(kstDateKey());
-  const blob = await loadDay(day.date); // 재시작 복구(카운트만, seen은 초기화)
-  if (blob) {
-    day.day = { ...day.day, ...blob.day };
-    if (Array.isArray(blob.hours)) day.hours = blob.hours.map((h) => ({ visitors: 0, chat: 0, flush: 0, money: 0, ...h }));
-  }
+  const d = kstDateKey();
+  today = freshToday(d);
+  hours = Array.from({ length: 24 }, emptyBucket);
+  const t = await loadToday();
+  if (t && t.date === d) today = { ...today, ...t, date: d }; // 같은 날이면 러닝합계 복구
+  hours = await loadHours(d); // 시간별 복구
   for (const b of await loadActiveBans()) bans.set(b.vid, b.expiry);
 
   setInterval(() => flushPersist().catch((e) => console.error("[persist]", e)), cfg.persistMs);
+  setInterval(() => { if (adminsConnected()) io.to("admins").emit("adminStats", adminSnapshot()); }, cfg.adminPushMs);
 
   server.listen(PORT, () => {
-    console.log(`[mt-socket] :${PORT} day=${day.date} money=${day.day.money} bans=${bans.size}`);
+    console.log(`[mt-socket] :${PORT} day=${today.date} money=${today.money} visits=${today.visits} bans=${bans.size}`);
   });
 }
-// 배포 재시작(SIGTERM) 전에 마지막 플러시 — 데이터 손실 최소화
 for (const sig of ["SIGTERM", "SIGINT"]) {
-  process.on(sig, async () => {
-    try { await flushPersist(); } catch { /* noop */ }
-    process.exit(0);
-  });
+  process.on(sig, async () => { try { await flushPersist(); } catch { /* noop */ } process.exit(0); });
 }
 boot();
