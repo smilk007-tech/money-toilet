@@ -131,7 +131,6 @@ export default function AdminDashboard() {
     setBc("");
     setBcSent(true);
     setTimeout(() => setBcSent(false), 2000);
-    flash("관리자 채팅 전송");
   };
 
   if (authed === null) return <div style={s.wrap}>{css}로딩중…</div>;
