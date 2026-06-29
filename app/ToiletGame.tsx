@@ -20,6 +20,8 @@ export default function ToiletGame() {
 
   return (
     <div id="app">
+      {/* 네트워크 끊김 표시 — 소켓 연결 실패 시 일정 시간 후 표시 */}
+      <div className="network-badge" id="networkBadge" hidden>📶 오프라인 모드</div>
       {/* ===== 상단 HUD ===== */}
       <header className="hud">
         <div className="hud__bar">
