@@ -19,19 +19,18 @@ import ReceiptCard from "@/components/ReceiptCard";
    - 완전한 인게임 유저로 취급: "hello"를 보내 실제 presence/visits에 정상 집계된다.
      단, 화면에 보여줄 접속자수는 (서버 count - 1) — 나 자신을 빼고 "제3자가 보기엔
      사람이 더 있어 보이게" 하기 위함. 음수면 0으로 표기.
-   - 오늘 누적금액(liveWon)은 실제 소켓 total을 기준으로 하되, 가입유도 화면 특성상
-     채팅서버 값이 멈춰있어도 계속 슬금슬금 올라가는 것처럼 보이게 하고, 서버에서
-     진짜 값이 갱신되면 그 값으로 스냅 후 다시 올라가는 척을 반복한다.
+   - 오늘 누적금액: 서버 실제값의 90%부터 시작해 60초 동안 100%까지 creep 애니메이션.
+     그 이후에도 같은 속도로 계속 올라감(접속 유도용이라 초과해도 무방).
+     서버에서 새 값이 오면 현재 표시값 기준으로 재보정해 다시 올라가는 것처럼 보임.
    - NEXT_PUBLIC_RT가 꺼져있으면(로컬/오프라인) 가짜 소켓으로 대체.
    - CTA는 새 탭이 아니라 SPA 라우팅(router.push)으로 이동 — 같은 vid로 메인에서
      바로 재연결되어 깔끔하게 이어지는 느낌을 준다. */
-
-const AVG_RATE_PER_PERSON = 3_000_000 / (22 * 8 * 3600); // ≈ 4.73원/초/인 (가입유도용 가짜 상승분)
 
 // FOMO 배너 노출 임계값 — 접속자/금액이 너무 적으면 오히려 "썰렁해 보여서" 역효과.
 // 둘 중 하나라도 넘으면 노출. 오픈 초반엔 트래픽이 적으니 낮게 잡아두고, 트래픽 늘면 올릴 것.
 const FOMO_MIN_PRESENCE = 1; // 나 말고 1명 이상 있으면 노출
 const FOMO_MIN_TOTAL = 10_000; // 오늘 누적 1만원 이상이면 노출
+const CREEP_DURATION_S = 60; // 90% → 100% 채우는 시간(초). 이후에도 같은 속도로 계속 올라감.
 
 export default function PayslipShare({
   data,
@@ -42,16 +41,70 @@ export default function PayslipShare({
 }) {
   const router = useRouter();
   const [count, setCount] = useState(Math.max(0, (data.p || 0) - 1));
+  // liveWon: 서버 실제값 — FOMO 임계 판단용
   const [liveWon, setLiveWon] = useState(data.g || 0);
+  // displayWon: 화면에 보여주는 값 — 90%서 시작해 creep 애니메이션
+  const [displayWon, setDisplayWon] = useState((data.g || 0) * 0.9);
   const countRef = useRef(count);
   countRef.current = count;
 
+  // creep 상태 — displayTicker가 이걸 읽어서 displayWon을 계산
+  const creep = useRef({
+    base: (data.g || 0) * 0.9,
+    rate: ((data.g || 0) * 0.1) / CREEP_DURATION_S, // 초당 증가분
+    startedAt: Date.now(),
+    synced: false,
+  });
+
   useEffect(() => {
+    const STEP_MS = 120;
+
+    // 서버 실제값 수신 시: liveWon 갱신 + creep 재보정
+    // 최초 1회: total의 90%서 시작, 10% 갭을 60초에 걸쳐 채움
+    // 이후: 현재 표시값 기준으로 새 실제값을 향해 재보정(화면 점프 없이 자연스럽게)
+    function applyGlobal(total: number) {
+      const c = creep.current;
+      const elapsed = (Date.now() - c.startedAt) / 1000;
+      const curDisplay = c.base + c.rate * elapsed;
+
+      setLiveWon(total);
+
+      if (!c.synced) {
+        const base = total * 0.9;
+        const gap = total * 0.1;
+        creep.current = {
+          base,
+          rate: gap / CREEP_DURATION_S,
+          startedAt: Date.now(),
+          synced: true,
+        };
+        setDisplayWon(base);
+      } else {
+        const gap = total - curDisplay;
+        if (gap > 0) {
+          // 현재 표시값에서 다시 올라가는 것처럼 — 최소 기존 속도는 유지
+          creep.current = {
+            base: curDisplay,
+            rate: Math.max(c.rate, gap / CREEP_DURATION_S),
+            startedAt: Date.now(),
+            synced: true,
+          };
+        }
+      }
+    }
+
+    // displayWon 애니메이션 ticker — creep 상태 기반으로 120ms마다 갱신
+    const displayTicker = setInterval(() => {
+      const c = creep.current;
+      const elapsed = (Date.now() - c.startedAt) / 1000;
+      setDisplayWon(c.base + c.rate * elapsed);
+    }, STEP_MS);
+
     const useReal = process.env.NEXT_PUBLIC_RT === "1";
 
     if (useReal) {
       const url = socketUrl();
-      if (!url) return; // 소켓 서버 미설정 — 명세서 정적 수치 그대로 둠
+      if (!url) return () => clearInterval(displayTicker);
       const sock = io(url, {
         transports: ["websocket", "polling"],
         reconnection: true,
@@ -78,33 +131,10 @@ export default function PayslipShare({
       sock.on("presence", ({ count: c }: { count: number }) =>
         setCount(Math.max(0, c - 1)),
       );
-      // 영수증 스냅샷(data.g)은 발급 시점 값이라 지금 실제값과 전혀 다를 수 있음(다른 날짜/구버전 등).
-      // 최초 1회는 무조건 실제값으로 강제 동기화하고, 그 이후부터만 max로 비교해
-      // 가짜 증가분이 실제값을 일시적으로 앞서가도 화면이 줄어드는 것처럼 보이지 않게 함.
-      // synced=true는 updater 안에서 세팅해야 함 — React가 updater를 비동기로 실행하므로
-      // setLiveWon() 호출 직후 바로 synced=true를 하면 updater가 실제로 실행되는 시점엔
-      // 이미 true가 돼있어서 "최초 1회 강제 동기화"가 절대 발생하지 않는 버그가 생긴다.
-      let synced = false;
-      sock.on("global", ({ total }: { total: number }) => {
-        setLiveWon((prev) => {
-          const next = synced ? Math.max(prev, total) : total;
-          synced = true;
-          return next;
-        });
-      });
-
-      // 채팅서버 값이 멈춰있어도 계속 올라가는 것처럼
-      const STEP_MS = 120;
-      const ticker = setInterval(() => {
-        setLiveWon(
-          (prev) =>
-            prev +
-            (countRef.current + 1) * AVG_RATE_PER_PERSON * (STEP_MS / 1000),
-        );
-      }, STEP_MS);
+      sock.on("global", ({ total }: { total: number }) => applyGlobal(total));
 
       return () => {
-        clearInterval(ticker);
+        clearInterval(displayTicker);
         try {
           sock.disconnect();
         } catch {}
@@ -115,25 +145,17 @@ export default function PayslipShare({
     socket.on("presence", ({ count: c }: { count: number }) =>
       setCount(Math.max(0, c - 1)),
     );
-    socket.on("global", ({ total }: { total: number }) =>
-      setLiveWon((prev) => Math.max(prev, total)),
-    );
-    socket.on("flush", (f: { total: number }) =>
-      setLiveWon((prev) => Math.max(prev, f.total)),
-    );
+    socket.on("global", ({ total }: { total: number }) => applyGlobal(total));
+    socket.on("flush", (f: { total: number }) => {
+      const c = creep.current;
+      const elapsed = (Date.now() - c.startedAt) / 1000;
+      const cur = c.base + c.rate * elapsed;
+      if (f.total > cur) applyGlobal(f.total);
+    });
     socket.connect();
 
-    const STEP_MS = 120;
-    const ticker = setInterval(() => {
-      setLiveWon(
-        (prev) =>
-          prev +
-          (countRef.current + 1) * AVG_RATE_PER_PERSON * (STEP_MS / 1000),
-      );
-    }, STEP_MS);
-
     return () => {
-      clearInterval(ticker);
+      clearInterval(displayTicker);
       try {
         socket.disconnect();
       } catch {}
@@ -169,7 +191,7 @@ export default function PayslipShare({
             ) : (
               <div style={liveDot}>오늘 다 같이</div>
             )}
-            {showAmt && <div style={liveAmt}>{fmtWon(liveWon)}</div>}
+            {showAmt && <div style={liveAmt}>{fmtWon(displayWon)}</div>}
             <div style={liveSub}>
               {showCount && showAmt
                 ? "다 같이 변기 위에서 실시간으로 쓸어담는 중 💰"
