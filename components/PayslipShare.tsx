@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FakeToiletSocket } from "@/lib/engine/fakeSocket";
+import { io } from "socket.io-client";
+import { socketUrl } from "@/lib/engine/realSocket";
+import { getVid, wasVidCreated } from "@/lib/engine/identity";
+import { LS } from "@/lib/storageKeys";
 import {
   fmtWon,
   RECEIPT_HISTORY_MAX_SHARE,
@@ -11,10 +16,22 @@ import { shareCtaLook } from "@/lib/receipt/shareCta";
 import ReceiptCard from "@/components/ReceiptCard";
 
 /* 공유받은 사람이 링크 타고 들어왔을 때 보는 화면.
-   - 가짜 소켓에 연결해 현재 접속자(N명)와 실시간 누적금액을 살아 움직이게 한다.
-   - 명세서 하단에 "함께 돈 벌러 가기" CTA로 앱 메인 랜딩. */
+   - 완전한 인게임 유저로 취급: "hello"를 보내 실제 presence/visits에 정상 집계된다.
+     단, 화면에 보여줄 접속자수는 (서버 count - 1) — 나 자신을 빼고 "제3자가 보기엔
+     사람이 더 있어 보이게" 하기 위함. 음수면 0으로 표기.
+   - 오늘 누적금액(liveWon)은 실제 소켓 total을 기준으로 하되, 가입유도 화면 특성상
+     채팅서버 값이 멈춰있어도 계속 슬금슬금 올라가는 것처럼 보이게 하고, 서버에서
+     진짜 값이 갱신되면 그 값으로 스냅 후 다시 올라가는 척을 반복한다.
+   - NEXT_PUBLIC_RT가 꺼져있으면(로컬/오프라인) 가짜 소켓으로 대체.
+   - CTA는 새 탭이 아니라 SPA 라우팅(router.push)으로 이동 — 같은 vid로 메인에서
+     바로 재연결되어 깔끔하게 이어지는 느낌을 준다. */
 
-const AVG_RATE_PER_PERSON = 3_000_000 / (22 * 8 * 3600); // ≈ 4.73원/초/인
+const AVG_RATE_PER_PERSON = 3_000_000 / (22 * 8 * 3600); // ≈ 4.73원/초/인 (가입유도용 가짜 상승분)
+
+// FOMO 배너 노출 임계값 — 접속자/금액이 너무 적으면 오히려 "썰렁해 보여서" 역효과.
+// 둘 중 하나라도 넘으면 노출. 오픈 초반엔 트래픽이 적으니 낮게 잡아두고, 트래픽 늘면 올릴 것.
+const FOMO_MIN_PRESENCE = 1; // 나 말고 1명 이상 있으면 노출
+const FOMO_MIN_TOTAL = 10_000; // 오늘 누적 1만원 이상이면 노출
 
 export default function PayslipShare({
   data,
@@ -23,14 +40,81 @@ export default function PayslipShare({
   data: ReceiptData;
   siteUrlHref: string;
 }) {
-  const [count, setCount] = useState(data.p || 0);
+  const router = useRouter();
+  const [count, setCount] = useState(Math.max(0, (data.p || 0) - 1));
   const [liveWon, setLiveWon] = useState(data.g || 0);
   const countRef = useRef(count);
   countRef.current = count;
 
   useEffect(() => {
+    const useReal = process.env.NEXT_PUBLIC_RT === "1";
+
+    if (useReal) {
+      const url = socketUrl();
+      if (!url) return; // 소켓 서버 미설정 — 명세서 정적 수치 그대로 둠
+      const sock = io(url, {
+        transports: ["websocket", "polling"],
+        reconnection: true,
+      });
+      let firstConnect = true;
+      sock.on("connect", () => {
+        const fresh = firstConnect;
+        firstConnect = false;
+        const vid = getVid();
+        const nick = (() => {
+          try {
+            return localStorage.getItem(LS.nick) || "";
+          } catch {
+            return "";
+          }
+        })();
+        sock.emit("hello", {
+          vid,
+          nick,
+          fresh,
+          isNew: fresh && wasVidCreated(),
+        });
+      });
+      sock.on("presence", ({ count: c }: { count: number }) =>
+        setCount(Math.max(0, c - 1)),
+      );
+      // 영수증 스냅샷(data.g)은 발급 시점 값이라 지금 실제값과 전혀 다를 수 있음(다른 날짜/구버전 등).
+      // 최초 1회는 무조건 실제값으로 강제 동기화하고, 그 이후부터만 max로 비교해
+      // 가짜 증가분이 실제값을 일시적으로 앞서가도 화면이 줄어드는 것처럼 보이지 않게 함.
+      // synced=true는 updater 안에서 세팅해야 함 — React가 updater를 비동기로 실행하므로
+      // setLiveWon() 호출 직후 바로 synced=true를 하면 updater가 실제로 실행되는 시점엔
+      // 이미 true가 돼있어서 "최초 1회 강제 동기화"가 절대 발생하지 않는 버그가 생긴다.
+      let synced = false;
+      sock.on("global", ({ total }: { total: number }) => {
+        setLiveWon((prev) => {
+          const next = synced ? Math.max(prev, total) : total;
+          synced = true;
+          return next;
+        });
+      });
+
+      // 채팅서버 값이 멈춰있어도 계속 올라가는 것처럼
+      const STEP_MS = 120;
+      const ticker = setInterval(() => {
+        setLiveWon(
+          (prev) =>
+            prev +
+            (countRef.current + 1) * AVG_RATE_PER_PERSON * (STEP_MS / 1000),
+        );
+      }, STEP_MS);
+
+      return () => {
+        clearInterval(ticker);
+        try {
+          sock.disconnect();
+        } catch {}
+      };
+    }
+
     const socket = new FakeToiletSocket();
-    socket.on("presence", ({ count }: { count: number }) => setCount(count));
+    socket.on("presence", ({ count: c }: { count: number }) =>
+      setCount(Math.max(0, c - 1)),
+    );
     socket.on("global", ({ total }: { total: number }) =>
       setLiveWon((prev) => Math.max(prev, total)),
     );
@@ -39,12 +123,12 @@ export default function PayslipShare({
     );
     socket.connect();
 
-    // 접속자 수 × 인당 초당수입 만큼 매끄럽게 차오르는 카운터
     const STEP_MS = 120;
     const ticker = setInterval(() => {
       setLiveWon(
         (prev) =>
-          prev + countRef.current * AVG_RATE_PER_PERSON * (STEP_MS / 1000),
+          prev +
+          (countRef.current + 1) * AVG_RATE_PER_PERSON * (STEP_MS / 1000),
       );
     }, STEP_MS);
 
@@ -59,7 +143,7 @@ export default function PayslipShare({
   return (
     <main
       style={{ ...wrap, cursor: "pointer" }}
-      onClick={() => window.open("/", "_blank", "noopener,noreferrer")}
+      onClick={() => router.push("/")}
     >
       <div style={cardWrap}>
         <ReceiptCard
@@ -69,15 +153,33 @@ export default function PayslipShare({
         />
       </div>
 
-      {/* 실시간 라이브 배너 */}
-      <div style={liveBox}>
-        <div style={liveDot}>
-          <span style={dot} />
-          현재 접속자 {count.toLocaleString("ko-KR")}명
-        </div>
-        <div style={liveAmt}>{fmtWon(liveWon)}</div>
-        <div style={liveSub}>다 같이 변기 위에서 실시간으로 쓸어담는 중 💰</div>
-      </div>
+      {/* 실시간 라이브 배너 — 접속자/금액 둘 다 낮으면 역효과라 숨김.
+          둘 중 하나만 기준 미달이면 그 줄만 숨기고 다른 한쪽으로 FOMO를 준다. */}
+      {(() => {
+        const showCount = count >= FOMO_MIN_PRESENCE;
+        const showAmt = liveWon >= FOMO_MIN_TOTAL;
+        if (!showCount && !showAmt) return null;
+        return (
+          <div style={liveBox}>
+            {showCount ? (
+              <div style={liveDot}>
+                <span style={dot} />
+                현재 접속자 {count.toLocaleString("ko-KR")}명
+              </div>
+            ) : (
+              <div style={liveDot}>오늘 다 같이</div>
+            )}
+            {showAmt && <div style={liveAmt}>{fmtWon(liveWon)}</div>}
+            <div style={liveSub}>
+              {showCount && showAmt
+                ? "다 같이 변기 위에서 실시간으로 쓸어담는 중 💰"
+                : showAmt
+                  ? "변기 위에서 실시간으로 쓸어담는 중 💰"
+                  : "변기 위에서 대기 중 🚽"}
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={cta}>🚽 돈버는 화장실 입장</div>
     </main>

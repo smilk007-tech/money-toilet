@@ -30,6 +30,8 @@ const bans = new Map(); // vid -> expiry(ms)|Infinity
 const chatBuf = []; // [{date,ts,hour,vid,nick,text}]
 let today = null; // { date, visits, newVisitors, chat, flush, money }
 let hours = null; // [24] of bucket
+let todayDirty = false; // 마지막 영속 이후 today 변경 여부
+const hoursDirty = new Set(); // 마지막 영속 이후 변경된 시간 인덱스
 
 function freshToday(date) {
   return { date, visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0 };
@@ -37,9 +39,12 @@ function freshToday(date) {
 function ensureDay() {
   const d = kstDateKey();
   if (today && today.date === d) return;
-  if (today) flushPersist().catch(() => {}); // 자정 롤오버 — 이전 날 저장
+  const rolled = !!today; // 자정 롤오버(서버 부팅 첫 호출 제외)
+  if (rolled) flushPersist().catch(() => {}); // 이전 날 저장
   today = freshToday(d);
   hours = Array.from({ length: 24 }, emptyBucket);
+  // 접속 중인 클라이언트는 'global' 푸시만으론 자정 초기화를 구분 못 함(스냅처럼 보임) → 전용 이벤트로 안내
+  if (rolled) io.emit("dayReset", { total: 0, date: d });
 }
 
 /* ---------- 어뷰징 ---------- */
@@ -77,19 +82,43 @@ function onlineList() {
     vid, nick: info.nick || "", conns: info.sockets.size, since: info.since, banned: isBanned(vid),
   })).sort((a, b) => a.since - b.since);
 }
-function adminSnapshot() {
+// 라이브성 데이터(자주 바뀜) — presence/오늘 러닝합계/온라인 목록
+function adminLiveSnapshot() {
   ensureDay();
-  return { presence: presence.size, today: { ...today }, hours: hours.map((h) => ({ ...h })), online: onlineList() };
+  return { presence: presence.size, today: { ...today }, online: onlineList() };
+}
+// 시간별 통계(5분 배치 영속과 같은 주기로만 바뀌어도 충분 — 매번 보낼 필요 없음)
+function adminHoursSnapshot() {
+  ensureDay();
+  return { hours: hours.map((h) => ({ ...h })) };
 }
 function adminsConnected() {
   return (io.sockets.adapter.rooms.get("admins")?.size || 0) > 0;
 }
 
+// 어드민 라이브 push — 상태가 실제로 바뀐 시점에만, 디바운스해서 한 번에 묶어 보냄
+// (매초 폴링하던 이전 구조는 변동 없어도 매번 presence/today/online 전체를 다시 보내 비효율적이었음)
+let aTimer = null, aDirty = false;
+function pushAdminLive() {
+  aDirty = true;
+  if (aTimer || !adminsConnected()) return;
+  aTimer = setTimeout(() => {
+    aTimer = null;
+    if (!aDirty || !adminsConnected()) return;
+    aDirty = false;
+    io.to("admins").emit("adminStats", adminLiveSnapshot());
+  }, cfg.presenceBroadcastMs);
+}
+
 /* ---------- 5분 배치 영속 ---------- */
 async function flushPersist() {
-  if (today) {
+  if (today && todayDirty) {
     await persistToday(today);
-    await persistHours(today.date, hours);
+    todayDirty = false;
+  }
+  if (today && hoursDirty.size) {
+    await persistHours(today.date, hours, hoursDirty);
+    hoursDirty.clear();
   }
   if (chatBuf.length) {
     const byDate = {};
@@ -138,7 +167,7 @@ app.post("/admin/unban", requireAdmin, async (req, res) => {
 });
 app.post("/admin/broadcast", requireAdmin, (req, res) => {
   const text = clean(req.body?.text ?? "", 120);
-  if (text) io.emit("chat", { name: "공지", text, kind: "bot" });
+  if (text) io.emit("chat", { name: "관리자", text, kind: "admin" });
   res.json({ ok: true });
 });
 app.post("/admin/config", requireAdmin, async (req, res) => {
@@ -162,7 +191,8 @@ io.on("connection", async (socket) => {
   if (adminToken && (await isValidSession(String(adminToken)))) {
     socket.data.isAdmin = true;
     socket.join("admins");
-    socket.emit("adminStats", adminSnapshot());
+    socket.emit("adminStats", adminLiveSnapshot());
+    socket.emit("adminHours", adminHoursSnapshot()); // 최초 1회는 즉시(이후엔 5분 주기로만)
     return; // 어드민은 view-only — 유저 핸들러 미부착, 동접 제외
   }
 
@@ -170,6 +200,12 @@ io.on("connection", async (socket) => {
   socket.data.nick = "";
   socket.data.counted = false;
   socket.data.lastFlushAt = Date.now();
+
+  // 연결 즉시 현재 상태 1회 전송 — 'hello'를 보내지 않는 수동 관전자(공유페이지 등)도
+  // presence/오늘 합계를 바로 볼 수 있게(이 emit 자체는 presence/visits에 영향 없음)
+  ensureDay();
+  socket.emit("presence", { count: presence.size });
+  socket.emit("global", { total: today.money });
 
   socket.on("hello", (p = {}) => {
     const incoming = String(p.vid ?? "").slice(0, 64);
@@ -190,11 +226,13 @@ io.on("connection", async (socket) => {
       const h = kstHour();
       today.visits++; hours[h].visits++;
       if (p.isNew) { today.newVisitors++; hours[h].newVisitors++; } // 신규 UUID
+      todayDirty = true; hoursDirty.add(h);
     }
 
     socket.emit("global", { total: today ? today.money : 0 });
     socket.emit("presence", { count: presence.size });
     broadcastPresence();
+    pushAdminLive();
   });
 
   socket.on("chat", (p = {}) => {
@@ -209,10 +247,12 @@ io.on("connection", async (socket) => {
     ensureDay();
     const h = kstHour();
     today.chat++; hours[h].chat++;
+    todayDirty = true; hoursDirty.add(h);
     const ts = Date.now();
     chatBuf.push({ date: today.date, ts, hour: h, vid, nick, text });
-    socket.broadcast.emit("chat", { name: nick, text, kind: "bot" }); // 일반 유저(나 제외)
+    socket.broadcast.emit("chat", { name: nick, text, kind: "user" }); // 실제 옆사람(나 제외)
     if (adminsConnected()) io.to("admins").emit("adminChat", { ts, hour: h, vid, nick, text }); // 어드민 라이브
+    pushAdminLive();
   });
 
   socket.on("flush", (p = {}) => {
@@ -232,13 +272,16 @@ io.on("connection", async (socket) => {
     const h = kstHour();
     today.money += amount; hours[h].money += amount;
     today.flush++; hours[h].flush++;
+    todayDirty = true; hoursDirty.add(h);
 
     const nick = socket.data.nick || "익명의 볼일러";
     if (p.broadcast !== false) {
       const text = clean(p.text, cfg.maxMsgLen);
-      socket.broadcast.emit("flush", { name: nick, amount, total: today.money, me: false, chat: true, text });
+      const kind = p.kind === "capped" ? "capped" : undefined; // 1시간 동결 후 물내림 — 다른 유저 화면에 코믹하게 구분 표시
+      socket.broadcast.emit("flush", { name: nick, amount, total: today.money, me: false, chat: true, text, kind });
     }
     io.emit("global", { total: today.money });
+    pushAdminLive();
   });
 
   socket.on("disconnect", () => {
@@ -250,6 +293,7 @@ io.on("connection", async (socket) => {
       if (info.sockets.size === 0) { presence.delete(vid); rate.delete(vid); }
     }
     broadcastPresence();
+    pushAdminLive();
   });
 });
 
@@ -265,7 +309,9 @@ async function boot() {
   for (const b of await loadActiveBans()) bans.set(b.vid, b.expiry);
 
   setInterval(() => flushPersist().catch((e) => console.error("[persist]", e)), cfg.persistMs);
-  setInterval(() => { if (adminsConnected()) io.to("admins").emit("adminStats", adminSnapshot()); }, cfg.adminPushMs);
+  // 시간별 통계는 5분 배치 영속과 같은 주기로만 push(매초 폴링하지 않음) — presence/오늘/online은
+  // pushAdminLive()로 변동 시점에만 디바운스 push(hello/chat/flush/disconnect에서 호출)
+  setInterval(() => { if (adminsConnected()) io.to("admins").emit("adminHours", adminHoursSnapshot()); }, cfg.persistMs);
 
   server.listen(PORT, () => {
     console.log(`[mt-socket] :${PORT} day=${today.date} money=${today.money} visits=${today.visits} bans=${bans.size}`);

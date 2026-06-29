@@ -7,6 +7,10 @@ import PayslipShare from "@/components/PayslipShare";
 
 type Props = { params: Promise<{ d: string }> };
 const siteUrl = resolveSiteUrl();
+
+// 영수증은 한 번 생성되면 불변(덮어쓰기 경로 없음, 30일 TTL 후 소멸) → ISR로 길게 캐시해
+// 동일 d 재방문 시 Redis 재조회 자체를 건너뛴다(렌더 결과를 Vercel이 캐시).
+export const revalidate = 2592000; // 30일 — Redis TTL과 동일
 async function resolveData(d: string) {
   return SHORT_ID_RE.test(d) ? await loadReceipt(d) : decodeReceipt(d);
 }

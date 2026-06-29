@@ -398,6 +398,16 @@ export default function ToiletGame() {
             </span>
             기기 데이터 초기화
           </button>
+          <button
+            className="settings__link"
+            type="button"
+            id="devSetTimer5950Btn"
+          >
+            <span className="settings__link-ico" aria-hidden>
+              🧪
+            </span>
+            59분 50초로 변경 (테스트)
+          </button>
         </div>
       </div>
 

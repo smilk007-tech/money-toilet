@@ -54,8 +54,7 @@ export const DEFAULTS = {
   rateWindowMs: 10_000,
   autoBlockSec: 10,
   maxMsgLen: 40,
-  presenceBroadcastMs: 2000, // 일반 유저에게 presence
-  adminPushMs: 3000, // 어드민에게 라이브 통계 push 주기
-  persistMs: 300_000, // 5분마다 Redis 영속
+  presenceBroadcastMs: 2000, // 일반 유저 presence 브로드캐스트 + 어드민 라이브 push 디바운스 공용
+  persistMs: 300_000, // 5분마다 Redis 영속 + 어드민 시간별 통계 push 주기
   chatDisabled: false,
 };

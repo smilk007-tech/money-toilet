@@ -6,8 +6,9 @@
   "description": "돈버는 화장실 실시간 소켓 서버 (Railway)",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node --env-file=.env index.js",
+    "dev": "node --env-file=.env --watch index.js",
+    "stop": "lsof -ti:4000 | xargs kill -9"
   },
   "engines": {
     "node": ">=20"

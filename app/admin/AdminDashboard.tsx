@@ -1,9 +1,9 @@
 "use client";
 
 /* 어드민 대시보드 (모바일 우선)
-   - 라이브(presence/오늘/online/실시간채팅): 어드민 전용 소켓(admins 룸) push — REST 안 탐
-   - 과거(시간별/채팅로그): Vercel API가 공유 Redis 조회 — 토큰 검증(단일 ADMIN_SECRET, Railway만)
-   - 로그인/밴: 소켓서버(Railway) REST */
+   - 라이브(presence/오늘/online/실시간채팅): 어드민 전용 소켓 push
+   - 과거(시간별/채팅로그): Vercel API(공유 Redis, 토큰검증)
+   - 로그인/밴/공지: 소켓서버(Railway) REST */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
@@ -12,7 +12,11 @@ type Bucket = { visits: number; newVisitors: number; chat: number; flush: number
 type Online = { vid: string; nick: string; conns: number; since: number; banned: boolean };
 type ChatRow = { ts: number; hour: number; vid: string; nick: string; text: string };
 type BanRow = { vid: string; expiry: number | null };
+// 서버가 "adminStats"(라이브: presence/today/online)와 "adminHours"(5분 주기)를 분리 push하므로
+// 클라에서는 부분 갱신을 병합해서 들고 있어야 함(매번 전체 스냅샷이 오지 않음).
 type Live = { presence: number; today: Bucket & { date: string }; hours: Bucket[]; online: Online[] };
+type LiveStats = Pick<Live, "presence" | "today" | "online">;
+type LiveHours = Pick<Live, "hours">;
 
 const SOCKET_BASE = (
   process.env.NEXT_PUBLIC_SOCKET_URL ||
@@ -30,13 +34,12 @@ const sumDay = (hours: Bucket[]) => hours.reduce((a, h) => ({
 }), { ...EMPTY });
 const DURATIONS = [{ v: "1d", t: "1일" }, { v: "3d", t: "3일" }, { v: "7d", t: "1주" }, { v: "30d", t: "1달" }, { v: "perm", t: "영구" }];
 
-// KST 날짜 (0=오늘 1=어제 2=엊그제)
-const dateOf = (i: number) => {
-  const d = new Date(Date.now() - i * 86400000 + 9 * 3600000);
+// KST 날짜 (daysAgo: 0=오늘 1=어제 2=엊그제)
+const dateOf = (daysAgo: number) => {
+  const d = new Date(Date.now() - daysAgo * 86400000 + 9 * 3600000);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 };
 
-// Railway 소켓서버 REST (로그인/밴)
 async function rail(path: string, opts?: RequestInit) {
   const token = getToken();
   const res = await fetch(`${SOCKET_BASE}/admin/${path}`, {
@@ -44,7 +47,6 @@ async function rail(path: string, opts?: RequestInit) {
   });
   return { status: res.status, data: await res.json().catch(() => ({})) };
 }
-// Vercel 과거조회 API
 async function vercel(path: string) {
   const token = getToken();
   const res = await fetch(`/api/admin/${path}`, { cache: "no-store", headers: token ? { Authorization: `Bearer ${token}` } : {} });
@@ -59,52 +61,55 @@ export default function AdminDashboard() {
   const [chatSub, setChatSub] = useState<0 | 1 | 2 | 3>(0); // 0실시간 1오늘 2어제 3엊그제
   const [live, setLive] = useState<Live | null>(null);
   const [liveChats, setLiveChats] = useState<ChatRow[]>([]);
-  const [histHours, setHistHours] = useState<Record<string, Bucket[]>>({});
   const [histChats, setHistChats] = useState<Record<string, ChatRow[]>>({});
+  const [histHours, setHistHours] = useState<Record<string, Bucket[]>>({});
   const [bans, setBans] = useState<BanRow[]>([]);
   const [expand, setExpand] = useState<string | null>(null);
   const [dur, setDur] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
+  // 정렬/검색/공지
+  const [chatSort, setChatSort] = useState<"new" | "old">("new");
+  const [chatQ, setChatQ] = useState("");
+  const [onSort, setOnSort] = useState<"new" | "old">("new");
+  const [onQ, setOnQ] = useState("");
+  const [bc, setBc] = useState("");
   const sockRef = useRef<Socket | null>(null);
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
-  // 인증 확인
   useEffect(() => {
     (async () => { if (!getToken()) return setAuthed(false); const { status } = await rail("me"); setAuthed(status === 200); })();
   }, []);
 
-  // 어드민 소켓 연결 (라이브 push)
   useEffect(() => {
     if (!authed) return;
     const sock = io(SOCKET_BASE || undefined, { auth: { adminToken: getToken() }, transports: ["websocket", "polling"], reconnection: true });
     sockRef.current = sock;
-    sock.on("adminStats", (d: Live) => setLive(d));
+    sock.on("adminStats", (d: LiveStats) => setLive((prev) => ({ ...(prev as Live), ...d }) as Live));
+    sock.on("adminHours", (d: LiveHours) => setLive((prev) => ({ ...(prev as Live), ...d }) as Live));
     sock.on("adminChat", (c: ChatRow) => setLiveChats((prev) => [c, ...prev].slice(0, 1000)));
     return () => { sock.close(); sockRef.current = null; };
   }, [authed]);
 
-  // 밴 목록 + 어제/엊그제 시간별(1회)
   const loadBans = useCallback(async () => { const { data } = await rail("bans"); if (data.ok) setBans(data.bans || []); }, []);
   useEffect(() => {
     if (!authed) return;
     loadBans();
-    for (const i of [1, 2]) {
-      const date = dateOf(i);
+    for (const ago of [1, 2]) {
+      const date = dateOf(ago);
       vercel(`hours?date=${date}`).then(({ data }) => { if (data.ok) setHistHours((p) => ({ ...p, [date]: data.hours })); });
     }
   }, [authed, loadBans]);
 
-  // 채팅로그 과거 조회: 오늘=5분마다, 어제/엊그제=1회
-  const loadChatlog = useCallback(async (i: number) => {
-    const date = dateOf(i);
+  // 채팅로그 과거: 오늘(sub1)=5분마다, 어제/엊그제=1회. daysAgo = sub-1
+  const loadChatlog = useCallback(async (sub: number) => {
+    const date = dateOf(sub - 1);
     const { data } = await vercel(`chatlog?date=${date}`);
     if (data.ok) setHistChats((p) => ({ ...p, [date]: data.chats || [] }));
   }, []);
   useEffect(() => {
-    if (!authed || tab !== "chatlog") return;
-    if (chatSub === 0) return; // 실시간은 소켓
+    if (!authed || tab !== "chatlog" || chatSub === 0) return;
     loadChatlog(chatSub);
-    if (chatSub === 1) { const id = setInterval(() => loadChatlog(1), 300000); return () => clearInterval(id); } // 오늘 5분
+    if (chatSub === 1) { const id = setInterval(() => loadChatlog(1), 300000); return () => clearInterval(id); }
   }, [authed, tab, chatSub, loadChatlog]);
 
   const login = async (e: React.FormEvent) => {
@@ -115,13 +120,10 @@ export default function AdminDashboard() {
     else setErr("비밀번호가 틀렸습니다");
   };
   const logout = async () => { await rail("logout", { method: "POST", body: "{}" }); try { localStorage.removeItem(TOKEN_KEY); } catch { /* */ } setAuthed(false); };
-  const ban = async (vid: string) => {
-    const { data } = await rail("ban", { method: "POST", body: JSON.stringify({ vid, duration: dur[vid] ?? "1d" }) });
-    if (data.ok) { flash("차단됨"); loadBans(); } else flash("실패");
-  };
+  const ban = async (vid: string) => { const { data } = await rail("ban", { method: "POST", body: JSON.stringify({ vid, duration: dur[vid] ?? "1d" }) }); if (data.ok) { flash("차단됨"); loadBans(); } else flash("실패"); };
   const unban = async (vid: string) => { const { data } = await rail("unban", { method: "POST", body: JSON.stringify({ vid }) }); if (data.ok) { flash("해제됨"); loadBans(); } };
-  const broadcast = async () => { const t = prompt("공지 문구"); if (t) { await rail("broadcast", { method: "POST", body: JSON.stringify({ text: t }) }); flash("공지 전송"); } };
   const reset = async () => { if (!confirm("통계·채팅로그 전체 초기화? (밴은 유지)")) return; await rail("reset", { method: "POST", body: "{}" }); flash("초기화됨"); };
+  const sendBc = async () => { const t = bc.trim(); if (!t) return; await rail("broadcast", { method: "POST", body: JSON.stringify({ text: t }) }); setBc(""); flash("관리자 공지 전송"); };
 
   if (authed === null) return <div style={s.wrap}>{css}로딩중…</div>;
   if (!authed) return (
@@ -136,17 +138,28 @@ export default function AdminDashboard() {
   );
 
   const dayCards = [
-    { i: 0, label: "오늘", totals: live ? sumDay(live.hours) : EMPTY, hours: live?.hours, live: true },
-    { i: 1, label: "어제", totals: histHours[dateOf(1)] ? sumDay(histHours[dateOf(1)]) : EMPTY, hours: histHours[dateOf(1)], live: false },
-    { i: 2, label: "엊그제", totals: histHours[dateOf(2)] ? sumDay(histHours[dateOf(2)]) : EMPTY, hours: histHours[dateOf(2)], live: false },
+    { ago: 0, label: "오늘", hours: live?.hours, live: true },
+    { ago: 1, label: "어제", hours: histHours[dateOf(1)], live: false },
+    { ago: 2, label: "엊그제", hours: histHours[dateOf(2)], live: false },
   ];
-  const curChats = chatSub === 0 ? liveChats : (histChats[dateOf(chatSub)] || []);
+
+  // 채팅로그 필터/정렬
+  const baseChats = chatSub === 0 ? liveChats : (histChats[dateOf(chatSub - 1)] || []);
+  const q1 = chatQ.trim().toLowerCase();
+  const chats = [...baseChats]
+    .filter((c) => !q1 || c.text.toLowerCase().includes(q1) || (c.nick || "").toLowerCase().includes(q1) || c.vid.toLowerCase().includes(q1))
+    .sort((a, b) => (chatSort === "new" ? b.ts - a.ts : a.ts - b.ts));
+  // 접속자 필터/정렬
+  const q2 = onQ.trim().toLowerCase();
+  const onlines = [...(live?.online || [])]
+    .filter((o) => !q2 || (o.nick || "").toLowerCase().includes(q2) || o.vid.toLowerCase().includes(q2))
+    .sort((a, b) => (onSort === "new" ? b.since - a.since : a.since - b.since));
 
   return (
     <div style={s.wrap}>{css}
       <header style={s.top}>
         <b>🚽 어드민</b>
-        <span style={s.live}>● 실시간 {live?.presence ?? 0}명</span>
+        <span style={s.liveN}>● 실시간 {live?.presence ?? 0}명</span>
         <button onClick={logout} style={s.btnGhost}>로그아웃</button>
       </header>
       <nav style={s.tabs}>
@@ -159,17 +172,18 @@ export default function AdminDashboard() {
       {tab === "stats" && (
         <div>
           {dayCards.map((d) => {
-            const key = dateOf(d.i);
+            const key = dateOf(d.ago);
+            const totals = d.hours ? sumDay(d.hours) : EMPTY;
             return (
               <div key={key} style={s.card}>
                 <div style={s.cardHead} onClick={() => setExpand(expand === key ? null : key)}>
-                  <b>{d.label}</b><span style={s.dim}>{key}{d.live ? " · LIVE" : ""}</span>
+                  <b>{d.label}</b><span style={s.dim2}>{key}{d.live ? " · LIVE" : ""}</span>
                   <span style={s.chevron}>{expand === key ? "▲시간별" : "▼시간별"}</span>
                 </div>
                 <div style={s.stats}>
-                  <Stat l="방문" v={won(d.totals.visits)} /><Stat l="신규" v={won(d.totals.newVisitors)} />
-                  <Stat l="채팅" v={won(d.totals.chat)} /><Stat l="물내림" v={won(d.totals.flush)} />
-                  <Stat l="번 돈" v={won(d.totals.money)} />
+                  <Stat l="방문" v={won(totals.visits)} /><Stat l="신규" v={won(totals.newVisitors)} />
+                  <Stat l="채팅" v={won(totals.chat)} /><Stat l="물내림" v={won(totals.flush)} />
+                  <Stat l="번 돈" v={won(totals.money)} />
                 </div>
                 {expand === key && (
                   <table style={s.htable}>
@@ -186,18 +200,22 @@ export default function AdminDashboard() {
           })}
           <div style={s.card}>
             <div style={s.cardTitle}>운영</div>
-            <div style={s.row}><button style={s.btn} onClick={broadcast}>📣 공지</button><button style={s.btnDanger} onClick={reset}>🧨 통계 초기화</button></div>
+            <button style={{ ...s.btnDanger, width: "100%" }} onClick={reset}>🧨 통계·채팅로그 초기화</button>
           </div>
         </div>
       )}
 
       {tab === "online" && (
         <div>
-          <div style={s.note}>현재 접속 {live?.online.length ?? 0}명 (어드민 제외)</div>
-          {(live?.online.length ?? 0) === 0 && <Empty />}
-          {live?.online.map((o) => (
+          <div style={s.ctrlRow}>
+            <input style={s.search} placeholder="검색: 닉네임 / UUID" value={onQ} onChange={(e) => setOnQ(e.target.value)} />
+            <button style={s.sortBtn} onClick={() => setOnSort((v) => (v === "new" ? "old" : "new"))}>{onSort === "new" ? "최신순" : "과거순"}</button>
+          </div>
+          <div style={s.note}>접속 {onlines.length}명 (어드민 제외)</div>
+          {onlines.length === 0 && <Empty />}
+          {onlines.map((o) => (
             <div key={o.vid} style={s.crow}>
-              <div style={s.cmeta}><b>{o.nick || "익명"}</b>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.banned && <span style={s.banTag}>차단</span>}<span style={s.dim}>{hhmm(o.since)}~</span></div>
+              <div style={s.cline}><b style={s.nb}>{o.nick || "익명"}</b>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.banned && <span style={s.banTag}>차단</span>}<span style={s.dim}>{hhmm(o.since)}~</span></div>
               <div style={s.cfoot}><code style={s.uuid}>{o.vid}</code><BanCtl vid={o.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
             </div>
           ))}
@@ -211,11 +229,22 @@ export default function AdminDashboard() {
               <button key={i} onClick={() => setChatSub(i as 0 | 1 | 2 | 3)} style={{ ...s.subtab, ...(chatSub === i ? s.tabOn : {}) }}>{l}</button>
             ))}
           </nav>
-          <div style={s.note}>{curChats.length}건{chatSub === 0 ? " (접속 후 수신분)" : ""}</div>
-          {curChats.length === 0 && <Empty />}
-          {curChats.map((c, i) => (
+          {chatSub === 0 && (
+            <div style={s.bcBox}>
+              <input style={s.bcInput} placeholder="관리자 공지 보내기 (모든 사용자에게)" value={bc}
+                onChange={(e) => setBc(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendBc(); }} maxLength={120} />
+              <button style={s.sendBtn} onClick={sendBc}>📢 전송</button>
+            </div>
+          )}
+          <div style={s.ctrlRow}>
+            <input style={s.search} placeholder="검색: 메시지 / 닉네임 / UUID" value={chatQ} onChange={(e) => setChatQ(e.target.value)} />
+            <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
+          </div>
+          <div style={s.note}>{chats.length}건{chatSub === 0 ? " (접속 후 수신분)" : ""}</div>
+          {chats.length === 0 && <Empty />}
+          {chats.map((c, i) => (
             <div key={i} style={s.crow}>
-              <div style={s.cmeta}><span style={s.htag}>{c.hour}시 {hhmm(c.ts)}</span><b>{c.nick || "익명"}</b><span style={s.ctext}>{c.text}</span></div>
+              <div style={s.cline}><span style={s.time}>{hhmm(c.ts)}</span><b style={s.nb}>{c.nick || "익명"}</b><span style={s.ctx}>{c.text}</span></div>
               <div style={s.cfoot}><code style={s.uuid}>{c.vid}</code><BanCtl vid={c.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
             </div>
           ))}
@@ -227,7 +256,7 @@ export default function AdminDashboard() {
           {bans.length === 0 && <Empty />}
           {bans.map((b) => (
             <div key={b.vid} style={s.crow}>
-              <div style={s.cmeta}><span style={s.dim}>{b.expiry === null ? "영구" : `~${new Date(b.expiry).toLocaleString("ko-KR", { hour12: false })}`}</span></div>
+              <div style={s.cline}><span style={s.dim}>{b.expiry === null ? "영구 차단" : `~${new Date(b.expiry).toLocaleString("ko-KR", { hour12: false })}`}</span></div>
               <div style={s.cfoot}><code style={s.uuid}>{b.vid}</code><button style={s.btnSm} onClick={() => unban(b.vid)}>해제</button></div>
             </div>
           ))}
@@ -250,23 +279,28 @@ function BanCtl({ vid, dur, setDur, onBan }: { vid: string; dur: Record<string, 
   );
 }
 
-// body overflow:hidden(게임 globals.css) 우회 → 어드민 스크롤 허용
-const css = <style>{`html,body{overflow-y:auto!important;height:auto!important;min-height:100%;position:static!important;background:#0f1512;margin:0}*{box-sizing:border-box}button{cursor:pointer}button:active{transform:translateY(1px)}`}</style>;
+const css = <style>{`html,body{overflow-y:auto!important;height:auto!important;min-height:100%;position:static!important;background:#0f1512;margin:0}*{box-sizing:border-box}button{cursor:pointer}button:active{transform:translateY(1px)}input{outline:none}`}</style>;
 const s: Record<string, React.CSSProperties> = {
-  wrap: { fontFamily: "system-ui,-apple-system,sans-serif", color: "#e7efe9", background: "#0f1512", minHeight: "100vh", padding: 10, maxWidth: 760, margin: "0 auto" },
+  wrap: { fontFamily: "system-ui,-apple-system,sans-serif", color: "#e7efe9", background: "#0f1512", minHeight: "100vh", padding: 10, maxWidth: 780, margin: "0 auto" },
   loginBox: { display: "flex", flexDirection: "column", gap: 12, marginTop: 80 },
   h1: { fontSize: 20, textAlign: "center" },
   input: { padding: 14, fontSize: 16, borderRadius: 10, border: "1px solid #2c3a32", background: "#16201b", color: "#fff" },
   err: { color: "#ff8a8a", textAlign: "center" },
   top: { display: "flex", alignItems: "center", gap: 10, padding: "4px 2px 10px", position: "sticky", top: 0, background: "#0f1512", zIndex: 10 },
-  live: { color: "#7ff0b0", fontSize: 13, marginLeft: "auto" },
+  liveN: { color: "#7ff0b0", fontSize: 13, marginLeft: "auto" },
   tabs: { display: "flex", gap: 6, marginBottom: 10 },
   tab: { flex: 1, padding: "10px 4px", borderRadius: 9, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 13 },
   subtabs: { display: "flex", gap: 5, marginBottom: 8 },
   subtab: { flex: 1, padding: "7px 4px", borderRadius: 7, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12 },
-  tabOn: { background: "#ffd233", color: "#1a1a1a", borderColor: "#ffd233", fontWeight: 700 },
+  tabOn: { background: "#ffd233", color: "#1a1a1a", border: "1px solid #ffd233", fontWeight: 700 },
   toast: { position: "sticky", top: 44, background: "#1f6b45", padding: "7px 12px", borderRadius: 8, marginBottom: 8, textAlign: "center", zIndex: 9 },
   note: { color: "#8fa89a", fontSize: 12, margin: "0 2px 8px" },
+  ctrlRow: { display: "flex", gap: 6, marginBottom: 8 },
+  search: { flex: 1, padding: "8px 10px", borderRadius: 8, border: "1px solid #2c3a32", background: "#16201b", color: "#e7efe9", fontSize: 13 },
+  sortBtn: { padding: "8px 12px", borderRadius: 8, border: "1px solid #2c3a32", background: "#1d2a23", color: "#ffd233", fontSize: 12, whiteSpace: "nowrap" },
+  bcBox: { display: "flex", gap: 6, marginBottom: 8 },
+  bcInput: { flex: 1, padding: "9px 11px", borderRadius: 8, border: "1px solid #5a4a1a", background: "#211c0e", color: "#ffe7a0", fontSize: 13 },
+  sendBtn: { padding: "9px 13px", borderRadius: 8, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" },
   card: { background: "#16201b", border: "1px solid #243029", borderRadius: 12, padding: 12, marginBottom: 10 },
   cardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" },
   cardTitle: { fontSize: 13, color: "#8fa89a", marginBottom: 8 },
@@ -278,21 +312,21 @@ const s: Record<string, React.CSSProperties> = {
   htable: { width: "100%", marginTop: 10, borderCollapse: "collapse", fontSize: 11 },
   th: { color: "#8fa89a", textAlign: "right", padding: "3px 5px", borderBottom: "1px solid #243029", fontWeight: 500 },
   td: { textAlign: "right", padding: "3px 5px", borderBottom: "1px solid #1b241e" },
-  row: { display: "flex", gap: 8 },
-  btn: { flex: 1, padding: 11, borderRadius: 9, border: "1px solid #2c3a32", background: "#1d2a23", color: "#e7efe9", fontSize: 14 },
   btnPrimary: { padding: 14, borderRadius: 10, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 16, fontWeight: 700 },
   btnGhost: { padding: "7px 11px", borderRadius: 8, border: "1px solid #2c3a32", background: "transparent", color: "#9fb3a6", fontSize: 12 },
-  btnDanger: { flex: 1, padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
-  // 컴팩트 채팅/접속 행
-  crow: { background: "#141d18", border: "1px solid #1f2a23", borderRadius: 8, padding: "6px 8px", marginBottom: 5 },
-  cmeta: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, flexWrap: "wrap" },
-  ctext: { wordBreak: "break-word", flex: "1 1 100%", marginTop: 2 },
-  cfoot: { display: "flex", alignItems: "center", gap: 6, marginTop: 4 },
+  btnDanger: { padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
+  // 컴팩트 행 (2줄: 내용 / uuid+차단)
+  crow: { background: "#141d18", border: "1px solid #1f2a23", borderRadius: 7, padding: "5px 8px", marginBottom: 4 },
+  cline: { display: "flex", alignItems: "baseline", gap: 6, fontSize: 13, flexWrap: "wrap", lineHeight: 1.35 },
+  time: { fontSize: 11, color: "#7ff0b0", whiteSpace: "nowrap" },
+  nb: { fontSize: 12.5, color: "#cfe5d8", whiteSpace: "nowrap" },
+  ctx: { wordBreak: "break-word", color: "#e7efe9", flex: 1 },
+  cfoot: { display: "flex", alignItems: "center", gap: 6, marginTop: 3 },
   uuid: { fontSize: 10, color: "#6f8378", background: "#0f1512", padding: "1px 5px", borderRadius: 4, wordBreak: "break-all", flex: 1, userSelect: "all" },
-  htag: { fontSize: 10, background: "#1d2a23", color: "#7ff0b0", padding: "1px 5px", borderRadius: 4, whiteSpace: "nowrap" },
   tag: { fontSize: 10, background: "#3a2f12", color: "#ffd233", padding: "1px 5px", borderRadius: 4 },
   banTag: { fontSize: 10, background: "#3a1f12", color: "#ffb27f", padding: "1px 5px", borderRadius: 4 },
   dim: { color: "#7a8c80", fontSize: 11, marginLeft: "auto", whiteSpace: "nowrap" },
+  dim2: { color: "#7a8c80", fontSize: 11 },
   banCtl: { display: "flex", gap: 5, alignItems: "center" },
   select: { padding: 5, borderRadius: 6, border: "1px solid #2c3a32", background: "#0f1512", color: "#e7efe9", fontSize: 11 },
   btnSm: { padding: "5px 11px", borderRadius: 6, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 12, whiteSpace: "nowrap" },

@@ -59,14 +59,17 @@ export async function loadToday() {
   if (!r) return null;
   return (await r.get(K.today)) || null;
 }
-// hours: 24개 버킷 배열 — 비어있지 않은 시간만 HSET
-export async function persistHours(date, hours) {
+// hours: 24개 버킷 배열, dirty: 마지막 영속 이후 변경된 시간 인덱스만 HSET
+// (매 5분 틱마다 안 바뀐 버킷까지 재기록하면 유휴 상태에서도 불필요한 write가 계속 발생함)
+export async function persistHours(date, hours, dirty) {
   const r = getRedis();
   if (!r) return;
-  const obj = {};
-  hours.forEach((h, i) => {
-    if (h.visits || h.newVisitors || h.chat || h.flush || h.money) obj[i] = h;
+  const idxs = dirty ? [...dirty] : hours.map((_, i) => i).filter((i) => {
+    const h = hours[i];
+    return h.visits || h.newVisitors || h.chat || h.flush || h.money;
   });
+  const obj = {};
+  for (const i of idxs) obj[i] = hours[i];
   if (!Object.keys(obj).length) return;
   const p = r.pipeline();
   p.hset(hoursKey(date), obj);
