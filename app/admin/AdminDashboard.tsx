@@ -209,7 +209,7 @@ export default function AdminDashboard() {
                     <thead><tr>{["시", "방문", "신규", "채팅", "물내림", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                     <tbody>
                       {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money) ? (
-                        <tr key={hr}><td style={s.td}>{hr}</td><td style={s.td}>{h.visits}</td><td style={s.td}>{h.newVisitors}</td><td style={s.td}>{h.chat}</td><td style={s.td}>{h.flush}</td><td style={s.td}>{won(h.money)}</td></tr>
+                        <tr key={hr}><td style={s.td}>{String(hr).padStart(2, "0")}</td><td style={s.td}>{h.visits}</td><td style={s.td}>{h.newVisitors}</td><td style={s.td}>{h.chat}</td><td style={s.td}>{h.flush}</td><td style={s.td}>{won(h.money)}</td></tr>
                       ) : null)}
                     </tbody>
                   </table>
