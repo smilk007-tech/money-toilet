@@ -19,11 +19,11 @@ import ReceiptCard from "@/components/ReceiptCard";
    - 완전한 인게임 유저로 취급: "hello"를 보내 실제 presence/visits에 정상 집계된다.
      단, 화면에 보여줄 접속자수는 (서버 count - 1) — 나 자신을 빼고 "제3자가 보기엔
      사람이 더 있어 보이게" 하기 위함. 음수면 0으로 표기.
-   - 오늘 누적금액: 서버 실제값의 90%부터 시작해 60초 동안 100%까지 creep 애니메이션.
+   - 오늘 누적금액: 소켓 첫 수신값의 90%부터 시작해 60초 동안 100%까지 creep 애니메이션.
      그 이후에도 같은 속도로 계속 올라감(접속 유도용이라 초과해도 무방).
-     서버에서 새 값이 오면 현재 표시값 기준으로 재보정해 다시 올라가는 것처럼 보임.
-   - 인게임에서 뒤로가기로 재진입한 경우: 100%에서 시작해 10%를 60초에 걸쳐 올림
-     (일관된 게임 사용성을 위해). sessionStorage 플래그로 감지.
+     서버 재수신 시에는 현재 표시값 기준으로 속도만 재보정 — 절대 100%로 점프하지 않음.
+   - 인게임에서 뒤로가기로 재진입한 경우: max(소켓값 100%, 게임에서 봤던 값)에서 시작해
+     10%를 60초에 걸쳐 올림 (일관된 게임 사용성). sessionStorage 플래그로 감지.
    - NEXT_PUBLIC_RT가 꺼져있으면(로컬/오프라인) 가짜 소켓으로 대체.
    - CTA는 새 탭이 아니라 SPA 라우팅(router.push)으로 이동 — 같은 vid로 메인에서
      바로 재연결되어 깔끔하게 이어지는 느낌을 준다. */
@@ -44,7 +44,7 @@ export default function PayslipShare({
   siteUrlHref: string;
 }) {
   const router = useRouter();
-  const [count, setCount] = useState(Math.max(0, (data.p || 0) - 1));
+  const [count, setCount] = useState(0);
 
   // 인게임에서 뒤로가기로 재진입한 경우 감지 — sessionStorage 플래그 확인 후 즉시 소비
   const [cameFromGame] = useState<boolean>(() => {
@@ -73,15 +73,13 @@ export default function PayslipShare({
   });
   const gameGlobalRef = useRef(gameGlobal);
 
-  // liveWon: 서버 실제값 — FOMO 임계 판단용
-  const [liveWon, setLiveWon] = useState(data.g || 0);
+  // liveWon: 서버 실제값 — FOMO 임계 판단용 (소켓 수신 전까지 0)
+  const [liveWon, setLiveWon] = useState(0);
   // displayWon: 화면에 보여주는 값 (절대 감소 없음 — monotonic 보장)
-  // 일반 진입: 90%서 시작해 creep 애니메이션
-  // 인게임 재진입: max(100%, gameGlobal)에서 시작해 10%를 60초에 걸쳐 올림
-  const initBase = Math.max(
-    (data.g || 0) * (cameFromGame ? 1.0 : 0.9),
-    cameFromGame ? gameGlobal : 0,
-  );
+  // 일반 진입: 소켓 첫 수신값의 90%서 시작, 이후 소켓 값으로 속도만 재보정
+  // 인게임 재진입: max(소켓 첫 수신값 100%, gameGlobal)에서 시작
+  // data.g는 더 이상 사용하지 않음 — 소켓 실시간 값만 사용
+  const initBase = cameFromGame ? gameGlobal : 0; // 소켓 수신 전 임시 시작값
   const [displayWon, setDisplayWon] = useState(initBase);
   const countRef = useRef(count);
   countRef.current = count;
@@ -89,9 +87,10 @@ export default function PayslipShare({
   liveWonRef.current = liveWon;
 
   // creep 상태 — displayTicker가 이걸 읽어서 displayWon을 계산
+  // synced=false: 아직 소켓 첫 응답 대기 중
   const creep = useRef({
     base: initBase,
-    rate: Math.max(((data.g || 0) * 0.1) / CREEP_DURATION_S, 1), // 초당 증가분 (최소 1원/초)
+    rate: 1, // 소켓 수신 전 더미값(applyGlobal !synced 분기에서 즉시 교체됨)
     startedAt: Date.now(),
     synced: false,
   });
@@ -110,18 +109,20 @@ export default function PayslipShare({
       setLiveWon(total);
 
       if (!c.synced) {
-        // 인게임에서 재진입 시 100%에서 시작, 일반 진입은 90%.
-        // 단, gameGlobal(게임에서 마지막으로 보인 값) 또는 현재 표시값보다 낮아지면 안 됨.
+        // 소켓 첫 수신값으로 creep 초기화
+        // 일반 진입: total * 90% 에서 시작 — 이후 소켓 재수신 시 속도만 재보정하며 절대 100%로 점프하지 않음
+        // 인게임 재진입: max(total, gameGlobal) 에서 시작 (게임에서 봤던 값보다 낮아지지 않음)
         const rawBase = cameFromGameRef.current ? total : total * 0.9;
-        const base = Math.max(rawBase, gameGlobalRef.current, curDisplay);
-        const gap = Math.max(total * 0.1, total - base, 1); // 0이 되지 않게
+        const base = cameFromGameRef.current
+          ? Math.max(rawBase, gameGlobalRef.current)
+          : rawBase; // 일반 진입은 gameGlobal 무시 — 항상 소켓값 90%
+        const gap = Math.max(total * 0.1, total - base, 1);
         creep.current = {
           base,
           rate: gap / CREEP_DURATION_S,
           startedAt: Date.now(),
           synced: true,
         };
-        // setDisplayWon은 ticker의 monotonic 보장에 맡김 (base가 curDisplay보다 클 경우 즉시 반영)
         if (base > curDisplay) setDisplayWon(base);
       } else {
         const gap = total - curDisplay;

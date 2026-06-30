@@ -37,8 +37,6 @@ function normalizeLoaded(o: unknown): ReceiptData | null {
     n: String(r.n ?? "익명의 볼일러").slice(0, 16),
     h,
     t: Math.max(0, Math.floor(Number(r.t) || 0)),
-    g: Math.max(0, Math.floor(Number(r.g) || 0)),
-    p: Math.max(0, Math.floor(Number(r.p) || 0)),
     f: Math.max(0, Math.floor(Number(r.f) || 0)),
     ts: Number(r.ts) || Date.now(),
     sl: Math.max(0, Math.floor(Number(r.sl) || 0)),

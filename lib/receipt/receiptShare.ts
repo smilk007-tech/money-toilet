@@ -15,8 +15,6 @@ export interface ReceiptData {
   n: string; // 닉네임(성명)
   h: number[]; // 지급내역 금액 배열 (오래된 순) — 회차는 f에서 역산
   t: number; // 누적 실수령액(내가 번 돈 총합)
-  g: number; // 오늘 다같이 번 돈(글로벌)
-  p: number; // 발급 시점 접속자(볼일 중 인원)
   f: number; // 총 물내림 횟수
   ts: number; // 발급 시각(epoch ms, 벽시계 — 누적시간 아님)
   sl: number; // 명언 인덱스 (RECEIPT_SLOGANS)
@@ -164,8 +162,6 @@ export function decodeReceipt(s: string): ReceiptData | null {
       n: String(o.n ?? "익명의 볼일러").slice(0, 16),
       h: sanitizeHistory(o.h),
       t: clampNum(o.t),
-      g: clampNum(o.g),
-      p: clampNum(o.p),
       f: clampNum(o.f),
       ts: Number(o.ts) || Date.now(),
       sl: normalizeSloganIndex(o.sl),

@@ -60,8 +60,6 @@ const FALLBACK: ReceiptData = {
   n: "익명의 볼일러",
   h: [],
   t: 0,
-  g: 0,
-  p: 0,
   f: 0,
   ts: Date.now(),
   sl: 0,
