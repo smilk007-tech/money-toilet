@@ -78,6 +78,11 @@ export default function AdminDashboard() {
   const [onQ, setOnQ] = useState("");
   const [bc, setBc] = useState("");
   const [bcSent, setBcSent] = useState(false);
+  // 채팅 레이트리밋 설정
+  type CfgState = { chatDisabled: boolean; rateLimitN: number; rateWindowMs: number; chatMinIntervalMs: number; autoBlockSec: number; maxMsgLen: number };
+  const CFG_DEFAULTS: CfgState = { chatDisabled: false, rateLimitN: 7, rateWindowMs: 10000, chatMinIntervalMs: 700, autoBlockSec: 10, maxMsgLen: 40 };
+  const [cfg, setCfg] = useState<CfgState>(CFG_DEFAULTS);
+  const [cfgLoaded, setCfgLoaded] = useState(false);
   const sockRef = useRef<Socket | null>(null);
   const loadedChatDatesRef = useRef<Set<string>>(new Set()); // 과거 채팅로그 메모리 캐시 적중 판정용
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
@@ -110,9 +115,19 @@ export default function AdminDashboard() {
     return () => { sock.close(); sockRef.current = null; };
   }, [authed]);
 
+  const loadCfg = useCallback(async () => {
+    const { data } = await rail("config");
+    if (data.ok && data.config) { setCfg({ ...CFG_DEFAULTS, ...data.config }); setCfgLoaded(true); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const saveCfg = async () => {
+    const { data } = await rail("config", { method: "POST", body: JSON.stringify(cfg) });
+    if (data.ok) { setCfg({ ...CFG_DEFAULTS, ...data.config }); flash("저장됨"); }
+    else flash("저장 실패");
+  };
   const loadBans = useCallback(async () => { const { data } = await rail("bans"); if (data.ok) setBans(data.bans || []); }, []);
   useEffect(() => {
     if (!authed) return;
+    loadCfg();
     loadBans();
     for (const ago of [1, 2]) {
       const date = dateOf(ago);
@@ -245,6 +260,36 @@ export default function AdminDashboard() {
               </div>
             );
           })}
+          <div style={s.card}>
+            <div style={s.cardTitle}>채팅 제어</div>
+            {!cfgLoaded ? <div style={s.dim2}>불러오는 중…</div> : (<>
+              <label style={s.cfgRow}>
+                <span>채팅 전체 차단</span>
+                <input type="checkbox" checked={cfg.chatDisabled} onChange={(e) => setCfg((p) => ({ ...p, chatDisabled: e.target.checked }))} />
+              </label>
+              <label style={s.cfgRow}>
+                <span>윈도우 내 최대 채팅 수</span>
+                <input type="number" min={1} max={50} value={cfg.rateLimitN} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, rateLimitN: Number(e.target.value) }))} />
+              </label>
+              <label style={s.cfgRow}>
+                <span>레이트 윈도우 (ms)</span>
+                <input type="number" min={1000} max={60000} step={1000} value={cfg.rateWindowMs} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, rateWindowMs: Number(e.target.value) }))} />
+              </label>
+              <label style={s.cfgRow}>
+                <span>연속 채팅 최소 간격 (ms)</span>
+                <input type="number" min={0} max={5000} step={100} value={cfg.chatMinIntervalMs} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, chatMinIntervalMs: Number(e.target.value) }))} />
+              </label>
+              <label style={s.cfgRow}>
+                <span>스트라이크당 차단 (초)</span>
+                <input type="number" min={1} max={300} value={cfg.autoBlockSec} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, autoBlockSec: Number(e.target.value) }))} />
+              </label>
+              <label style={s.cfgRow}>
+                <span>최대 메시지 길이</span>
+                <input type="number" min={10} max={200} value={cfg.maxMsgLen} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, maxMsgLen: Number(e.target.value) }))} />
+              </label>
+              <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
+            </>)}
+          </div>
           <div style={s.card}>
             <div style={s.cardTitle}>운영</div>
             <button style={{ ...s.btnDanger, width: "100%" }} onClick={resetMoney}>💸 다같이 번 돈 초기화</button>
@@ -427,6 +472,8 @@ const s: Record<string, React.CSSProperties> = {
   btnPrimary: { padding: 14, borderRadius: 10, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 16, fontWeight: 700 },
   btnGhost: { padding: "7px 11px", borderRadius: 8, border: "1px solid #2c3a32", background: "transparent", color: "#9fb3a6", fontSize: 12 },
   btnDanger: { padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
+  cfgRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1e2b24", fontSize: 13, color: "#c8ddd4", cursor: "default" },
+  cfgNum: { width: 80, padding: "4px 6px", borderRadius: 6, border: "1px solid #2c3a32", background: "#0e1812", color: "#e8f5ee", fontSize: 13, textAlign: "right" as const },
   // 채팅로그 서브탭 [오늘][어제][엊그제][그끄저께]
   subtabs: { display: "flex", gap: 4, marginBottom: 8 },
   subtab: { flex: 1, padding: "7px 4px", borderRadius: 8, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12.5, whiteSpace: "nowrap" },

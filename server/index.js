@@ -180,6 +180,9 @@ app.post("/admin/broadcast", requireAdmin, (req, res) => {
   if (text) io.emit("chat", { name: "관리자", text, kind: "admin" });
   res.json({ ok: true });
 });
+app.get("/admin/config", requireAdmin, (_req, res) => {
+  res.json({ ok: true, config: cfg });
+});
 app.post("/admin/config", requireAdmin, async (req, res) => {
   await setConfig(req.body ?? {}); cfg = await loadConfig();
   res.json({ ok: true, config: cfg });
