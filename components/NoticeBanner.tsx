@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import { activeNoticeFrom, type Notice } from "@/lib/notices";
 
 const SOCKET_BASE = (
@@ -10,18 +11,26 @@ const SOCKET_BASE = (
 
 const COPIES = 12;
 
-/* 시스템 공지 배너 — 어드민에서 관리. 서버 /notices 에서 fetch 후 활성 공지 표시. */
+/* 시스템 공지 배너 — 어드민에서 관리.
+   초기: REST fetch. 이후: socket "notices" 이벤트로 실시간 갱신. */
 export default function NoticeBanner() {
   const [notice, setNotice] = useState<Notice | null>(null);
 
   useEffect(() => {
     if (!SOCKET_BASE) return;
+
+    // 초기 로드
     fetch(`${SOCKET_BASE}/notices`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => {
-        if (Array.isArray(d?.notices)) setNotice(activeNoticeFrom(d.notices));
-      })
+      .then((d) => { if (Array.isArray(d?.notices)) setNotice(activeNoticeFrom(d.notices)); })
       .catch(() => {});
+
+    // 실시간 갱신 — socket.io-client가 같은 URL의 기존 연결을 재사용(새 WS 연결 없음)
+    const sock = io(SOCKET_BASE, { transports: ["websocket", "polling"] });
+    sock.on("notices", (d: { notices: Notice[] }) => {
+      setNotice(Array.isArray(d?.notices) ? activeNoticeFrom(d.notices) : null);
+    });
+    return () => { sock.disconnect(); };
   }, []);
 
   if (!notice) return null;
