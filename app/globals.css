@@ -2173,7 +2173,20 @@ body {
   }
 }
 
-/* 볼일 중 영역 오프라인 배지 — 소켓 연결 실패 시 stallsVal 대신 표시 */
+/* 볼일 중 영역 — 연결 대기 중 로딩 표시 */
+.hud__stalls-loading {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--neon);
+  letter-spacing: 0.05em;
+  animation: stalls-pulse 1.1s ease-in-out infinite;
+}
+@keyframes stalls-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* 볼일 중 영역 오프라인 배지 — 8초 이상 연결 안 될 때 표시 */
 .hud__offline-badge {
   font-size: 10px;
   font-weight: 700;

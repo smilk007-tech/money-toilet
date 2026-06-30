@@ -44,6 +44,14 @@ export default function ToiletGame() {
                 <span className="hud__val" id="stallsVal">
                   <b id="stallCount">0</b>명
                 </span>
+                <span
+                  className="hud__stalls-loading"
+                  id="loadingBadge"
+                  aria-label="연결 중"
+                  hidden
+                >
+                  ···
+                </span>
                 <span className="hud__offline-badge" id="offlineBadge" hidden>
                   🔇 연결 끊김
                 </span>

@@ -60,12 +60,28 @@ export default function PayslipShare({
   });
   const cameFromGameRef = useRef(cameFromGame);
 
+  // 인게임에서 마지막으로 보였던 global 값 — 공유 페이지 표시값의 하한선으로 사용
+  // (sessionStorage에 게임이 이탈할 때 저장; cameFromGame 여부와 무관하게 읽음)
+  const [gameGlobal] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      const v = sessionStorage.getItem("mt_game_global");
+      return v !== null ? parseFloat(v) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const gameGlobalRef = useRef(gameGlobal);
+
   // liveWon: 서버 실제값 — FOMO 임계 판단용
   const [liveWon, setLiveWon] = useState(data.g || 0);
-  // displayWon: 화면에 보여주는 값
+  // displayWon: 화면에 보여주는 값 (절대 감소 없음 — monotonic 보장)
   // 일반 진입: 90%서 시작해 creep 애니메이션
-  // 인게임 재진입: 100%에서 시작해 10%를 60초에 걸쳐 올림
-  const initBase = (data.g || 0) * (cameFromGame ? 1.0 : 0.9);
+  // 인게임 재진입: max(100%, gameGlobal)에서 시작해 10%를 60초에 걸쳐 올림
+  const initBase = Math.max(
+    (data.g || 0) * (cameFromGame ? 1.0 : 0.9),
+    cameFromGame ? gameGlobal : 0,
+  );
   const [displayWon, setDisplayWon] = useState(initBase);
   const countRef = useRef(count);
   countRef.current = count;
@@ -75,7 +91,7 @@ export default function PayslipShare({
   // creep 상태 — displayTicker가 이걸 읽어서 displayWon을 계산
   const creep = useRef({
     base: initBase,
-    rate: ((data.g || 0) * 0.1) / CREEP_DURATION_S, // 초당 증가분
+    rate: Math.max(((data.g || 0) * 0.1) / CREEP_DURATION_S, 1), // 초당 증가분 (최소 1원/초)
     startedAt: Date.now(),
     synced: false,
   });
@@ -94,16 +110,19 @@ export default function PayslipShare({
       setLiveWon(total);
 
       if (!c.synced) {
-        // 인게임에서 재진입 시 100%에서 시작, 일반 진입은 90%
-        const base = cameFromGameRef.current ? total : total * 0.9;
-        const gap = total * 0.1;
+        // 인게임에서 재진입 시 100%에서 시작, 일반 진입은 90%.
+        // 단, gameGlobal(게임에서 마지막으로 보인 값) 또는 현재 표시값보다 낮아지면 안 됨.
+        const rawBase = cameFromGameRef.current ? total : total * 0.9;
+        const base = Math.max(rawBase, gameGlobalRef.current, curDisplay);
+        const gap = Math.max(total * 0.1, total - base, 1); // 0이 되지 않게
         creep.current = {
           base,
           rate: gap / CREEP_DURATION_S,
           startedAt: Date.now(),
           synced: true,
         };
-        setDisplayWon(base);
+        // setDisplayWon은 ticker의 monotonic 보장에 맡김 (base가 curDisplay보다 클 경우 즉시 반영)
+        if (base > curDisplay) setDisplayWon(base);
       } else {
         const gap = total - curDisplay;
         if (gap > 0) {
@@ -115,14 +134,17 @@ export default function PayslipShare({
             synced: true,
           };
         }
+        // gap <= 0: 서버 값이 현재 표시보다 낮아도 무시 — 절대 감소 없음
       }
     }
 
-    // displayWon 애니메이션 ticker — creep 상태 기반으로 120ms마다 갱신
+    // displayWon 애니메이션 ticker — creep 상태 기반으로 120ms마다 갱신.
+    // prev와 비교해 항상 max 값을 사용 → 어떤 상황에서도 화면값이 감소하지 않음(monotonic).
     const displayTicker = setInterval(() => {
       const c = creep.current;
       const elapsed = (Date.now() - c.startedAt) / 1000;
-      setDisplayWon(c.base + c.rate * elapsed);
+      const next = c.base + c.rate * elapsed;
+      setDisplayWon((prev) => Math.max(prev, next));
     }, STEP_MS);
 
     const useReal = process.env.NEXT_PUBLIC_RT === "1";
@@ -196,19 +218,13 @@ export default function PayslipShare({
         "mt_handoff_global",
         String(Math.round(liveWonRef.current)),
       );
-      sessionStorage.setItem(
-        "mt_handoff_stalls",
-        String(countRef.current + 1),
-      );
+      sessionStorage.setItem("mt_handoff_stalls", String(countRef.current + 1));
     } catch {}
     router.push("/");
   }
 
   return (
-    <main
-      style={{ ...wrap, cursor: "pointer" }}
-      onClick={handleCtaClick}
-    >
+    <main style={{ ...wrap, cursor: "pointer" }} onClick={handleCtaClick}>
       <div style={cardWrap}>
         <ReceiptCard
           d={data}
