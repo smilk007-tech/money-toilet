@@ -219,14 +219,9 @@ io.on("connection", async (socket) => {
   socket.on("hello", (p = {}) => {
     const incoming = String(p.vid ?? "").slice(0, 64);
     if (!incoming) return;
-    if (!socket.data.vid) socket.data.vid = incoming; // vid 소켓당 고정
+    if (!socket.data.vid) socket.data.vid = incoming;
     const vid = socket.data.vid;
     socket.data.nick = clean(p.nick, 16);
-
-    let info = presence.get(vid);
-    if (!info) presence.set(vid, (info = { sockets: new Set(), nick: "", since: Date.now() }));
-    info.sockets.add(socket.id);
-    info.nick = socket.data.nick || info.nick;
 
     // 방문 카운트 — 소켓당 1회, 새 페이지진입(fresh)일 때만(재연결 제외)
     if (!socket.data.counted && p.fresh) {
@@ -234,12 +229,22 @@ io.on("connection", async (socket) => {
       ensureDay();
       const h = kstHour();
       today.visits++; hours[h].visits++;
-      if (p.isNew) { today.newVisitors++; hours[h].newVisitors++; } // 신규 UUID
+      if (p.isNew) { today.newVisitors++; hours[h].newVisitors++; }
       todayDirty = true; hoursDirty.add(h);
     }
 
     socket.emit("global", { total: today ? today.money : 0 });
     socket.emit("presence", { count: presence.size });
+
+    // 공유페이지 방문자 — 방문 집계는 하지만 presence(실시간 볼일 중) 제외
+    if (p.isShare) return;
+
+    // 인게임 실유저 — presence에 추가하고 브로드캐스트
+    let info = presence.get(vid);
+    if (!info) presence.set(vid, (info = { sockets: new Set(), nick: "", since: Date.now() }));
+    info.sockets.add(socket.id);
+    info.nick = socket.data.nick || info.nick;
+
     broadcastPresence();
     pushAdminLive();
   });
@@ -326,12 +331,11 @@ io.on("connection", async (socket) => {
     const info = presence.get(vid);
     if (info) {
       info.sockets.delete(socket.id);
-      // 마지막 연결까지 끊기면 정리. flushClock은 일부러 남겨 재연결 도배 헤드룸 재무장을 막는다
-      // (오래된 항목은 flushPersist에서 주기적으로 정리).
       if (info.sockets.size === 0) { presence.delete(vid); rate.delete(vid + ":chat"); rate.delete(vid + ":flush"); }
+      // presence가 실제로 바뀐 경우에만 브로드캐스트 (공유페이지 방문자는 presence에 없으므로 여기 안 옴)
+      broadcastPresence();
+      pushAdminLive();
     }
-    broadcastPresence();
-    pushAdminLive();
   });
 });
 

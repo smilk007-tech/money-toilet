@@ -16,25 +16,20 @@ import { shareCtaLook } from "@/lib/receipt/shareCta";
 import ReceiptCard from "@/components/ReceiptCard";
 
 /* 공유받은 사람이 링크 타고 들어왔을 때 보는 화면.
-   - 완전한 인게임 유저로 취급: "hello"를 보내 실제 presence/visits에 정상 집계된다.
-     단, 화면에 보여줄 접속자수는 (서버 count - 1) — 나 자신을 빼고 "제3자가 보기엔
-     사람이 더 있어 보이게" 하기 위함. 음수면 0으로 표기.
-   - 오늘 누적금액: 소켓 첫 수신값의 90%부터 시작해 60초 동안 100%까지 creep 애니메이션.
-     그 이후에도 같은 속도로 계속 올라감(접속 유도용이라 초과해도 무방).
-     서버 재수신 시에는 현재 표시값 기준으로 속도만 재보정 — 절대 100%로 점프하지 않음.
-   - 인게임에서 뒤로가기로 재진입한 경우: max(소켓값 100%, 게임에서 봤던 값)에서 시작해
-     10%를 60초에 걸쳐 올림 (일관된 게임 사용성). sessionStorage 플래그로 감지.
+   - isShare: true 플래그로 hello 전송 → 서버가 presence 맵에 포함하지 않음(방문 집계는 정상).
+     화면에 보여줄 접속자수는 서버가 내보내는 그대로 사용(자기 자신 차감 불필요).
+   - 오늘 누적금액: 소켓 첫 수신값까지 1천원부터 60초에 걸쳐 creep 애니메이션.
+     이후 재수신 시 현재 표시값 기준으로 속도만 재보정 — 절대 점프 없음.
+   - 인게임에서 뒤로가기로 재진입한 경우: max(소켓값 100%, 게임에서 봤던 값)에서 시작.
+     sessionStorage 플래그로 감지.
    - NEXT_PUBLIC_RT가 꺼져있으면(로컬/오프라인) 가짜 소켓으로 대체.
-   - CTA는 새 탭이 아니라 SPA 라우팅(router.push)으로 이동 — 같은 vid로 메인에서
-     바로 재연결되어 깔끔하게 이어지는 느낌을 준다. */
+   - CTA는 SPA 라우팅(router.push)으로 이동 — 같은 vid로 메인에서 바로 재연결. */
 
 const SESSION_FROM_GAME_KEY = "mt_came_from_game";
 
-// FOMO 배너 노출 임계값 — 접속자/금액이 너무 적으면 오히려 "썰렁해 보여서" 역효과.
-// 둘 중 하나라도 넘으면 노출. 오픈 초반엔 트래픽이 적으니 낮게 잡아두고, 트래픽 늘면 올릴 것.
-const FOMO_MIN_PRESENCE = 1; // 나 말고 1명 이상 있으면 노출
-const FOMO_MIN_TOTAL = 10_000; // 오늘 누적 1만원 이상이면 노출
-const CREEP_DURATION_S = 60; // 90% → 100% 채우는 시간(초). 이후에도 같은 속도로 계속 올라감.
+// FOMO 배너 노출 임계값
+const FOMO_MIN_PRESENCE = 1; // 실유저 1명 이상이면 접속자줄 노출 (공유페이지 방문자는 서버에서 이미 제외)
+const CREEP_DURATION_S = 60; // creep 속도 기준 시간(초)
 
 export default function PayslipShare({
   data,
@@ -121,7 +116,7 @@ export default function PayslipShare({
       // 등장 시점의 값으로 구조를 확정(freeze) — 이후엔 숫자만 제자리 갱신, 구조는 불변.
       setFrozen({
         hasPresence: countRef.current >= FOMO_MIN_PRESENCE,
-        hasAmount: liveWonRef.current >= FOMO_MIN_TOTAL,
+        hasAmount: true, // 금액 임계 제거 — 항상 표시
       });
       setRevealed(true);
     }
@@ -131,9 +126,11 @@ export default function PayslipShare({
     // 소켓이 끝내 조용해도(오프라인 등) 빈 박스가 남지 않도록 폴백 등장.
     const revealFallback = setTimeout(doReveal, 1200);
 
-    // presence 수신 — 표시값은 (서버 count - 1). ref를 동기 갱신해 reveal 판정이 최신값을 보게 함.
+    // presence 수신 — 서버가 공유페이지 방문자를 presence에서 제외하므로 자기자신 차감 불필요.
+    // 단조증가만 허용 — 접속자 감소는 화면에 표시하지 않음.
     function applyPresence(c: number) {
-      const next = Math.max(0, c - 1);
+      const raw = Math.max(0, c);
+      const next = Math.max(countRef.current, raw);
       countRef.current = next;
       setCount(next);
       gotPresence = true;
@@ -155,13 +152,13 @@ export default function PayslipShare({
 
       if (!c.synced) {
         // 소켓 첫 수신값으로 creep 초기화
-        // 일반 진입: total * 90% 에서 시작 — 이후 소켓 재수신 시 속도만 재보정하며 절대 100%로 점프하지 않음
-        // 인게임 재진입: max(total, gameGlobal) 에서 시작 (게임에서 봤던 값보다 낮아지지 않음)
-        const rawBase = cameFromGameRef.current ? total : total * 0.9;
+        // 일반 진입: 1천원에서 시작해 60초에 걸쳐 실제값까지 creep
+        // 인게임 재진입: max(실제값, 게임에서 봤던 값)에서 시작
+        const rawBase = cameFromGameRef.current ? total : Math.min(1000, total);
         const base = cameFromGameRef.current
           ? Math.max(rawBase, gameGlobalRef.current)
-          : rawBase; // 일반 진입은 gameGlobal 무시 — 항상 소켓값 90%
-        const gap = Math.max(total * 0.1, total - base, 1);
+          : rawBase;
+        const gap = Math.max(total - base, 1);
         creep.current = {
           base,
           rate: gap / CREEP_DURATION_S,
@@ -223,6 +220,7 @@ export default function PayslipShare({
           nick,
           fresh,
           isNew: fresh && wasVidCreated(),
+          isShare: true,
         });
       });
       sock.on("presence", ({ count: c }: { count: number }) =>
@@ -272,6 +270,7 @@ export default function PayslipShare({
 
   return (
     <main style={{ ...wrap, cursor: "pointer" }} onClick={handleCtaClick}>
+      <style>{`@keyframes share-dot-pulse{0%,100%{opacity:1}50%{opacity:.25}}.share-dot{animation:share-dot-pulse 1.8s ease-in-out infinite}`}</style>
       <div style={cardWrap}>
         <ReceiptCard
           d={data}
@@ -294,25 +293,23 @@ export default function PayslipShare({
         >
           {frozen?.hasPresence ? (
             <div style={liveDot}>
-              <span style={dot} />
+              <span style={dot} className="share-dot" />
               현재 접속자 {count.toLocaleString("ko-KR")}명
             </div>
           ) : (
-            <div style={liveDot}>지금도 다 같이 버는 중</div>
+            <div style={liveDot}>오늘 다 같이</div>
           )}
           {frozen?.hasAmount ? (
             <div style={liveAmt}>{fmtWon(displayWon)}</div>
           ) : (
             <div style={liveAmtIdle}>오늘도 차곡차곡 💰</div>
           )}
-          <div style={liveSub}>
-            다 같이 변기 위에서 실시간으로 쓸어담는 중 💰
-          </div>
+          <div style={liveSub}>변기 위에서 실시간으로 쓸어담는 중 💰</div>
         </div>
       </div>
 
       <div style={ctaWrap}>
-        <div style={ctaNudge}>{nick}님처럼 변기에서 월급 줍기 💰</div>
+        <div style={ctaNudge}>{nick}님처럼 돈버는 화장실에서</div>
         <div style={cta}>
           <img
             src="/brand-icon.png"

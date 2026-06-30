@@ -327,25 +327,23 @@ body {
 .skin-light {
   position: absolute;
   z-index: 24;
-  top: clamp(8px, 2.2svh, 24px);
+  /* 패딩만큼 top 보정 — 이미지 실제 위치는 유지하면서 클릭 영역만 확대 */
+  top: clamp(-14px, calc(2.2svh - 22px), 2px);
   left: 50%;
   width: 96px;
   height: auto;
   transform: translateX(-50%);
-  pointer-events: auto; /* 형광등 탭 이스터에그용(커서 힌트는 안 줌 — 숨겨진 기능) */
+  pointer-events: auto; /* 형광등 탭 이스터에그용 */
+  padding: 22px 28px; /* 클릭 영역 사방으로 확대 (모바일 탭 편의성) */
 }
-/* 개발자 도구 해제 막바지 — 살짝 깜빡 */
+/* 형광등 이스터에그 — 깜빡임 */
 .skin-light--blink {
-  animation: skin-light-blink 0.18s ease;
+  animation: skin-light-blink 0.22s ease;
 }
 @keyframes skin-light-blink {
-  50% {
-    filter: brightness(1.8) drop-shadow(0 0 14px rgba(255, 244, 200, 0.85));
-  }
-}
-/* 개발자 도구 켜진 상태 — 형광등 ON 연출 */
-.skin-light--on {
-  filter: brightness(1.18) drop-shadow(0 0 14px rgba(255, 240, 190, 0.55));
+  0%   { filter: none; }
+  40%  { filter: brightness(2.2) drop-shadow(0 0 18px rgba(255, 244, 200, 0.9)); }
+  100% { filter: none; }
 }
 
 /* 문 경첩(좌측 모서리) */
@@ -1705,40 +1703,37 @@ body {
 }
 .reset-confirm__title {
   margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
   color: #fff;
   text-align: center;
-}
-.reset-confirm__title-emoji {
-  font-size: 15px;
-  line-height: 1;
-  letter-spacing: -2px;
 }
 .reset-confirm__stats {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  overflow: hidden;
 }
 .reset-confirm__stat {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: space-between;
+  padding: 9px 14px;
+}
+.reset-confirm__stat + .reset-confirm__stat {
+  border-top: 1px solid rgba(255,255,255,0.07);
 }
 .reset-confirm__stat dt {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #9fdcc9;
 }
 .reset-confirm__stat dd {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
@@ -2280,6 +2275,10 @@ body {
 }
 .skin-tp--torn .tp__hang {
   transform: scaleY(0.16);
+}
+/* 빈 상태(8번 소진) — 늘어진 휴지 숨기고 심만 보임 */
+.skin-tp--empty .tp__hang {
+  display: none;
 }
 
 /* 뜯겨 바닥으로 떨어지는 휴지 한 장 — 바닥 위에 떨어짐(채팅 아래, 광고와는 안 겹침) */
