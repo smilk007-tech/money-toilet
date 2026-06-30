@@ -31,6 +31,7 @@ export async function loadConfig() {
     const def = DEFAULTS[key];
     if (typeof def === "boolean") m[key] = raw[key] === true || raw[key] === "true" || raw[key] === 1;
     else if (typeof def === "number") m[key] = Number(raw[key]);
+    else if (Array.isArray(def)) { try { m[key] = JSON.parse(raw[key]); } catch { m[key] = def; } }
   }
   return m;
 }
@@ -43,6 +44,7 @@ export async function setConfig(patch) {
     const def = DEFAULTS[key];
     if (typeof def === "boolean") out[key] = Boolean(patch[key]);
     else if (typeof def === "number") out[key] = Number(patch[key]);
+    else if (Array.isArray(def)) out[key] = JSON.stringify(Array.isArray(patch[key]) ? patch[key] : def);
   }
   if (Object.keys(out).length) await r.hset(K.adminCfg, out);
 }

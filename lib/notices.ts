@@ -32,20 +32,9 @@ function parseKst(s: string | undefined, isEnd: boolean): number | null {
   return Number.isNaN(t) ? null : t;
 }
 
-function parseList(): Notice[] {
-  try {
-    const raw = process.env.NEXT_PUBLIC_NOTICES;
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-/** 현재 시각(KST) 기준 노출할 첫 공지. 윈도우 충족 항목이 없으면 null. */
-export function activeNotice(now: number = Date.now()): Notice | null {
-  for (const n of parseList()) {
+/** 주어진 배열에서 현재 시각(KST) 기준 노출할 첫 공지. 없으면 null. */
+export function activeNoticeFrom(list: Notice[], now: number = Date.now()): Notice | null {
+  for (const n of list) {
     if (!n || typeof n.text !== "string" || !n.text.trim()) continue;
     const start = parseKst(n.start, false);
     const end = parseKst(n.end, true);
@@ -55,4 +44,14 @@ export function activeNotice(now: number = Date.now()): Notice | null {
     return { text: n.text.trim(), url };
   }
   return null;
+}
+
+/** @deprecated NEXT_PUBLIC_NOTICES 환경변수 기반. 어드민 관리 방식으로 전환됨. */
+export function activeNotice(now: number = Date.now()): Notice | null {
+  try {
+    const raw = process.env.NEXT_PUBLIC_NOTICES;
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? activeNoticeFrom(arr, now) : null;
+  } catch { return null; }
 }

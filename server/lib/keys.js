@@ -60,6 +60,7 @@ export const DEFAULTS = {
   presenceBroadcastMs: 2000, // 일반 유저 presence 브로드캐스트 + 어드민 라이브 push 디바운스 공용
   persistMs: 300_000, // 5분마다 Redis 영속 + 어드민 시간별 통계 push 주기
   chatDisabled: false,
+  notices: [], // 시스템 공지 배너. 어드민에서 관리. Notice[] JSON.
 };
 // 자동 차단 상한 — 누적 위반(strike)으로 차단 시간이 늘어나도 이 값을 넘지 않음
 export const MAX_AUTOBLOCK_SEC = 600;

@@ -2184,7 +2184,7 @@ body {
 }
 .notice-bar__track span {
   display: inline-block;
-  padding: 0 18px;
+  padding: 0 6px;
   color: #fff;
   font-size: 13px;
   font-weight: 700;

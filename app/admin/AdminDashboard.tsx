@@ -78,9 +78,10 @@ export default function AdminDashboard() {
   const [onQ, setOnQ] = useState("");
   const [bc, setBc] = useState("");
   const [bcSent, setBcSent] = useState(false);
-  // 채팅 레이트리밋 설정
-  type CfgState = { chatDisabled: boolean; rateLimitN: number; rateWindowMs: number; chatMinIntervalMs: number; autoBlockSec: number; maxMsgLen: number };
-  const CFG_DEFAULTS: CfgState = { chatDisabled: false, rateLimitN: 7, rateWindowMs: 10000, chatMinIntervalMs: 700, autoBlockSec: 10, maxMsgLen: 40 };
+  // 채팅 레이트리밋 + 공지 설정
+  type NoticeEntry = { text: string; start?: string; end?: string; url?: string };
+  type CfgState = { chatDisabled: boolean; rateLimitN: number; rateWindowMs: number; chatMinIntervalMs: number; autoBlockSec: number; maxMsgLen: number; notices: NoticeEntry[] };
+  const CFG_DEFAULTS: CfgState = { chatDisabled: false, rateLimitN: 7, rateWindowMs: 10000, chatMinIntervalMs: 700, autoBlockSec: 10, maxMsgLen: 40, notices: [] };
   const [cfg, setCfg] = useState<CfgState>(CFG_DEFAULTS);
   const [cfgLoaded, setCfgLoaded] = useState(false);
   const sockRef = useRef<Socket | null>(null);
@@ -297,6 +298,23 @@ export default function AdminDashboard() {
             </>)}
           </div>
           <div style={s.card}>
+            <div style={s.cardTitle}>📢 공지 배너</div>
+            <div style={s.cfgDesc}>활성 공지 1건이 상단에 흘러가는 배너로 표시됩니다. start/end 생략하면 즉시·무한 노출.</div>
+            <div style={{ marginTop: 10 }}>
+              {cfg.notices.map((n, i) => (
+                <div key={i} style={s.noticeRow}>
+                  <input placeholder="공지 문구 *" value={n.text} style={{ ...s.noticeInput, flex: 2 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], text: e.target.value }; return { ...p, notices: ns }; })} />
+                  <input placeholder="시작 (예: 2026-07-05)" value={n.start || ""} style={{ ...s.noticeInput, flex: 1.2 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], start: e.target.value || undefined }; return { ...p, notices: ns }; })} />
+                  <input placeholder="종료 (예: 2026-07-05T12:00)" value={n.end || ""} style={{ ...s.noticeInput, flex: 1.2 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], end: e.target.value || undefined }; return { ...p, notices: ns }; })} />
+                  <input placeholder="URL (선택)" value={n.url || ""} style={{ ...s.noticeInput, flex: 1.5 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], url: e.target.value || undefined }; return { ...p, notices: ns }; })} />
+                  <button style={s.btnSm} onClick={() => setCfg((p) => ({ ...p, notices: p.notices.filter((_, j) => j !== i) }))}>✕</button>
+                </div>
+              ))}
+              <button style={{ ...s.btnGhost, marginTop: 8 }} onClick={() => setCfg((p) => ({ ...p, notices: [...p.notices, { text: "" }] }))}>+ 공지 추가</button>
+            </div>
+            <button style={{ ...s.btnPrimary, width: "100%", marginTop: 10 }} onClick={saveCfg}>저장</button>
+          </div>
+          <div style={s.card}>
             <div style={s.cardTitle}>💸 운영</div>
             <button style={{ ...s.btnDanger, width: "100%" }} onClick={resetMoney}>다같이 번 돈 초기화</button>
           </div>
@@ -484,6 +502,8 @@ const s: Record<string, React.CSSProperties> = {
   cfgInputWrap: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0 },
   cfgUnit: { fontSize: 12, color: "#5a7a6a", flexShrink: 0 },
   cfgNum: { width: 64, padding: "4px 6px", borderRadius: 6, border: "1px solid #2c3a32", background: "#0e1812", color: "#e8f5ee", fontSize: 13, textAlign: "right" as const },
+  noticeRow: { display: "flex", alignItems: "center", gap: 4, marginBottom: 6, flexWrap: "wrap" as const },
+  noticeInput: { padding: "5px 7px", borderRadius: 6, border: "1px solid #2c3a32", background: "#0e1812", color: "#e8f5ee", fontSize: 12, minWidth: 0 },
   // 채팅로그 서브탭 [오늘][어제][엊그제][그끄저께]
   subtabs: { display: "flex", gap: 4, marginBottom: 8 },
   subtab: { flex: 1, padding: "7px 4px", borderRadius: 8, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12.5, whiteSpace: "nowrap" },

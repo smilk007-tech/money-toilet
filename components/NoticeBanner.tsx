@@ -1,18 +1,31 @@
 "use client";
 
-import { useState } from "react";
-import { activeNotice } from "@/lib/notices";
+import { useEffect, useState } from "react";
+import { activeNoticeFrom, type Notice } from "@/lib/notices";
 
-/* 시스템 공지 배너 — 인게임 상단의 까만 바, 흰 글씨가 왼쪽으로 무한 반복 스크롤(마퀴).
-   url이 있으면 클릭 시 새 탭 이동, 없으면 클릭 무반응(일반 div). */
+const SOCKET_BASE = (
+  process.env.NEXT_PUBLIC_SOCKET_URL ||
+  (typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:4000" : "")
+).replace(/\/$/, "");
+
+const COPIES = 12;
+
+/* 시스템 공지 배너 — 어드민에서 관리. 서버 /notices 에서 fetch 후 활성 공지 표시. */
 export default function NoticeBanner() {
-  // 마운트 시점(KST)의 활성 공지 1건 확정 — 세션 중 윈도우 경과 반영은 새로고침으로 충분.
-  const [notice] = useState(() => activeNotice());
+  const [notice, setNotice] = useState<Notice | null>(null);
+
+  useEffect(() => {
+    if (!SOCKET_BASE) return;
+    fetch(`${SOCKET_BASE}/notices`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d?.notices)) setNotice(activeNoticeFrom(d.notices));
+      })
+      .catch(() => {});
+  }, []);
+
   if (!notice) return null;
 
-  const hasUrl = !!notice.url;
-  // 끊김 없는 마퀴: N벌 복사 → translate(-1/N * 100%) 반복. 많은 복사본으로 PC 넓은 화면도 커버.
-  const COPIES = 12;
   const track = (
     <div className="notice-bar__track" aria-hidden>
       {Array.from({ length: COPIES }).map((_, i) => (
@@ -21,15 +34,9 @@ export default function NoticeBanner() {
     </div>
   );
 
-  if (hasUrl) {
+  if (notice.url) {
     return (
-      <a
-        className="notice-bar notice-bar--link"
-        href={notice.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={notice.text}
-      >
+      <a className="notice-bar notice-bar--link" href={notice.url} target="_blank" rel="noopener noreferrer" aria-label={notice.text}>
         {track}
       </a>
     );

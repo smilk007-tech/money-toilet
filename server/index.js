@@ -180,6 +180,10 @@ app.post("/admin/broadcast", requireAdmin, (req, res) => {
   if (text) io.emit("chat", { name: "관리자", text, kind: "admin" });
   res.json({ ok: true });
 });
+/* 공지 배너 — 인증 없이 공개. 클라이언트가 마운트 시 fetch. */
+app.get("/notices", (_req, res) => {
+  res.json({ ok: true, notices: cfg.notices ?? [] });
+});
 app.get("/admin/config", requireAdmin, (_req, res) => {
   res.json({ ok: true, config: cfg });
 });
