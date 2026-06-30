@@ -35,15 +35,17 @@ export const ak = {
 
 export const TTL = {
   hours: 60 * 60 * 24 * 95, // 시간별 95일 보관
-  chatLog: 60 * 60 * 24 * 3, // 채팅로그 3일
+  chatLog: 60 * 60 * 24 * 5, // 채팅로그 5일 — 어드민 [오늘~그끄저께](3일 전)까지 안전 조회용 여유
   adminSession: 60 * 60 * 24, // 어드민 세션 24시간
   loginLock: 60 * 15,
 };
 
 export const LOGIN_MAX_FAILS = 5;
 export const DURATION_SEC = { "1d": 86400, "3d": 259200, "7d": 604800, "30d": 2592000, perm: null };
-export const MAX_PER_SEC = Math.ceil(100_000_000 / (22 * 8 * 3600)); // 158원/초
-export const FLUSH_CAP = MAX_PER_SEC * 3600; // 568,800
+// 분모는 클라이언트 lib/constants.js WORK_CONFIG(월 20.6일 × 8시간)와 동일해야 함 — 불일치 시
+// 클라가 계산한 초당 적립을 서버 accrued 상한이 도로 깎아낸다.
+export const MAX_PER_SEC = Math.ceil(100_000_000 / (20.6 * 8 * 3600)); // 169원/초
+export const FLUSH_CAP = MAX_PER_SEC * 3600; // 608,400
 export const CHATLOG_MAX = 6000;
 
 /** 빈 시간 버킷 */
@@ -53,8 +55,11 @@ export const DEFAULTS = {
   rateLimitN: 7,
   rateWindowMs: 10_000,
   autoBlockSec: 10,
+  chatMinIntervalMs: 700, // 같은 사람 연속 채팅 최소 간격(연타/도배 1차 방어) — 미만이면 조용히 무시
   maxMsgLen: 40,
   presenceBroadcastMs: 2000, // 일반 유저 presence 브로드캐스트 + 어드민 라이브 push 디바운스 공용
   persistMs: 300_000, // 5분마다 Redis 영속 + 어드민 시간별 통계 push 주기
   chatDisabled: false,
 };
+// 자동 차단 상한 — 누적 위반(strike)으로 차단 시간이 늘어나도 이 값을 넘지 않음
+export const MAX_AUTOBLOCK_SEC = 600;

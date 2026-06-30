@@ -183,6 +183,14 @@ body {
   align-items: center;
   justify-content: flex-end;
 }
+/* 각 컬럼 최소폭 예약 — 로딩(···)→값 전환 시 패널 좌측 가장자리가 밀리지 않게 고정.
+   값은 우측 정렬(stack--right)이라 예약폭 안에서 채워지므로 레이아웃 시프트가 사라진다. */
+.hud__stalls .hud__stack {
+  min-width: 52px;
+}
+.hud__global .hud__stack {
+  min-width: 104px;
+}
 .hud__global {
   display: flex;
   align-items: center;
@@ -223,6 +231,7 @@ body {
   color: var(--neon);
   font-size: 15px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 .hud__global b {
   color: var(--gold);
@@ -453,6 +462,25 @@ body {
 .ad-a4__emoji {
   font-size: 28px;
   line-height: 1;
+}
+/* 광고 공석 동안 노출하는 브랜드 로고(돈버는 화장실) */
+.ad-a4__brand {
+  width: 66px;
+  height: 66px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
+}
+.ad-a4--brand {
+  gap: 6px;
+}
+.ad-a4--brand .ad-a4__head {
+  font-size: 14px;
+  color: #1c2b5a;
+  letter-spacing: -0.02em;
+}
+.ad-a4--brand .ad-a4__sub {
+  color: #8a7a52;
+  font-weight: 600;
 }
 .ad-a4__head {
   font-size: 13px;
@@ -2050,28 +2078,109 @@ body {
   }
 }
 
+/* =====================  시스템 공지 마퀴 배너  ===================== */
+.notice-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30; /* HUD(20) 위 — 공지는 항상 맨 위 */
+  height: calc(26px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px); /* 노치 영역은 까맣게 채우고 글씨는 그 아래 */
+  background: #000;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.notice-bar--link {
+  cursor: pointer;
+  text-decoration: none;
+}
+.notice-bar--link:active {
+  opacity: 0.85;
+}
+.notice-bar__track {
+  display: flex;
+  flex: none;
+  align-items: center;
+  white-space: nowrap;
+  animation: notice-marquee 22s linear infinite;
+  will-change: transform;
+}
+.notice-bar:hover .notice-bar__track {
+  animation-play-state: paused; /* PC에서 읽기 편하게 hover 시 정지 */
+}
+.notice-bar__track span {
+  display: inline-block;
+  padding: 0 32px; /* 두 벌 사이 간격 → 끊김 없이 이어 보임 */
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+@keyframes notice-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  } /* 한 벌 폭만큼 이동 → 두 벌이 끊김 없이 무한 반복 */
+}
+/* 공지가 있을 때 상단 HUD를 배너 아래로 내려 겹침 방지 */
+#app:has(.notice-bar) .hud {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 36px);
+}
+
 /* =====================  토스트  ===================== */
 .toast {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--bottom-h, 188px) + 8px); /* .bottom(덱+채팅) 블록 바로 위 */
-  transform: translateX(-50%);
+  bottom: calc(var(--bottom-h, 188px) + 10px); /* .bottom(덱+채팅) 블록 바로 위 */
+  /* 기본(숨김 직전/직후) 상태 — 살짝 아래 + 투명. translateX(-50%)는 항상 유지(중앙정렬). */
+  transform: translateX(-50%) translateY(12px) scale(0.96);
+  opacity: 0;
   z-index: 80; /* 모든 팝업(명세서60·기록65·후원66) 위에서 보이도록 */
-  background: rgba(16, 24, 18, 0.88);
-  color: #eafff5;
-  border: 1px solid rgba(125, 255, 176, 0.28);
-  border-radius: 20px;
-  padding: 9px 16px;
-  font-size: 13px;
+  background: linear-gradient(180deg, rgba(22, 33, 26, 0.96), rgba(12, 18, 14, 0.96));
+  color: #f3fff9;
+  border: 1px solid rgba(125, 255, 176, 0.38);
+  border-radius: 16px;
+  padding: 12px 18px;
+  font-size: 14px;
   font-weight: 700;
-  white-space: nowrap;
-  animation: fadeIn 0.25s ease;
-  max-width: 92%;
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  text-align: center;
+  white-space: normal; /* 긴 메시지는 줄바꿈 허용 → 가독성 */
+  max-width: 86%;
   cursor: pointer;
-  backdrop-filter: blur(3px);
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.5),
+    0 2px 0 rgba(125, 255, 176, 0.12) inset;
+  backdrop-filter: blur(7px);
+  /* 등장/퇴장 공통 트랜지션 — 퇴장 시 .toast--show 제거로 자연스럽게 사라진다.
+     등장은 살짝 통통 튀는 느낌(overshoot)으로 주목도+가독성↑. */
+  transition:
+    opacity 0.26s ease,
+    transform 0.34s cubic-bezier(0.2, 0.85, 0.3, 1.25);
+  will-change: opacity, transform;
+}
+.toast--show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
 }
 .toast[hidden] {
   display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: opacity 0.2s ease;
+    transform: translateX(-50%);
+  }
+  .toast--show {
+    transform: translateX(-50%);
+  }
 }
 /* 자랑하기 팝업(명세서)이 열려 있을 땐 토스트를 하단으로 내려
    카드 가운데를 가리지 않게 한다(팝업은 열렸을 때만 DOM에 존재). */
@@ -2184,6 +2293,21 @@ body {
 @keyframes stalls-pulse {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 1; }
+}
+
+/* HUD 값 최초 등장 — 로딩(···)에서 실제 값으로 바뀔 때 1회 부드럽게 페이드인 */
+@keyframes hud-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hud-reveal {
+  animation: hud-reveal 0.45s ease both;
 }
 
 /* 볼일 중 영역 오프라인 배지 — 8초 이상 연결 안 될 때 표시 */

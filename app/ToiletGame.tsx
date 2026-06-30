@@ -5,6 +5,7 @@ import { DONATE_KAKAO_URL, donateQrUrl } from "@/lib/constants";
 import { initGame } from "@/lib/engine/game";
 import { initStage } from "@/lib/engine/stage";
 import PayslipModal from "@/components/PayslipModal";
+import NoticeBanner from "@/components/NoticeBanner";
 
 export default function ToiletGame() {
   useEffect(() => {
@@ -20,6 +21,8 @@ export default function ToiletGame() {
 
   return (
     <div id="app">
+      {/* 시스템 공지(서버점검·이벤트 등) — 활성 공지가 있을 때만 상단 까만 마퀴 배너 렌더 */}
+      <NoticeBanner />
       {/* 네트워크 끊김 표시는 볼일 중 영역에 통합 (networkBadge 미사용) */}
       {/* ===== 상단 HUD ===== */}
       <header className="hud">
@@ -41,14 +44,13 @@ export default function ToiletGame() {
                   </span>
                   <span className="hud__cap">볼일 중</span>
                 </span>
-                <span className="hud__val" id="stallsVal">
+                <span className="hud__val" id="stallsVal" hidden>
                   <b id="stallCount">0</b>명
                 </span>
                 <span
                   className="hud__stalls-loading"
                   id="loadingBadge"
                   aria-label="연결 중"
-                  hidden
                 >
                   ···
                 </span>
@@ -65,8 +67,15 @@ export default function ToiletGame() {
                   </span>
                   <span className="hud__cap">오늘 다같이</span>
                 </span>
-                <span className="hud__val">
+                <span className="hud__val" id="globalVal" hidden>
                   <b id="globalEarned">0원</b>
+                </span>
+                <span
+                  className="hud__stalls-loading"
+                  id="globalLoading"
+                  aria-label="연결 중"
+                >
+                  ···
                 </span>
               </span>
             </div>
@@ -189,6 +198,16 @@ export default function ToiletGame() {
 
         {/* 동적 A4 광고 — 문 가운데 포스터 자리(게임 로직 유지) */}
         <a className="ad-a4" id="adA4" href="#" target="_blank" rel="noopener">
+          {/* 광고 공석 동안 노출하는 브랜드 로고(돈버는 화장실) — 기본 숨김, rotateAd가 토글 */}
+          <img
+            className="ad-a4__brand"
+            id="adBrand"
+            src="/brand-icon.png"
+            alt=""
+            width={66}
+            height={66}
+            hidden
+          />
           <div className="ad-a4__emoji" id="adEmoji">
             📢
           </div>

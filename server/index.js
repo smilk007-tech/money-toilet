@@ -11,7 +11,7 @@ import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
 
-import { DEFAULTS, FLUSH_CAP, MAX_PER_SEC, kstDateKey, kstHour, emptyBucket } from "./lib/keys.js";
+import { DEFAULTS, FLUSH_CAP, MAX_PER_SEC, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, emptyBucket } from "./lib/keys.js";
 import {
   loadConfig, setConfig, persistToday, loadToday, persistHours, loadHours,
   appendChatLog, loadActiveBans, banVid, unbanVid, listBans, resetStats, clean,
@@ -55,13 +55,20 @@ function isBanned(vid) {
   return true;
 }
 const rate = new Map();
-function rateOk(vid) {
+// 슬라이딩 윈도우 레이트리밋 — 버킷(chat/flush)별로 분리해 한쪽이 다른 쪽 예산을 잠식하지 않게 한다.
+function rateOk(vid, bucket = "chat") {
+  const key = vid + ":" + bucket;
   const now = Date.now();
-  const arr = (rate.get(vid) || []).filter((t) => now - t < cfg.rateWindowMs);
+  const arr = (rate.get(key) || []).filter((t) => now - t < cfg.rateWindowMs);
   arr.push(now);
-  rate.set(vid, arr);
+  rate.set(key, arr);
   return arr.length <= cfg.rateLimitN;
 }
+// 물내림 적립 시계 — vid별 마지막 물내림 시각(소켓 재연결과 무관하게 유지).
+// 소켓당으로 두면 재연결마다 1시간 헤드룸이 재무장돼 도배 주입에 악용되므로 vid 기준으로 보존한다.
+const flushClock = new Map(); // vid -> 마지막 물내림 ts(ms)
+const FLUSH_HEADROOM_MS = 3600_000; // 최초/장기부재 후 물내림에 허용하는 적립 헤드룸(=1시간, 클라 부재중 적립 상한과 동일)
+const STRIKE_DECAY_MS = 5 * 60 * 1000; // 마지막 위반 후 이 시간 지나면 누적 strike 리셋(선량한 장기세션 보호)
 
 /* ---------- presence 브로드캐스트(디바운스) ---------- */
 let pTimer = null, pDirty = false;
@@ -112,6 +119,9 @@ function pushAdminLive() {
 
 /* ---------- 5분 배치 영속 ---------- */
 async function flushPersist() {
+  // flushClock 정리 — 1시간 지난 항목은 기본 헤드룸과 동일해 무의미하므로 제거(메모리 보호).
+  const cutoff = Date.now() - FLUSH_HEADROOM_MS;
+  for (const [vid, t] of flushClock) if (t < cutoff) flushClock.delete(vid);
   if (today && todayDirty) {
     await persistToday(today);
     todayDirty = false;
@@ -199,7 +209,6 @@ io.on("connection", async (socket) => {
   socket.data.vid = null;
   socket.data.nick = "";
   socket.data.counted = false;
-  socket.data.lastFlushAt = Date.now();
 
   // 연결 즉시 현재 상태 1회 전송 — 'hello'를 보내지 않는 수동 관전자(공유페이지 등)도
   // presence/오늘 합계를 바로 볼 수 있게(이 emit 자체는 presence/visits에 영향 없음)
@@ -242,13 +251,32 @@ io.on("connection", async (socket) => {
     const text = clean(p.text, cfg.maxMsgLen);
     if (!text || cfg.chatDisabled) return;
     if (isBanned(vid)) return; // 섀도밴
-    if (!rateOk(vid)) { bans.set(vid, Date.now() + cfg.autoBlockSec * 1000); return; }
+
+    const now = Date.now();
+    // (1) 연타 방지 — 같은 사람이 최소 간격 미만으로 보내면 조용히 무시(차단까진 아님)
+    if (now - (socket.data.lastChatAt || 0) < cfg.chatMinIntervalMs) return;
+    // (2) 동일 문구 도배 방지 — 직전과 같은 텍스트면 무시(간격은 갱신해 연타 패턴도 함께 차단)
+    if (text === socket.data.lastChatText) { socket.data.lastChatAt = now; return; }
+    // (3) 슬라이딩 윈도우 한도 초과 — 누적 위반(strike)으로 차단 시간을 점증시켜 상습범을 밀어냄.
+    //     단 마지막 위반 후 STRIKE_DECAY_MS 지나면 strike를 리셋해, 한참 전에 한 번 튄
+    //     선량한 장기세션 유저가 영구 가중되지 않게 한다.
+    if (!rateOk(vid, "chat")) {
+      if (now - (socket.data.lastStrikeAt || 0) > STRIKE_DECAY_MS) socket.data.chatStrikes = 0;
+      socket.data.chatStrikes = (socket.data.chatStrikes || 0) + 1;
+      socket.data.lastStrikeAt = now;
+      const blockSec = Math.min(cfg.autoBlockSec * socket.data.chatStrikes, MAX_AUTOBLOCK_SEC);
+      bans.set(vid, now + blockSec * 1000);
+      return;
+    }
+    socket.data.lastChatAt = now;
+    socket.data.lastChatText = text;
+
     const nick = socket.data.nick || "익명의 볼일러";
     ensureDay();
     const h = kstHour();
     today.chat++; hours[h].chat++;
     todayDirty = true; hoursDirty.add(h);
-    const ts = Date.now();
+    const ts = now;
     chatBuf.push({ date: today.date, ts, hour: h, vid, nick, text });
     socket.broadcast.emit("chat", { name: nick, text, kind: "user" }); // 실제 옆사람(나 제외)
     if (adminsConnected()) io.to("admins").emit("adminChat", { ts, hour: h, vid, nick, text }); // 어드민 라이브
@@ -261,11 +289,14 @@ io.on("connection", async (socket) => {
     if (p.nick) { socket.data.nick = clean(p.nick, 16); const i = presence.get(vid); if (i) i.nick = socket.data.nick; }
     let amount = Math.floor(Number(p.amount) || 0);
     if (amount < 1) return;
-    if (cfg.chatDisabled || isBanned(vid) || !rateOk(vid)) return;
+    if (cfg.chatDisabled || isBanned(vid) || !rateOk(vid, "flush")) return;
     const now = Date.now();
-    const accrued = Math.ceil((MAX_PER_SEC * (now - socket.data.lastFlushAt)) / 1000) + MAX_PER_SEC;
+    // 적립 헤드룸은 vid별 마지막 물내림 기준 — 재연결해도 시계가 유지돼 도배 재무장을 막는다.
+    // 최초/장기부재(>1h) 물내림만 1시간치 헤드룸을 받아 부재중 적립분(클라 상한=1시간)을 통과시킨다.
+    const lastFlushAt = flushClock.get(vid) ?? now - FLUSH_HEADROOM_MS;
+    const accrued = Math.ceil((MAX_PER_SEC * (now - lastFlushAt)) / 1000) + MAX_PER_SEC;
     amount = Math.min(amount, accrued, FLUSH_CAP);
-    socket.data.lastFlushAt = now;
+    flushClock.set(vid, now);
     if (amount < 1) return;
 
     ensureDay();
@@ -279,6 +310,11 @@ io.on("connection", async (socket) => {
       const text = clean(p.text, cfg.maxMsgLen);
       const kind = p.kind === "capped" ? "capped" : undefined; // 1시간 동결 후 물내림 — 다른 유저 화면에 코믹하게 구분 표시
       socket.broadcast.emit("flush", { name: nick, amount, total: today.money, me: false, chat: true, text, kind });
+      // 물내림도 '채팅'이므로 로그를 남긴다 — 어드민 채팅로그에 정산 활동 포함.
+      // 일반 물내림은 클라가 멘트를 로컬 생성(text=null)하므로 서버에서 금액 멘트로 대체.
+      const logText = text || `💰 ${amount.toLocaleString("ko-KR")}원 물내림!`;
+      chatBuf.push({ date: today.date, ts: now, hour: h, vid, nick, text: logText });
+      if (adminsConnected()) io.to("admins").emit("adminChat", { ts: now, hour: h, vid, nick, text: logText });
     }
     io.emit("global", { total: today.money });
     pushAdminLive();
@@ -290,7 +326,9 @@ io.on("connection", async (socket) => {
     const info = presence.get(vid);
     if (info) {
       info.sockets.delete(socket.id);
-      if (info.sockets.size === 0) { presence.delete(vid); rate.delete(vid); }
+      // 마지막 연결까지 끊기면 정리. flushClock은 일부러 남겨 재연결 도배 헤드룸 재무장을 막는다
+      // (오래된 항목은 flushPersist에서 주기적으로 정리).
+      if (info.sockets.size === 0) { presence.delete(vid); rate.delete(vid + ":chat"); rate.delete(vid + ":flush"); }
     }
     broadcastPresence();
     pushAdminLive();

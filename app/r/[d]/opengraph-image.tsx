@@ -1,3 +1,4 @@
+import { readFileSync } from "fs";
 import { ImageResponse } from "next/og";
 import {
   decodeReceipt,
@@ -9,9 +10,18 @@ import {
 import { SITE_NAME } from "@/lib/ogMeta";
 import { SHORT_ID_RE, loadReceipt } from "@/lib/receipt/receiptStore";
 
+// 브랜드 아이콘(금화+변기) — 🚽 이모지 대신 로고로 노출(읽기 실패 시 이모지 폴백).
+let BRAND_ICON = "";
+try {
+  BRAND_ICON = `data:image/png;base64,${readFileSync(new URL("../../icon.png", import.meta.url)).toString("base64")}`;
+} catch {}
+
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = `${SITE_NAME} · 화장실에서 번 돈 인증`;
+// 영수증은 생성 후 불변 → id별 OG 이미지를 30일 캐시(페이지 revalidate·Redis TTL과 동일).
+// 카톡 등에서 같은 링크를 여러 번 언펄해도 Redis 재조회·이미지 재생성 없이 CDN이 응답.
+export const revalidate = 2592000; // 30일
 
 // 오래된 Safari UA → Google Fonts가 woff2 대신 ttf(satori 호환)를 내려준다.
 const TTF_UA =
@@ -94,13 +104,25 @@ function OgImage({
       <div
         style={{
           display: "flex",
+          alignItems: "center",
           fontSize: 48,
           fontWeight: 800,
           color: "#9fdcc9",
           marginBottom: 28,
         }}
       >
-        🚽 {SITE_NAME}
+        {BRAND_ICON ? (
+          <img
+            src={BRAND_ICON}
+            width={64}
+            height={64}
+            style={{ marginRight: 16 }}
+            alt=""
+          />
+        ) : (
+          "🚽 "
+        )}
+        {SITE_NAME}
       </div>
 
       {nick && (

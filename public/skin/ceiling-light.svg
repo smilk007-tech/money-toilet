@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 158 92">
-  <defs>
-    <linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
-      <stop stop-color="#fefefd"/>
-      <stop offset="1" stop-color="#f3f3f1"/>
-    </linearGradient>
-  </defs>
-  <path d="M5 4H153L142 88H16Z" fill="#d5d4d1"/>
-  <path d="M13 7H145L137 71H21Z" fill="url(#f)"/>
-  <path d="M16 88H142L137 71H21Z" fill="#bebfbd"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 158 92"><defs><linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fefefd"/><stop offset="1" stop-color="#f3f3f1"/></linearGradient></defs><path d="M5 4H153L142 88H16Z" fill="#d5d4d1"/><path d="M13 7H145L137 71H21Z" fill="url(#f)"/><path d="M16 88H142L137 71H21Z" fill="#bebfbd"/></svg>

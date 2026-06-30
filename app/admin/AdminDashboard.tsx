@@ -72,11 +72,14 @@ export default function AdminDashboard() {
   // 정렬/검색/공지
   const [chatSort, setChatSort] = useState<"new" | "old">("new");
   const [chatQ, setChatQ] = useState("");
+  const [chatlogDay, setChatlogDay] = useState(0); // 채팅로그 서브탭: 0=오늘 1=어제 2=엊그제 3=그끄저께
+  const [chatlogLoading, setChatlogLoading] = useState(false);
   const [onSort, setOnSort] = useState<"new" | "old">("new");
   const [onQ, setOnQ] = useState("");
   const [bc, setBc] = useState("");
   const [bcSent, setBcSent] = useState(false);
   const sockRef = useRef<Socket | null>(null);
+  const loadedChatDatesRef = useRef<Set<string>>(new Set()); // 과거 채팅로그 메모리 캐시 적중 판정용
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 2000); };
 
   useEffect(() => {
@@ -117,18 +120,26 @@ export default function AdminDashboard() {
     }
   }, [authed, loadBans]);
 
-  // 채팅로그 과거: 오늘(sub1)=5분마다, 어제/엊그제=1회. daysAgo = sub-1
+  // 채팅로그 로더 — 과거 날짜(ago>=1)는 불변이라 메모리 캐시 적중 시 재요청하지 않는다.
+  // 오늘(ago=0)은 최초 1회 로드 후, 새로고침(force)일 때만 Vercel 캐시를 우회해 신규 데이터를 가져온다.
   const loadChatlog = useCallback(async (ago: number) => {
     const date = dateOf(ago);
-    const { data } = await vercel(`chatlog?date=${date}`);
-    if (data.ok) setHistChats((p) => ({ ...p, [date]: data.chats || [] }));
+    // 과거(ago>=1)는 불변 → 메모리 캐시 적중 시 재요청 생략. 오늘(ago=0)은 항상 라이브로 새로 불러옴
+    // (서브탭 재진입·자정 롤오버 시에도 최신 반영). 캐시버스터로 CDN/데이터 캐시 우회.
+    if (ago >= 1 && loadedChatDatesRef.current.has(date)) return;
+    setChatlogLoading(true);
+    const bust = ago === 0 ? `&_t=${Date.now()}` : "";
+    const { data } = await vercel(`chatlog?date=${date}${bust}`);
+    if (data.ok) {
+      loadedChatDatesRef.current.add(date);
+      setHistChats((p) => ({ ...p, [date]: data.chats || [] }));
+    }
+    setChatlogLoading(false);
   }, []);
   useEffect(() => {
     if (!authed || tab !== "chatlog") return;
-    for (const ago of [0, 1, 2]) loadChatlog(ago);
-    const id = setInterval(() => loadChatlog(0), 300000); // 오늘만 5분마다
-    return () => clearInterval(id);
-  }, [authed, tab, loadChatlog]);
+    loadChatlog(chatlogDay); // 선택된 서브탭 날짜만 로드(과거는 캐시 적중 시 무요청)
+  }, [authed, tab, chatlogDay, loadChatlog]);
 
   const login = async (e: React.FormEvent) => {
     e.preventDefault(); setErr("");
@@ -169,7 +180,7 @@ export default function AdminDashboard() {
   ];
 
   // 채팅로그 필터/정렬
-  const baseChats = tab === "liveChat" ? liveChats : (histChats[dateOf(0)] || []);
+  const baseChats = tab === "liveChat" ? liveChats : (histChats[dateOf(chatlogDay)] || []);
   const q1 = chatQ.trim().toLowerCase();
   const chats = [...baseChats]
     .filter((c) => !q1 || c.text.toLowerCase().includes(q1) || (c.nick || "").toLowerCase().includes(q1) || c.vid.toLowerCase().includes(q1))
@@ -250,10 +261,16 @@ export default function AdminDashboard() {
           <div style={s.note}>접속 {onlines.length}명 (어드민 제외)</div>
           {onlines.length === 0 && <Empty />}
           {onlines.map((o) => (
-            <div key={o.vid} style={s.crow}>
-              <div style={s.cline}><b style={s.nb}>{o.nick || "익명"}</b>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.banned && <span style={s.banTag}>차단</span>}<span style={s.dim}>{hhmm(o.since)}~</span></div>
-              <div style={s.cfoot}><code style={s.uuid}>{o.vid}</code><BanCtl vid={o.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
-            </div>
+            <LogRow
+              key={o.vid}
+              nick={o.nick || "익명"}
+              time={`${hhmm(o.since)}~`}
+              vid={o.vid}
+              tags={<>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
+              dur={dur}
+              setDur={setDur}
+              onBan={ban}
+            />
           ))}
         </div>
       )}
@@ -279,16 +296,18 @@ export default function AdminDashboard() {
           {chats.length === 0 && <Empty />}
           {chats.map((c, i) => {
             // 라이브 채팅은 nickByVid 우선 — 닉 변경 시 이전 메시지도 최신 닉으로 갱신
-            const displayNick = (tab === "liveChat" ? nickByVid[c.vid] : undefined) || c.nick || "익명";
+            const displayNick = nickByVid[c.vid] || c.nick || "익명";
             return (
-              <div key={i} style={s.crow}>
-                <div style={s.clineNew}>
-                  <span style={s.time}>{hhmm(c.ts)}</span>
-                  <span style={s.nick}>{displayNick}</span>
-                  <span style={s.msg}>{c.text}</span>
-                </div>
-                <div style={s.cfoot}><code style={s.uuid}>{c.vid}</code><BanCtl vid={c.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
-              </div>
+              <LogRow
+                key={i}
+                nick={displayNick}
+                time={hhmm(c.ts)}
+                message={c.text}
+                vid={c.vid}
+                dur={dur}
+                setDur={setDur}
+                onBan={ban}
+              />
             );
           })}
         </div>
@@ -296,21 +315,33 @@ export default function AdminDashboard() {
 
       {tab === "chatlog" && (
         <div>
+          <div style={s.subtabs}>
+            {["오늘", "어제", "엊그제", "그끄저께"].map((label, i) => (
+              <button key={label} onClick={() => setChatlogDay(i)} style={{ ...s.subtab, ...(chatlogDay === i ? s.subtabOn : {}) }}>{label}</button>
+            ))}
+          </div>
           <div style={s.ctrlRow}>
             <input style={s.search} placeholder="검색: 메시지 / 닉네임 / UUID" value={chatQ} onChange={(e) => setChatQ(e.target.value)} />
             <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
+            {chatlogDay === 0 && (
+              <button style={s.sortBtn} onClick={() => loadChatlog(0)} disabled={chatlogLoading} title="오늘 채팅로그 새로고침(캐시 우회)">{chatlogLoading ? "…" : "🔄"}</button>
+            )}
           </div>
-          <div style={s.note}>{chats.length}건</div>
-          {chats.length === 0 && <Empty />}
+          <div style={s.note}>
+            {dateOf(chatlogDay)} · {chats.length}건{chatlogDay === 0 ? " · 5분 주기 반영(새로고침으로 최신화)" : " · 보관본(메모리 캐시)"}
+          </div>
+          {chatlogLoading && chats.length === 0 ? <div style={s.empty}>불러오는 중…</div> : chats.length === 0 ? <Empty /> : null}
           {chats.map((c, i) => (
-            <div key={i} style={s.crow}>
-              <div style={s.clineNew}>
-                <span style={s.time}>{hhmm(c.ts)}</span>
-                <span style={s.nick}>{c.nick || "익명"}</span>
-                <span style={s.msg}>{c.text}</span>
-              </div>
-              <div style={s.cfoot}><code style={s.uuid}>{c.vid}</code><BanCtl vid={c.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
-            </div>
+            <LogRow
+              key={`${c.ts}-${i}`}
+              nick={c.nick || "익명"}
+              time={hhmm(c.ts)}
+              message={c.text}
+              vid={c.vid}
+              dur={dur}
+              setDur={setDur}
+              onBan={ban}
+            />
           ))}
         </div>
       )}
@@ -332,6 +363,24 @@ export default function AdminDashboard() {
 
 function Stat({ l, v }: { l: string; v: string }) { return <div style={s.stat}><div style={s.statV}>{v}</div><div style={s.statL}>{l}</div></div>; }
 function Empty() { return <div style={s.empty}>데이터 없음</div>; }
+
+// 채팅/동접 공통 카드 — [닉네임 (태그)] ………… [시간(우측끝)] / (메시지) / [UUID][차단]
+function LogRow({ nick, time, message, vid, tags, dur, setDur, onBan }: {
+  nick: string; time: string; message?: string | null; vid: string; tags?: React.ReactNode;
+  dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void;
+}) {
+  return (
+    <div style={s.crow}>
+      <div style={s.rowHead}>
+        <b style={s.rowNick}>{nick}</b>
+        {tags}
+        <span style={s.rowTime}>{time}</span>
+      </div>
+      {message ? <div style={s.rowBody}>{message}</div> : null}
+      <div style={s.cfoot}><code style={s.uuid}>{vid}</code><BanCtl vid={vid} dur={dur} setDur={setDur} onBan={onBan} /></div>
+    </div>
+  );
+}
 function BanCtl({ vid, dur, setDur, onBan }: { vid: string; dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void }) {
   return (
     <span style={s.banCtl}>
@@ -378,8 +427,16 @@ const s: Record<string, React.CSSProperties> = {
   btnPrimary: { padding: 14, borderRadius: 10, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 16, fontWeight: 700 },
   btnGhost: { padding: "7px 11px", borderRadius: 8, border: "1px solid #2c3a32", background: "transparent", color: "#9fb3a6", fontSize: 12 },
   btnDanger: { padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
-  // 채팅 행 — 개선된 레이아웃
+  // 채팅로그 서브탭 [오늘][어제][엊그제][그끄저께]
+  subtabs: { display: "flex", gap: 4, marginBottom: 8 },
+  subtab: { flex: 1, padding: "7px 4px", borderRadius: 8, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12.5, whiteSpace: "nowrap" },
+  subtabOn: { background: "#1f6b45", color: "#fff", borderColor: "#1f6b45", fontWeight: 700 },
+  // 채팅/동접 공통 카드 — 개선된 레이아웃(닉 좌측, 시간 우측끝)
   crow: { background: "#141d18", border: "1px solid #1f2a23", borderRadius: 7, padding: "8px", marginBottom: 4 },
+  rowHead: { display: "flex", alignItems: "center", gap: 6, lineHeight: 1.4 },
+  rowNick: { fontSize: 12.5, color: "#ffd84d", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "62%" },
+  rowTime: { marginLeft: "auto", fontSize: 10.5, color: "#7ff0b0", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
+  rowBody: { marginTop: 5, fontSize: 13, color: "#e7efe9", wordBreak: "break-word", lineHeight: 1.4 },
   cline: { display: "flex", alignItems: "baseline", gap: 6, fontSize: 13, flexWrap: "wrap", lineHeight: 1.35 },
   clineNew: { display: "flex", alignItems: "baseline", gap: 8, fontSize: 12.5, lineHeight: 1.4 },
   time: { fontSize: 10, color: "#7ff0b0", whiteSpace: "nowrap", minWidth: 42, fontVariantNumeric: "tabular-nums" },

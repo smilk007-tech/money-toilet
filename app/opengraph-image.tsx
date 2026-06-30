@@ -1,9 +1,19 @@
+import { readFileSync } from "fs";
 import { ImageResponse } from "next/og";
 import { SITE_NAME } from "@/lib/ogMeta";
+
+// 브랜드 아이콘(금화+변기) — 🚽 이모지 대신 로고로 노출해 브랜딩 강화.
+// 읽기 실패 시 이모지로 폴백(OG 생성이 절대 깨지지 않게).
+let BRAND_ICON = "";
+try {
+  BRAND_ICON = `data:image/png;base64,${readFileSync(new URL("./icon.png", import.meta.url)).toString("base64")}`;
+} catch {}
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = `${SITE_NAME} · 변기위의 월급루팡`;
+// 사이트 공용 OG는 사실상 고정 — 생성 결과를 길게 캐시해 매 언펄마다 재생성(폰트 fetch+렌더) 방지.
+export const revalidate = 2592000; // 30일
 
 const TAGLINE = "#변기위의 월급루팡";
 
@@ -76,7 +86,18 @@ export default async function Image() {
           textShadow: "0 4px 24px rgba(255, 216, 77, 0.35)",
         }}
       >
-        🚽 {SITE_NAME}
+        {BRAND_ICON ? (
+          <img
+            src={BRAND_ICON}
+            width={132}
+            height={132}
+            style={{ marginRight: 26 }}
+            alt=""
+          />
+        ) : (
+          "🚽 "
+        )}
+        {SITE_NAME}
       </div>
       <div
         style={{

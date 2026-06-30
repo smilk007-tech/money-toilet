@@ -86,6 +86,15 @@ export default function PayslipShare({
   const liveWonRef = useRef(liveWon);
   liveWonRef.current = liveWon;
 
+  // 라이브 배너 등장 제어 — 첫 스냅샷(접속자 + 금액)을 모두 받은 뒤 '한 번만' 페이드인한다.
+  // 등장 시점에 구조(접속자줄·금액줄 노출 여부)를 freeze해 이후엔 숫자만 제자리 갱신 →
+  // 진입 0.5초 내 텍스트가 막 바뀌거나 '1명 접속' 시 내용이 또 바뀌는 시각 노이즈를 없앤다.
+  const [revealed, setRevealed] = useState(false);
+  const [frozen, setFrozen] = useState<{
+    hasPresence: boolean;
+    hasAmount: boolean;
+  } | null>(null);
+
   // creep 상태 — displayTicker가 이걸 읽어서 displayWon을 계산
   // synced=false: 아직 소켓 첫 응답 대기 중
   const creep = useRef({
@@ -98,6 +107,38 @@ export default function PayslipShare({
   useEffect(() => {
     const STEP_MS = 120;
 
+    // ----- 라이브 배너 reveal 제어 -----
+    // 접속자(presence)와 금액(global)을 '모두' 받은 순간에 단 한 번 등장시킨다.
+    // 둘을 따로 반영하면 "0.5초 안에 텍스트가 두세 번 바뀌는" 노이즈가 생기므로 묶어서 처리.
+    let didReveal = false;
+    let gotGlobal = false;
+    let gotPresence = false;
+    function doReveal() {
+      if (didReveal) return;
+      didReveal = true;
+      clearTimeout(revealFallback);
+      // 등장 시점의 값으로 구조를 확정(freeze) — 이후엔 숫자만 제자리 갱신, 구조는 불변.
+      setFrozen({
+        hasPresence: countRef.current >= FOMO_MIN_PRESENCE,
+        hasAmount: liveWonRef.current >= FOMO_MIN_TOTAL,
+      });
+      setRevealed(true);
+    }
+    function maybeReveal() {
+      if (gotGlobal && gotPresence) doReveal();
+    }
+    // 소켓이 끝내 조용해도(오프라인 등) 빈 박스가 남지 않도록 폴백 등장.
+    const revealFallback = setTimeout(doReveal, 1200);
+
+    // presence 수신 — 표시값은 (서버 count - 1). ref를 동기 갱신해 reveal 판정이 최신값을 보게 함.
+    function applyPresence(c: number) {
+      const next = Math.max(0, c - 1);
+      countRef.current = next;
+      setCount(next);
+      gotPresence = true;
+      maybeReveal();
+    }
+
     // 서버 실제값 수신 시: liveWon 갱신 + creep 재보정
     // 최초 1회: total의 90%서 시작, 10% 갭을 60초에 걸쳐 채움
     // 이후: 현재 표시값 기준으로 새 실제값을 향해 재보정(화면 점프 없이 자연스럽게)
@@ -106,7 +147,10 @@ export default function PayslipShare({
       const elapsed = (Date.now() - c.startedAt) / 1000;
       const curDisplay = c.base + c.rate * elapsed;
 
+      liveWonRef.current = total; // reveal 판정용 동기 갱신
       setLiveWon(total);
+      gotGlobal = true;
+      maybeReveal();
 
       if (!c.synced) {
         // 소켓 첫 수신값으로 creep 초기화
@@ -152,7 +196,11 @@ export default function PayslipShare({
 
     if (useReal) {
       const url = socketUrl();
-      if (!url) return () => clearInterval(displayTicker);
+      if (!url)
+        return () => {
+          clearInterval(displayTicker);
+          clearTimeout(revealFallback);
+        };
       const sock = io(url, {
         transports: ["websocket", "polling"],
         reconnection: true,
@@ -177,12 +225,13 @@ export default function PayslipShare({
         });
       });
       sock.on("presence", ({ count: c }: { count: number }) =>
-        setCount(Math.max(0, c - 1)),
+        applyPresence(c),
       );
       sock.on("global", ({ total }: { total: number }) => applyGlobal(total));
 
       return () => {
         clearInterval(displayTicker);
+        clearTimeout(revealFallback);
         try {
           sock.disconnect();
         } catch {}
@@ -191,7 +240,7 @@ export default function PayslipShare({
 
     const socket = new FakeToiletSocket();
     socket.on("presence", ({ count: c }: { count: number }) =>
-      setCount(Math.max(0, c - 1)),
+      applyPresence(c),
     );
     socket.on("global", ({ total }: { total: number }) => applyGlobal(total));
     socket.on("flush", (f: { total: number }) => {
@@ -204,6 +253,7 @@ export default function PayslipShare({
 
     return () => {
       clearInterval(displayTicker);
+      clearTimeout(revealFallback);
       try {
         socket.disconnect();
       } catch {}
@@ -229,39 +279,47 @@ export default function PayslipShare({
         />
       </div>
 
-      {/* 실시간 라이브 배너 — 항상 동일한 구조를 렌더링해 레이아웃 시프트 방지.
-          소켓 연결 전에는 플레이스홀더를, 연결 후에는 실제 값을 보여준다. */}
-      {(() => {
-        const showCount = count >= FOMO_MIN_PRESENCE;
-        const showAmt = liveWon >= FOMO_MIN_TOTAL;
-        return (
-          <div style={liveBox}>
-            {showCount ? (
-              <div style={liveDot}>
-                <span style={dot} />
-                현재 접속자 {count.toLocaleString("ko-KR")}명
-              </div>
-            ) : (
-              <div style={liveDot}>오늘 다 같이</div>
-            )}
-            {showAmt ? (
-              <div style={liveAmt}>{fmtWon(displayWon)}</div>
-            ) : (
-              /* 소켓 연결 전 — 금액 영역 높이 점유용 플레이스홀더 */
-              <div style={liveAmtPlaceholder}>로딩 중...</div>
-            )}
-            <div style={liveSub}>
-              {showCount && showAmt
-                ? "다 같이 변기 위에서 실시간으로 쓸어담는 중 💰"
-                : showAmt
-                  ? "변기 위에서 실시간으로 쓸어담는 중 💰"
-                  : "다 같이 모은 금액 계산하고 있습니다 💰"}
+      {/* 실시간 라이브 배너 — 박스는 첫 페인트부터 항상 자리를 점유(레이아웃 시프트 0).
+          접속자+금액을 모두 받은 순간 inner를 '한 번만' 페이드인하고, 이후엔 숫자만 제자리
+          갱신한다. 구조(접속자줄·금액줄)는 등장 시점에 freeze되어 더 이상 바뀌지 않으므로
+          진입 직후 텍스트가 연속으로 바뀌거나 '1명 접속' 시 내용이 또 바뀌는 노이즈가 사라진다. */}
+      <div style={liveBox}>
+        <div
+          style={{
+            ...liveInner,
+            opacity: revealed ? 1 : 0,
+            transform: revealed ? "none" : "translateY(3px)",
+          }}
+        >
+          {frozen?.hasPresence ? (
+            <div style={liveDot}>
+              <span style={dot} />
+              현재 접속자 {count.toLocaleString("ko-KR")}명
             </div>
+          ) : (
+            <div style={liveDot}>지금도 다 같이 버는 중</div>
+          )}
+          {frozen?.hasAmount ? (
+            <div style={liveAmt}>{fmtWon(displayWon)}</div>
+          ) : (
+            <div style={liveAmtIdle}>오늘도 차곡차곡 💰</div>
+          )}
+          <div style={liveSub}>
+            다 같이 변기 위에서 실시간으로 쓸어담는 중 💰
           </div>
-        );
-      })()}
+        </div>
+      </div>
 
-      <div style={cta}>🚽 돈버는 화장실 입장</div>
+      <div style={cta}>
+        <img
+          src="/brand-icon.png"
+          alt=""
+          width={26}
+          height={26}
+          style={{ display: "block" }}
+        />
+        돈버는 화장실 입장
+      </div>
     </main>
   );
 }
@@ -285,13 +343,21 @@ const liveBox: React.CSSProperties = {
   width: "100%",
   maxWidth: 420,
   display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: 2,
+  justifyContent: "center",
   padding: "10px 14px",
   borderRadius: 12,
   background: "rgba(16,24,18,0.7)",
   border: "1px solid rgba(125,255,176,0.28)",
+};
+// 등장 애니메이션 대상 — 박스는 항상 자리를 잡고, 이 안쪽만 한 번 페이드인한다.
+const liveInner: React.CSSProperties = {
+  width: "100%",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 2,
+  transition: "opacity .55s ease, transform .55s ease",
+  willChange: "opacity",
 };
 const liveDot: React.CSSProperties = {
   display: "inline-flex",
@@ -316,11 +382,15 @@ const liveAmt: React.CSSProperties = {
   fontVariantNumeric: "tabular-nums",
   textShadow: "0 0 16px rgba(255,216,77,0.35)",
 };
-const liveAmtPlaceholder: React.CSSProperties = {
-  fontSize: 30,
-  fontWeight: 900,
-  lineHeight: 1,
-  color: "rgba(255,216,77,0.25)", // 같은 높이를 점유하되 흐리게
+// 금액 미달(콜드스타트) 시 금액줄 자리에 들어가는 대체 문구.
+// liveAmt와 동일한 높이(30px)를 점유해 등장 전/후 박스 높이가 변하지 않게 한다.
+const liveAmtIdle: React.CSSProperties = {
+  height: 30,
+  display: "flex",
+  alignItems: "center",
+  fontSize: 15,
+  fontWeight: 800,
+  color: "rgba(255,216,77,0.55)",
 };
 const liveSub: React.CSSProperties = {
   color: "#cfeee2",

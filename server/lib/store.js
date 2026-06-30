@@ -154,6 +154,6 @@ export async function resetStats() {
   const r = getRedis();
   if (!r) return;
   const dates = lastDateKeys(95);
-  const logDates = lastDateKeys(3);
+  const logDates = lastDateKeys(5); // 채팅로그 TTL(5일)에 맞춰 초기화 범위도 5일
   await r.del(K.today, ...dates.map(hoursKey), ...logDates.map(chatLogKey));
 }
