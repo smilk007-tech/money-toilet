@@ -117,7 +117,8 @@ export default function AdminDashboard() {
 
   const loadCfg = useCallback(async () => {
     const { data } = await rail("config");
-    if (data.ok && data.config) { setCfg({ ...CFG_DEFAULTS, ...data.config }); setCfgLoaded(true); }
+    if (data.ok && data.config) setCfg({ ...CFG_DEFAULTS, ...data.config });
+    setCfgLoaded(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const saveCfg = async () => {
     const { data } = await rail("config", { method: "POST", body: JSON.stringify(cfg) });
