@@ -878,6 +878,11 @@ body {
 .flush-receipt:active {
   opacity: 0.7;
 }
+.flush-receipt:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
 .flush-receipt__icon {
   display: inline-block;
   line-height: 1;
