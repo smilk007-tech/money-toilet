@@ -11,11 +11,13 @@ export default function NoticeBanner() {
   if (!notice) return null;
 
   const hasUrl = !!notice.url;
-  // 끊김 없는 마퀴: 동일 문구 2벌을 -50% 이동(한 벌 폭만큼) → 무한 루프.
+  // 끊김 없는 마퀴: N벌 복사 → translate(-1/N * 100%) 반복. 많은 복사본으로 PC 넓은 화면도 커버.
+  const COPIES = 12;
   const track = (
     <div className="notice-bar__track" aria-hidden>
-      <span>{notice.text}</span>
-      <span>{notice.text}</span>
+      {Array.from({ length: COPIES }).map((_, i) => (
+        <span key={i}>{notice.text} · </span>
+      ))}
     </div>
   );
 

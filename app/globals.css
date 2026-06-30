@@ -2175,19 +2175,20 @@ body {
   flex: none;
   align-items: center;
   white-space: nowrap;
-  animation: notice-marquee 22s linear infinite;
+  /* 12벌 복사 → 1/12 이동으로 끊김 없이 루프. PC 광폭 화면도 커버. */
+  animation: notice-marquee 14s linear infinite;
   will-change: transform;
 }
 .notice-bar:hover .notice-bar__track {
-  animation-play-state: paused; /* PC에서 읽기 편하게 hover 시 정지 */
+  animation-play-state: paused;
 }
 .notice-bar__track span {
   display: inline-block;
-  padding: 0 32px; /* 두 벌 사이 간격 → 끊김 없이 이어 보임 */
+  padding: 0 18px;
   color: #fff;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 @keyframes notice-marquee {
@@ -2195,8 +2196,8 @@ body {
     transform: translateX(0);
   }
   to {
-    transform: translateX(-50%);
-  } /* 한 벌 폭만큼 이동 → 두 벌이 끊김 없이 무한 반복 */
+    transform: translateX(-8.3333%); /* 1/12 — 한 벌 폭만큼 이동 → 무한 반복 */
+  }
 }
 /* 공지가 있을 때 상단 HUD를 배너 아래로 내려 겹침 방지 */
 #app:has(.notice-bar) .hud {
