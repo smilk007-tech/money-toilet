@@ -20,8 +20,7 @@ export default function ToiletGame() {
 
   return (
     <div id="app">
-      {/* 네트워크 끊김 표시 — 소켓 연결 실패 시 일정 시간 후 표시 */}
-      <div className="network-badge" id="networkBadge" hidden>📶 오프라인 모드</div>
+      {/* 네트워크 끊김 표시는 볼일 중 영역에 통합 (networkBadge 미사용) */}
       {/* ===== 상단 HUD ===== */}
       <header className="hud">
         <div className="hud__bar">
@@ -42,8 +41,11 @@ export default function ToiletGame() {
                   </span>
                   <span className="hud__cap">볼일 중</span>
                 </span>
-                <span className="hud__val">
-                  <b id="stallCount">--</b>명
+                <span className="hud__val" id="stallsVal">
+                  <b id="stallCount">0</b>명
+                </span>
+                <span className="hud__offline-badge" id="offlineBadge" hidden>
+                  🚫 연결 끊김
                 </span>
               </span>
             </span>

@@ -60,6 +60,9 @@ export default function AdminDashboard() {
   const [tab, setTab] = useState<"stats" | "online" | "liveChat" | "chatlog" | "bans">("stats");
   const [live, setLive] = useState<Live | null>(null);
   const [liveChats, setLiveChats] = useState<ChatRow[]>([]);
+  // vid → 최신 닉네임 맵 — adminChat/adminStats 수신 시마다 갱신.
+  // 라이브 채팅 렌더 시 이 맵을 우선 사용해 닉네임 변경을 소급 반영.
+  const [nickByVid, setNickByVid] = useState<Record<string, string>>({});
   const [histChats, setHistChats] = useState<Record<string, ChatRow[]>>({});
   const [histHours, setHistHours] = useState<Record<string, Bucket[]>>({});
   const [bans, setBans] = useState<BanRow[]>([]);
@@ -84,9 +87,23 @@ export default function AdminDashboard() {
     if (!authed) return;
     const sock = io(SOCKET_BASE || undefined, { auth: { adminToken: getToken() }, transports: ["websocket", "polling"], reconnection: true });
     sockRef.current = sock;
-    sock.on("adminStats", (d: LiveStats) => setLive((prev) => ({ ...(prev as Live), ...d }) as Live));
+    sock.on("adminStats", (d: LiveStats) => {
+      // 온라인 목록에서 vid→nick 최신화
+      if (d.online) {
+        setNickByVid((prev) => {
+          const next = { ...prev };
+          for (const o of d.online) if (o.nick && o.vid) next[o.vid] = o.nick;
+          return next;
+        });
+      }
+      setLive((prev) => ({ ...(prev as Live), ...d }) as Live);
+    });
     sock.on("adminHours", (d: LiveHours) => setLive((prev) => ({ ...(prev as Live), ...d }) as Live));
-    sock.on("adminChat", (c: ChatRow) => setLiveChats((prev) => [c, ...prev].slice(0, 1000)));
+    sock.on("adminChat", (c: ChatRow) => {
+      // 채팅 수신 시점의 nick으로 맵 업데이트 — 닉 변경 시 이전 메시지도 소급 반영
+      if (c.nick && c.vid) setNickByVid((prev) => ({ ...prev, [c.vid]: c.nick }));
+      setLiveChats((prev) => [c, ...prev].slice(0, 1000));
+    });
     return () => { sock.close(); sockRef.current = null; };
   }, [authed]);
 
@@ -260,16 +277,20 @@ export default function AdminDashboard() {
           </div>
           <div style={s.note}>{chats.length}건 (접속 후 수신분)</div>
           {chats.length === 0 && <Empty />}
-          {chats.map((c, i) => (
-            <div key={i} style={s.crow}>
-              <div style={s.clineNew}>
-                <span style={s.time}>{hhmm(c.ts)}</span>
-                <span style={s.nick}>{c.nick || "익명"}</span>
-                <span style={s.msg}>{c.text}</span>
+          {chats.map((c, i) => {
+            // 라이브 채팅은 nickByVid 우선 — 닉 변경 시 이전 메시지도 최신 닉으로 갱신
+            const displayNick = (tab === "liveChat" ? nickByVid[c.vid] : undefined) || c.nick || "익명";
+            return (
+              <div key={i} style={s.crow}>
+                <div style={s.clineNew}>
+                  <span style={s.time}>{hhmm(c.ts)}</span>
+                  <span style={s.nick}>{displayNick}</span>
+                  <span style={s.msg}>{c.text}</span>
+                </div>
+                <div style={s.cfoot}><code style={s.uuid}>{c.vid}</code><BanCtl vid={c.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
               </div>
-              <div style={s.cfoot}><code style={s.uuid}>{c.vid}</code><BanCtl vid={c.vid} dur={dur} setDur={setDur} onBan={ban} /></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

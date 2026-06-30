@@ -22,9 +22,13 @@ import ReceiptCard from "@/components/ReceiptCard";
    - 오늘 누적금액: 서버 실제값의 90%부터 시작해 60초 동안 100%까지 creep 애니메이션.
      그 이후에도 같은 속도로 계속 올라감(접속 유도용이라 초과해도 무방).
      서버에서 새 값이 오면 현재 표시값 기준으로 재보정해 다시 올라가는 것처럼 보임.
+   - 인게임에서 뒤로가기로 재진입한 경우: 100%에서 시작해 10%를 60초에 걸쳐 올림
+     (일관된 게임 사용성을 위해). sessionStorage 플래그로 감지.
    - NEXT_PUBLIC_RT가 꺼져있으면(로컬/오프라인) 가짜 소켓으로 대체.
    - CTA는 새 탭이 아니라 SPA 라우팅(router.push)으로 이동 — 같은 vid로 메인에서
      바로 재연결되어 깔끔하게 이어지는 느낌을 준다. */
+
+const SESSION_FROM_GAME_KEY = "mt_came_from_game";
 
 // FOMO 배너 노출 임계값 — 접속자/금액이 너무 적으면 오히려 "썰렁해 보여서" 역효과.
 // 둘 중 하나라도 넘으면 노출. 오픈 초반엔 트래픽이 적으니 낮게 잡아두고, 트래픽 늘면 올릴 것.
@@ -41,16 +45,36 @@ export default function PayslipShare({
 }) {
   const router = useRouter();
   const [count, setCount] = useState(Math.max(0, (data.p || 0) - 1));
+
+  // 인게임에서 뒤로가기로 재진입한 경우 감지 — sessionStorage 플래그 확인 후 즉시 소비
+  const [cameFromGame] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const v = sessionStorage.getItem(SESSION_FROM_GAME_KEY);
+      if (v === "1") {
+        sessionStorage.removeItem(SESSION_FROM_GAME_KEY);
+        return true;
+      }
+    } catch {}
+    return false;
+  });
+  const cameFromGameRef = useRef(cameFromGame);
+
   // liveWon: 서버 실제값 — FOMO 임계 판단용
   const [liveWon, setLiveWon] = useState(data.g || 0);
-  // displayWon: 화면에 보여주는 값 — 90%서 시작해 creep 애니메이션
-  const [displayWon, setDisplayWon] = useState((data.g || 0) * 0.9);
+  // displayWon: 화면에 보여주는 값
+  // 일반 진입: 90%서 시작해 creep 애니메이션
+  // 인게임 재진입: 100%에서 시작해 10%를 60초에 걸쳐 올림
+  const initBase = (data.g || 0) * (cameFromGame ? 1.0 : 0.9);
+  const [displayWon, setDisplayWon] = useState(initBase);
   const countRef = useRef(count);
   countRef.current = count;
+  const liveWonRef = useRef(liveWon);
+  liveWonRef.current = liveWon;
 
   // creep 상태 — displayTicker가 이걸 읽어서 displayWon을 계산
   const creep = useRef({
-    base: (data.g || 0) * 0.9,
+    base: initBase,
     rate: ((data.g || 0) * 0.1) / CREEP_DURATION_S, // 초당 증가분
     startedAt: Date.now(),
     synced: false,
@@ -70,7 +94,8 @@ export default function PayslipShare({
       setLiveWon(total);
 
       if (!c.synced) {
-        const base = total * 0.9;
+        // 인게임에서 재진입 시 100%에서 시작, 일반 진입은 90%
+        const base = cameFromGameRef.current ? total : total * 0.9;
         const gap = total * 0.1;
         creep.current = {
           base,
@@ -162,10 +187,27 @@ export default function PayslipShare({
     };
   }, []);
 
+  function handleCtaClick() {
+    try {
+      sessionStorage.setItem(SESSION_FROM_GAME_KEY, "1");
+      // 공유 페이지의 마지막 실시간 값을 게임 페이지로 전달 — 소켓 재연결 전 0 깜빡임 방지
+      // stalls: 공유 페이지는 자신을 제외한 값(count - 1)을 표시하므로, +1해서 게임 기준으로 복원
+      sessionStorage.setItem(
+        "mt_handoff_global",
+        String(Math.round(liveWonRef.current)),
+      );
+      sessionStorage.setItem(
+        "mt_handoff_stalls",
+        String(countRef.current + 1),
+      );
+    } catch {}
+    router.push("/");
+  }
+
   return (
     <main
       style={{ ...wrap, cursor: "pointer" }}
-      onClick={() => router.push("/")}
+      onClick={handleCtaClick}
     >
       <div style={cardWrap}>
         <ReceiptCard
