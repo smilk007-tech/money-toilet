@@ -28,7 +28,6 @@ import ReceiptCard from "@/components/ReceiptCard";
 const SESSION_FROM_GAME_KEY = "mt_came_from_game";
 
 // FOMO 배너 노출 임계값
-const FOMO_MIN_PRESENCE = 1; // 실유저 1명 이상이면 접속자줄 노출 (공유페이지 방문자는 서버에서 이미 제외)
 const CREEP_DURATION_S = 60; // creep 속도 기준 시간(초)
 
 export default function PayslipShare({
@@ -42,60 +41,22 @@ export default function PayslipShare({
   const [count, setCount] = useState(0);
   const nick = data.n || "익명의 볼일러"; // 보낸 사람 닉 — CTA 사회적 증거 문구에 사용
 
-  // 인게임에서 뒤로가기로 재진입한 경우 감지 — sessionStorage 플래그 확인 후 즉시 소비
-  const [cameFromGame] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const v = sessionStorage.getItem(SESSION_FROM_GAME_KEY);
-      if (v === "1") {
-        sessionStorage.removeItem(SESSION_FROM_GAME_KEY);
-        return true;
-      }
-    } catch {}
-    return false;
-  });
-  const cameFromGameRef = useRef(cameFromGame);
-
-  // 인게임에서 마지막으로 보였던 global 값 — 공유 페이지 표시값의 하한선으로 사용
-  // (sessionStorage에 게임이 이탈할 때 저장; cameFromGame 여부와 무관하게 읽음)
-  const [gameGlobal] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      const v = sessionStorage.getItem("mt_game_global");
-      return v !== null ? parseFloat(v) || 0 : 0;
-    } catch {
-      return 0;
-    }
-  });
-  const gameGlobalRef = useRef(gameGlobal);
-
-  // liveWon: 서버 실제값 — FOMO 임계 판단용 (소켓 수신 전까지 0)
+  // liveWon: 서버 실제값
   const [liveWon, setLiveWon] = useState(0);
-  // displayWon: 화면에 보여주는 값 (절대 감소 없음 — monotonic 보장)
-  // 일반 진입: 소켓 첫 수신값의 90%서 시작, 이후 소켓 값으로 속도만 재보정
-  // 인게임 재진입: max(소켓 첫 수신값 100%, gameGlobal)에서 시작
-  // data.g는 더 이상 사용하지 않음 — 소켓 실시간 값만 사용
-  const initBase = cameFromGame ? gameGlobal : 0; // 소켓 수신 전 임시 시작값
-  const [displayWon, setDisplayWon] = useState(initBase);
+  // displayWon: 화면에 보여주는 값 (monotonic — 절대 감소 없음, 목표치 도달 시 정지)
+  const [displayWon, setDisplayWon] = useState(0);
   const countRef = useRef(count);
   countRef.current = count;
   const liveWonRef = useRef(liveWon);
   liveWonRef.current = liveWon;
 
-  // 라이브 배너 등장 제어 — 첫 스냅샷(접속자 + 금액)을 모두 받은 뒤 '한 번만' 페이드인한다.
-  // 등장 시점에 구조(접속자줄·금액줄 노출 여부)를 freeze해 이후엔 숫자만 제자리 갱신 →
-  // 진입 0.5초 내 텍스트가 막 바뀌거나 '1명 접속' 시 내용이 또 바뀌는 시각 노이즈를 없앤다.
   const [revealed, setRevealed] = useState(false);
-  const [frozen, setFrozen] = useState<{
-    hasPresence: boolean;
-    hasAmount: boolean;
-  } | null>(null);
 
-  // creep 상태 — displayTicker가 이걸 읽어서 displayWon을 계산
-  // synced=false: 아직 소켓 첫 응답 대기 중
+  // creep 상태 — displayTicker가 읽어서 displayWon 계산. target 도달 시 정지.
   const creep = useRef({
-    base: initBase,
-    rate: 1, // 소켓 수신 전 더미값(applyGlobal !synced 분기에서 즉시 교체됨)
+    base: 0,
+    rate: 0,
+    target: 0,
     startedAt: Date.now(),
     synced: false,
   });
@@ -114,10 +75,6 @@ export default function PayslipShare({
       didReveal = true;
       clearTimeout(revealFallback);
       // 등장 시점의 값으로 구조를 확정(freeze) — 이후엔 숫자만 제자리 갱신, 구조는 불변.
-      setFrozen({
-        hasPresence: countRef.current >= FOMO_MIN_PRESENCE,
-        hasAmount: true, // 금액 임계 제거 — 항상 표시
-      });
       setRevealed(true);
     }
     function maybeReveal() {
@@ -137,56 +94,51 @@ export default function PayslipShare({
       maybeReveal();
     }
 
-    // 서버 실제값 수신 시: liveWon 갱신 + creep 재보정
-    // 최초 1회: total의 90%서 시작, 10% 갭을 60초에 걸쳐 채움
-    // 이후: 현재 표시값 기준으로 새 실제값을 향해 재보정(화면 점프 없이 자연스럽게)
+    // 서버 실제값 수신: liveWon 갱신 + creep 초기화/재보정
+    // total >= 1000: 90%에서 시작해 60초에 걸쳐 실제값 도달 후 정지
+    // total < 1000: 0원에서 시작해 60초에 걸쳐 1000원 향해 creep, 도달 시 정지
     function applyGlobal(total: number) {
       const c = creep.current;
       const elapsed = (Date.now() - c.startedAt) / 1000;
-      const curDisplay = c.base + c.rate * elapsed;
+      const curDisplay = Math.min(c.base + c.rate * elapsed, c.target);
 
-      liveWonRef.current = total; // reveal 판정용 동기 갱신
+      liveWonRef.current = total;
       setLiveWon(total);
       gotGlobal = true;
       maybeReveal();
 
       if (!c.synced) {
-        // 소켓 첫 수신값으로 creep 초기화
-        // 일반 진입: 1천원에서 시작해 60초에 걸쳐 실제값까지 creep
-        // 인게임 재진입: max(실제값, 게임에서 봤던 값)에서 시작
-        const rawBase = cameFromGameRef.current ? total : Math.min(1000, total);
-        const base = cameFromGameRef.current
-          ? Math.max(rawBase, gameGlobalRef.current)
-          : rawBase;
-        const gap = Math.max(total - base, 1);
+        const base = total >= 1000 ? total * 0.9 : 0;
+        const target = total >= 1000 ? total : 1000;
         creep.current = {
           base,
-          rate: gap / CREEP_DURATION_S,
+          rate: (target - base) / CREEP_DURATION_S,
+          target,
           startedAt: Date.now(),
           synced: true,
         };
-        if (base > curDisplay) setDisplayWon(base);
+        if (base > 0) setDisplayWon(base);
       } else {
-        const gap = total - curDisplay;
-        if (gap > 0) {
-          // 현재 표시값에서 다시 올라가는 것처럼 — 최소 기존 속도는 유지
+        // 새 값이 현재 target보다 높으면 target 갱신
+        if (total > c.target) {
+          const gap = total - curDisplay;
           creep.current = {
             base: curDisplay,
             rate: Math.max(c.rate, gap / CREEP_DURATION_S),
+            target: total,
             startedAt: Date.now(),
             synced: true,
           };
         }
-        // gap <= 0: 서버 값이 현재 표시보다 낮아도 무시 — 절대 감소 없음
+        // 서버 값이 낮아도 무시 — 절대 감소 없음
       }
     }
 
-    // displayWon 애니메이션 ticker — creep 상태 기반으로 120ms마다 갱신.
-    // prev와 비교해 항상 max 값을 사용 → 어떤 상황에서도 화면값이 감소하지 않음(monotonic).
+    // displayWon ticker — target 도달 시 정지, monotonic 보장
     const displayTicker = setInterval(() => {
       const c = creep.current;
       const elapsed = (Date.now() - c.startedAt) / 1000;
-      const next = c.base + c.rate * elapsed;
+      const next = Math.min(c.base + c.rate * elapsed, c.target);
       setDisplayWon((prev) => Math.max(prev, next));
     }, STEP_MS);
 
@@ -290,20 +242,14 @@ export default function PayslipShare({
             transform: revealed ? "none" : "translateY(3px)",
           }}
         >
-          {frozen?.hasPresence ? (
-            <div style={liveDot}>
-              <span style={dot} />
-              현재 접속자 {count.toLocaleString("ko-KR")}명
-            </div>
-          ) : (
-            <div style={liveDot}>오늘 다 같이</div>
-          )}
-          {frozen?.hasAmount ? (
-            <div style={liveAmt}>{fmtWon(displayWon)}</div>
-          ) : (
-            <div style={liveAmtIdle}>오늘도 차곡차곡 💰</div>
-          )}
-          <div style={liveSub}>변기 위에서 실시간으로 쓸어담는 중 💰</div>
+          <div style={liveDot}>
+            <span style={dot} />
+            {count > 1
+              ? `현재 접속자 ${count.toLocaleString("ko-KR")}명`
+              : "실시간"}
+          </div>
+          <div style={liveAmt}>{fmtWon(displayWon)}</div>
+          <div style={liveSub}>다같이 변기 위에서 쓸어담는 중 💰</div>
         </div>
       </div>
 
