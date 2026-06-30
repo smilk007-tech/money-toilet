@@ -212,14 +212,9 @@ export default function PayslipShare({
 
   function handleCtaClick() {
     try {
+      // 게임 → 공유 페이지 재진입 감지용 플래그만 남김
+      // (mt_handoff_global/stalls 제거 — 게임 페이지는 자체 소켓으로 로드, 깜빡임 원인이었음)
       sessionStorage.setItem(SESSION_FROM_GAME_KEY, "1");
-      // 공유 페이지의 마지막 실시간 값을 게임 페이지로 전달 — 소켓 재연결 전 0 깜빡임 방지
-      // stalls: 공유 페이지는 자신을 제외한 값(count - 1)을 표시하므로, +1해서 게임 기준으로 복원
-      sessionStorage.setItem(
-        "mt_handoff_global",
-        String(Math.round(liveWonRef.current)),
-      );
-      sessionStorage.setItem("mt_handoff_stalls", String(countRef.current + 1));
     } catch {}
     router.push("/");
   }
@@ -234,12 +229,11 @@ export default function PayslipShare({
         />
       </div>
 
-      {/* 실시간 라이브 배너 — 접속자/금액 둘 다 낮으면 역효과라 숨김.
-          둘 중 하나만 기준 미달이면 그 줄만 숨기고 다른 한쪽으로 FOMO를 준다. */}
+      {/* 실시간 라이브 배너 — 항상 동일한 구조를 렌더링해 레이아웃 시프트 방지.
+          소켓 연결 전에는 플레이스홀더를, 연결 후에는 실제 값을 보여준다. */}
       {(() => {
         const showCount = count >= FOMO_MIN_PRESENCE;
         const showAmt = liveWon >= FOMO_MIN_TOTAL;
-        if (!showCount && !showAmt) return null;
         return (
           <div style={liveBox}>
             {showCount ? (
@@ -250,13 +244,18 @@ export default function PayslipShare({
             ) : (
               <div style={liveDot}>오늘 다 같이</div>
             )}
-            {showAmt && <div style={liveAmt}>{fmtWon(displayWon)}</div>}
+            {showAmt ? (
+              <div style={liveAmt}>{fmtWon(displayWon)}</div>
+            ) : (
+              /* 소켓 연결 전 — 금액 영역 높이 점유용 플레이스홀더 */
+              <div style={liveAmtPlaceholder}>로딩 중...</div>
+            )}
             <div style={liveSub}>
               {showCount && showAmt
                 ? "다 같이 변기 위에서 실시간으로 쓸어담는 중 💰"
                 : showAmt
                   ? "변기 위에서 실시간으로 쓸어담는 중 💰"
-                  : "변기 위에서 대기 중 🚽"}
+                  : "다 같이 모은 금액 계산하고 있습니다 💰"}
             </div>
           </div>
         );
@@ -316,6 +315,12 @@ const liveAmt: React.CSSProperties = {
   lineHeight: 1,
   fontVariantNumeric: "tabular-nums",
   textShadow: "0 0 16px rgba(255,216,77,0.35)",
+};
+const liveAmtPlaceholder: React.CSSProperties = {
+  fontSize: 30,
+  fontWeight: 900,
+  lineHeight: 1,
+  color: "rgba(255,216,77,0.25)", // 같은 높이를 점유하되 흐리게
 };
 const liveSub: React.CSSProperties = {
   color: "#cfeee2",
