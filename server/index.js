@@ -14,7 +14,7 @@ import { Server } from "socket.io";
 import { DEFAULTS, FLUSH_CAP, MAX_PER_SEC, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, emptyBucket } from "./lib/keys.js";
 import {
   loadConfig, setConfig, persistToday, loadToday, persistHours, loadHours,
-  appendChatLog, loadActiveBans, banVid, unbanVid, listBans, resetStats, clean,
+  appendChatLog, loadActiveBans, banVid, unbanVid, listBans, clean,
 } from "./lib/store.js";
 import {
   passwordMatches, createSession, destroySession, isValidSession,
@@ -184,9 +184,9 @@ app.post("/admin/config", requireAdmin, async (req, res) => {
   await setConfig(req.body ?? {}); cfg = await loadConfig();
   res.json({ ok: true, config: cfg });
 });
-app.post("/admin/reset", requireAdmin, async (_req, res) => {
-  await resetStats();
-  today = freshToday(kstDateKey()); hours = Array.from({ length: 24 }, emptyBucket); chatBuf.length = 0;
+app.post("/admin/reset-money", requireAdmin, async (_req, res) => {
+  today.money = 0;
+  await persistToday(today);
   io.emit("global", { total: 0 });
   res.json({ ok: true });
 });

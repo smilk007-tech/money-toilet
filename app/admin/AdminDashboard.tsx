@@ -151,7 +151,7 @@ export default function AdminDashboard() {
   const logout = async () => { await rail("logout", { method: "POST", body: "{}" }); try { localStorage.removeItem(TOKEN_KEY); } catch { /* */ } setAuthed(false); };
   const ban = async (vid: string) => { const { data } = await rail("ban", { method: "POST", body: JSON.stringify({ vid, duration: dur[vid] ?? "1d" }) }); if (data.ok) { flash("차단됨"); loadBans(); } else flash("실패"); };
   const unban = async (vid: string) => { const { data } = await rail("unban", { method: "POST", body: JSON.stringify({ vid }) }); if (data.ok) { flash("해제됨"); loadBans(); } };
-  const reset = async () => { if (!confirm("통계·채팅로그 전체 초기화? (밴은 유지)")) return; await rail("reset", { method: "POST", body: "{}" }); flash("초기화됨"); };
+  const resetMoney = async () => { if (!confirm("다같이 번 돈을 0원으로 초기화할까요?")) return; await rail("reset-money", { method: "POST", body: "{}" }); flash("초기화됨"); };
   const sendBc = async () => {
     const t = bc.trim();
     if (!t) return;
@@ -247,7 +247,7 @@ export default function AdminDashboard() {
           })}
           <div style={s.card}>
             <div style={s.cardTitle}>운영</div>
-            <button style={{ ...s.btnDanger, width: "100%" }} onClick={reset}>🧨 통계·채팅로그 초기화</button>
+            <button style={{ ...s.btnDanger, width: "100%" }} onClick={resetMoney}>💸 다같이 번 돈 초기화</button>
           </div>
         </div>
       )}
