@@ -55,7 +55,7 @@ export default function ToiletGame() {
                   ···
                 </span>
                 <span className="hud__offline-badge" id="offlineBadge" hidden>
-                  🔇 연결 끊김
+                  연결 끊김
                 </span>
               </span>
             </span>
@@ -336,7 +336,9 @@ export default function ToiletGame() {
           <span style={{ left: "0%", transform: "translateX(0)" }}>휴식</span>
           <span style={{ left: "38.5%" }}>500만</span>
           <span style={{ left: "76.9%" }}>1천만</span>
-          <span style={{ left: "100%", transform: "translateX(-100%)" }}>1억</span>
+          <span style={{ left: "100%", transform: "translateX(-100%)" }}>
+            1억
+          </span>
         </div>
       </div>
 
@@ -461,9 +463,7 @@ export default function ToiletGame() {
           role="dialog"
           aria-label="기록 초기화 확인"
         >
-          <h2 className="reset-confirm__title">
-            이 기록들이 사라져요
-          </h2>
+          <h2 className="reset-confirm__title">이 기록들이 사라져요</h2>
           <dl className="reset-confirm__stats">
             <div className="reset-confirm__stat">
               <dt>물내림</dt>
