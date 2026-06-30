@@ -2275,6 +2275,16 @@ body {
   pointer-events: auto;
   cursor: pointer;
 }
+.skin-tp {
+  padding-top: 18px;
+  padding-bottom: 18px;
+  margin-top: -18px;
+  margin-bottom: -18px;
+}
+.skin-latch {
+  padding: 14px 12px;
+  margin: -14px -12px;
+}
 .skin-tp:active {
   transform: translateY(-50%) scale(0.96);
 }
@@ -2302,10 +2312,10 @@ body {
   display: none;
 }
 .skin-tp--empty .tp__roll {
-  fill: #c8a06a; /* 밝은 갈색 — 빈 휴지심 */
+  fill: #b88c58; /* 빈 휴지심 갈색 */
 }
 .skin-tp--empty .tp__core {
-  fill: #a07840;
+  fill: #8c6828;
 }
 
 /* 뜯겨 바닥으로 떨어지는 휴지 한 장 — 바닥 위에 떨어짐(채팅 아래, 광고와는 안 겹침) */
