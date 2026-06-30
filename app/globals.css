@@ -332,7 +332,20 @@ body {
   width: 96px;
   height: auto;
   transform: translateX(-50%);
-  pointer-events: none;
+  pointer-events: auto; /* 형광등 탭 이스터에그용(커서 힌트는 안 줌 — 숨겨진 기능) */
+}
+/* 개발자 도구 해제 막바지 — 살짝 깜빡 */
+.skin-light--blink {
+  animation: skin-light-blink 0.18s ease;
+}
+@keyframes skin-light-blink {
+  50% {
+    filter: brightness(1.8) drop-shadow(0 0 14px rgba(255, 244, 200, 0.85));
+  }
+}
+/* 개발자 도구 켜진 상태 — 형광등 ON 연출 */
+.skin-light--on {
+  filter: brightness(1.18) drop-shadow(0 0 14px rgba(255, 240, 190, 0.55));
 }
 
 /* 문 경첩(좌측 모서리) */
@@ -2152,8 +2165,8 @@ body {
   line-height: 1.42;
   letter-spacing: -0.01em;
   text-align: center;
-  white-space: normal; /* 긴 메시지는 줄바꿈 허용 → 가독성 */
-  max-width: 86%;
+  white-space: nowrap; /* 토스트는 항상 한 줄 — 절대 개행 금지 */
+  max-width: none; /* 폭 제한 없이 한 줄 내용 길이에 맞춤(개행 유발 방지) */
   cursor: pointer;
   box-shadow:
     0 12px 34px rgba(0, 0, 0, 0.5),
@@ -2165,6 +2178,19 @@ body {
     opacity 0.26s ease,
     transform 0.34s cubic-bezier(0.2, 0.85, 0.3, 1.25);
   will-change: opacity, transform;
+}
+/* 토스트 내 강조 토큰 — 같은 의미는 같은 색으로 통일.
+   MAX/1시간(한도 도달)=붉은 분홍, +N분(적립=돈)=골드(앱 머니 컬러와 통일). */
+.toast-em {
+  font-weight: 900;
+}
+.toast-em--max {
+  color: #ff6b8a;
+  text-shadow: 0 0 12px rgba(255, 107, 138, 0.45);
+}
+.toast-em--gain {
+  color: var(--gold, #ffd84d);
+  text-shadow: 0 0 12px rgba(255, 216, 77, 0.4);
 }
 .toast--show {
   opacity: 1;

@@ -106,7 +106,12 @@ export default function ToiletGame() {
             src="/skin/center-door.svg"
             alt=""
           />
-          <img className="skin-light" src="/skin/ceiling-light.svg" alt="" />
+          <img
+            className="skin-light"
+            id="skinLight"
+            src="/skin/ceiling-light.svg"
+            alt=""
+          />
           <img
             className="skin-hinge skin-hinge--1"
             src="/skin/hinge.svg"
@@ -416,29 +421,31 @@ export default function ToiletGame() {
           </button>
         </div>
 
-        {/* 개발 중 임시 도구 — 이 기기의 모든 로컬스토리지(저장 데이터)를 초기화 */}
-        <div className="settings__divider"></div>
-        <div className="settings__links">
-          <button
-            className="settings__link settings__link--danger"
-            type="button"
-            id="devWipeAllBtn"
-          >
-            <span className="settings__link-ico" aria-hidden>
-              🧨
-            </span>
-            기기 데이터 초기화
-          </button>
-          <button
-            className="settings__link"
-            type="button"
-            id="devSetTimer5950Btn"
-          >
-            <span className="settings__link-ico" aria-hidden>
-              🧪
-            </span>
-            59분 50초로 변경 (테스트)
-          </button>
+        {/* 개발자 도구 — 일반 사용자에겐 숨김. 메인 형광등 30탭(이스터에그)으로만 노출됨 */}
+        <div id="devTools" hidden>
+          <div className="settings__divider"></div>
+          <div className="settings__links">
+            <button
+              className="settings__link settings__link--danger"
+              type="button"
+              id="devWipeAllBtn"
+            >
+              <span className="settings__link-ico" aria-hidden>
+                🧨
+              </span>
+              기기 데이터 초기화
+            </button>
+            <button
+              className="settings__link"
+              type="button"
+              id="devSetTimer5950Btn"
+            >
+              <span className="settings__link-ico" aria-hidden>
+                🧪
+              </span>
+              59분 50초로 변경 (테스트)
+            </button>
+          </div>
         </div>
       </div>
 
