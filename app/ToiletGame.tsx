@@ -158,6 +158,9 @@ export default function ToiletGame() {
           </svg>
         </div>
 
+        {/* 천장 형광등 이스터에그 클릭 오버레이 — scene 직계 자식, z-index 높여 상단 UI 위에서 탭 수신 */}
+        <div id="ceilingLightTap" className="ceiling-light-tap" aria-hidden />
+
         {/* 좌측 휴지걸이 — 인라인 SVG(이스터에그: 클릭 시 한 장 뜯겨 바닥으로, 몇 초 후 재충전) */}
         <svg
           className="skin-tp"
@@ -188,8 +191,8 @@ export default function ToiletGame() {
             d="M8 23 56 5Q79 5 89 27L89 61 53 83 8 68Z"
             fill="url(#tpMetal)"
           />
-          <circle cx="46" cy="61" r="27" fill="#efeeeb" />
-          <circle cx="46" cy="61" r="9" fill="#76797b" />
+          <circle className="tp__roll" cx="46" cy="61" r="27" fill="#efeeeb" />
+          <circle className="tp__core" cx="46" cy="61" r="9" fill="#76797b" />
           <path d="M8 23 46 52Q55 59 46 67L8 95Z" fill="#7e8285" />
           <path
             className="tp__hang"
