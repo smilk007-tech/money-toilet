@@ -557,6 +557,7 @@ body {
   max-width: 100%;
   width: max-content;
   word-break: keep-all;
+  overflow-wrap: break-word;
   text-align: left;
   background: rgba(10, 15, 12, 0.62);
   color: #e9f5ee;
