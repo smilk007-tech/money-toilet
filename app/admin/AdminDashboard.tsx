@@ -5,7 +5,8 @@
    - 과거(시간별/채팅로그): Vercel API(공유 Redis, 토큰검증)
    - 로그인/밴/공지: 소켓서버(Railway) REST */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { activeNoticeFrom } from "@/lib/notices";
 import { io, type Socket } from "socket.io-client";
 
 type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number };
@@ -299,20 +300,38 @@ export default function AdminDashboard() {
           </div>
           <div style={s.card}>
             <div style={s.cardTitle}>📢 공지 배너</div>
-            <div style={s.cfgDesc}>활성 공지 1건이 상단에 흘러가는 배너로 표시됩니다. start/end 생략하면 즉시·무한 노출.</div>
-            <div style={{ marginTop: 10 }}>
-              {cfg.notices.map((n, i) => (
-                <div key={i} style={s.noticeRow}>
-                  <input placeholder="공지 문구 *" value={n.text} style={{ ...s.noticeInput, flex: 2 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], text: e.target.value }; return { ...p, notices: ns }; })} />
-                  <input placeholder="시작 (예: 2026-07-05)" value={n.start || ""} style={{ ...s.noticeInput, flex: 1.2 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], start: e.target.value || undefined }; return { ...p, notices: ns }; })} />
-                  <input placeholder="종료 (예: 2026-07-05T12:00)" value={n.end || ""} style={{ ...s.noticeInput, flex: 1.2 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], end: e.target.value || undefined }; return { ...p, notices: ns }; })} />
-                  <input placeholder="URL (선택)" value={n.url || ""} style={{ ...s.noticeInput, flex: 1.5 }} onChange={(e) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], url: e.target.value || undefined }; return { ...p, notices: ns }; })} />
-                  <button style={s.btnSm} onClick={() => setCfg((p) => ({ ...p, notices: p.notices.filter((_, j) => j !== i) }))}>✕</button>
+            <div style={s.cfgDesc}>활성 공지 1건이 상단에 흘러가는 배너로 표시됩니다. 날짜 생략 시 즉시·무한 노출.</div>
+            {cfg.notices.length === 0 && <div style={{ ...s.cfgDesc, marginTop: 10, textAlign: "center" }}>등록된 공지 없음</div>}
+            {cfg.notices.map((n, i) => {
+              const isActive = !!n.text.trim() && activeNoticeFrom(cfg.notices)?.text === n.text.trim();
+              const upd = (patch: Partial<typeof n>) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], ...patch }; return { ...p, notices: ns }; });
+              return (
+                <div key={i} style={s.noticeCard}>
+                  <div style={s.noticeCardHead}>
+                    <span style={{ fontSize: 11, color: isActive ? "#7ff0b0" : "#5a7a6a", fontWeight: isActive ? 700 : 400 }}>{isActive ? "● 현재 표시 중" : "○ 비활성"}</span>
+                    <button style={s.btnSm} onClick={() => setCfg((p) => ({ ...p, notices: p.notices.filter((_, j) => j !== i) }))}>삭제</button>
+                  </div>
+                  <div style={s.cfgDesc}>공지 문구 *</div>
+                  <input value={n.text} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="서버 점검 예정" onChange={(e) => upd({ text: e.target.value })} />
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={s.cfgDesc}>시작 (생략=즉시)</div>
+                      <input value={n.start || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="2026-07-05" onChange={(e) => upd({ start: e.target.value || undefined })} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={s.cfgDesc}>종료 (생략=무한)</div>
+                      <input value={n.end || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="2026-07-05T12:00" onChange={(e) => upd({ end: e.target.value || undefined })} />
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <div style={s.cfgDesc}>URL (선택 — 클릭 시 이동)</div>
+                    <input value={n.url || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="https://..." onChange={(e) => upd({ url: e.target.value || undefined })} />
+                  </div>
                 </div>
-              ))}
-              <button style={{ ...s.btnGhost, marginTop: 8 }} onClick={() => setCfg((p) => ({ ...p, notices: [...p.notices, { text: "" }] }))}>+ 공지 추가</button>
-            </div>
-            <button style={{ ...s.btnPrimary, width: "100%", marginTop: 10 }} onClick={saveCfg}>저장</button>
+              );
+            })}
+            <button style={{ ...s.btnGhost, width: "100%", marginTop: 8 }} onClick={() => setCfg((p) => ({ ...p, notices: [...p.notices, { text: "" }] }))}>+ 공지 추가</button>
+            <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
           </div>
           <div style={s.card}>
             <div style={s.cardTitle}>💸 운영</div>
@@ -486,8 +505,8 @@ const s: Record<string, React.CSSProperties> = {
   cardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" },
   cardTitle: { fontSize: 13, color: "#8fa89a", marginBottom: 8 },
   chevron: { marginLeft: "auto", fontSize: 12, color: "#ffd233" },
-  stats: { display: "flex", gap: 4 },
-  stat: { flex: 1, textAlign: "center" },
+  stats: { display: "flex", gap: 8, flexWrap: "wrap" as const },
+  stat: { flex: "1 0 60px", textAlign: "center" },
   statV: { fontSize: 15, fontWeight: 800, color: "#fff" },
   statL: { fontSize: 10, color: "#8fa89a", marginTop: 3 },
   htable: { width: "100%", marginTop: 10, borderCollapse: "collapse", fontSize: 11 },
@@ -502,8 +521,9 @@ const s: Record<string, React.CSSProperties> = {
   cfgInputWrap: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0 },
   cfgUnit: { fontSize: 12, color: "#5a7a6a", flexShrink: 0 },
   cfgNum: { width: 64, padding: "4px 6px", borderRadius: 6, border: "1px solid #2c3a32", background: "#0e1812", color: "#e8f5ee", fontSize: 13, textAlign: "right" as const },
-  noticeRow: { display: "flex", alignItems: "center", gap: 4, marginBottom: 6, flexWrap: "wrap" as const },
-  noticeInput: { padding: "5px 7px", borderRadius: 6, border: "1px solid #2c3a32", background: "#0e1812", color: "#e8f5ee", fontSize: 12, minWidth: 0 },
+  noticeCard: { background: "#0e1812", border: "1px solid #2c3a32", borderRadius: 8, padding: "10px 10px 12px", marginTop: 10 },
+  noticeCardHead: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  noticeInput: { padding: "6px 8px", borderRadius: 6, border: "1px solid #2c3a32", background: "#141d18", color: "#e8f5ee", fontSize: 12, display: "block" },
   // 채팅로그 서브탭 [오늘][어제][엊그제][그끄저께]
   subtabs: { display: "flex", gap: 4, marginBottom: 8 },
   subtab: { flex: 1, padding: "7px 4px", borderRadius: 8, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12.5, whiteSpace: "nowrap" },
