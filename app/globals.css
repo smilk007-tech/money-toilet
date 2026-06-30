@@ -2151,7 +2151,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 30; /* HUD(20) 위 — 공지는 항상 맨 위 */
+  z-index: 200; /* 형광등 탭 오버레이(70) 포함 모든 UI 위 */
   height: calc(26px + env(safe-area-inset-top, 0px));
   padding-top: env(
     safe-area-inset-top,
