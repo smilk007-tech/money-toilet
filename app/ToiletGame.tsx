@@ -132,9 +132,11 @@ export default function ToiletGame() {
             className="skin-latch"
             id="skinLatch"
             viewBox="0 0 44 32"
+            overflow="visible"
             role="button"
             aria-label="문 잠금 토글"
           >
+            <rect x="-16" y="-16" width="76" height="64" fill="transparent" />
             <rect x="1" y="1" width="30" height="30" rx="6" fill="#989da0" />
             <circle cx="16" cy="16" r="9" fill="#c1c4c5" />
             <rect
@@ -166,9 +168,11 @@ export default function ToiletGame() {
           className="skin-tp"
           id="skinTp"
           viewBox="0 0 96 132"
+          overflow="visible"
           role="button"
           aria-label="휴지 한 장 뜯기"
         >
+          <rect x="0" y="-22" width="96" height="176" fill="transparent" />
           <defs>
             <linearGradient id="tpMetal" x1="0" y1="0" x2="1" y2=".2">
               <stop offset="0" stopColor="#55585b" />

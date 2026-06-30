@@ -2308,16 +2308,6 @@ body {
   pointer-events: auto;
   cursor: pointer;
 }
-.skin-tp {
-  padding-top: 18px;
-  padding-bottom: 18px;
-  margin-top: -18px;
-  margin-bottom: -18px;
-}
-.skin-latch {
-  padding: 14px 12px;
-  margin: -14px -12px;
-}
 .skin-tp:active {
   transform: translateY(-50%) scale(0.96);
 }
