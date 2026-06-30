@@ -240,7 +240,7 @@ export default function ToiletGame() {
         {/* 1row: [시계/내 월급] | [내 채팅/적립] | [총/물내리기] */}
         <div className="deck">
           <div className="deckcol deckcol--salary">
-            <div className="deckcol__top deckcol__timer" id="timer" hidden>
+            <div className="deckcol__top deckcol__timer" id="timer">
               ⏰ <span id="timerVal">00:00</span>
             </div>
             <button className="ctrl-salary" id="salaryToggle" type="button">
@@ -372,15 +372,6 @@ export default function ToiletGame() {
               <span className="nick-save-text">저장</span>
             </label>
           </div>
-        </div>
-
-        {/* 표시 */}
-        <div className="settings__group">
-          <div className="settings__group-title">표시</div>
-          <label className="settings__row settings__row--toggle">
-            <span>타이머 표시</span>
-            <input type="checkbox" id="timerToggle" className="sw" />
-          </label>
         </div>
 
         {/* 내 기록 — 총 N원 노출(mt_total_visible) 시에만 표시 */}
