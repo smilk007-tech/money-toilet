@@ -45,7 +45,7 @@ export default function ToiletGame() {
                   <b id="stallCount">0</b>명
                 </span>
                 <span className="hud__offline-badge" id="offlineBadge" hidden>
-                  🚫 연결 끊김
+                  🔇 연결 끊김
                 </span>
               </span>
             </span>
