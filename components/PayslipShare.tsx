@@ -246,7 +246,7 @@ export default function PayslipShare({
             <span style={dot} />
             {count > 1
               ? `현재 접속자 ${count.toLocaleString("ko-KR")}명`
-              : "실시간"}
+              : "현재 실시간 누적"}
           </div>
           <div style={liveAmt}>{fmtWon(displayWon)}</div>
           <div style={liveSub}>다같이 변기 위에서 쓸어담는 중 💰</div>
