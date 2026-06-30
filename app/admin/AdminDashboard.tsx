@@ -392,7 +392,7 @@ function BanCtl({ vid, dur, setDur, onBan }: { vid: string; dur: Record<string, 
   );
 }
 
-const css = <style>{`html,body{overflow-y:auto!important;height:auto!important;min-height:100%;position:static!important;background:#0f1512;margin:0}*{box-sizing:border-box}button{cursor:pointer}button:active{transform:translateY(1px)}input{outline:none}@keyframes admin-dot-pulse{0%,100%{opacity:1}50%{opacity:.2}}.admin-live-dot{animation:admin-dot-pulse 1.8s ease-in-out infinite}`}</style>;
+const css = <style>{`html,body{overflow-y:auto!important;height:auto!important;min-height:100%;position:static!important;background:#0f1512;margin:0}*{box-sizing:border-box}button{cursor:pointer}button:active{transform:translateY(1px)}input{outline:none}.admin-live-dot{opacity:.55}`}</style>;
 const s: Record<string, React.CSSProperties> = {
   wrap: { fontFamily: "system-ui,-apple-system,sans-serif", color: "#e7efe9", background: "#0f1512", minHeight: "100vh", padding: 10, maxWidth: 780, margin: "0 auto" },
   loginBox: { display: "flex", flexDirection: "column", gap: 12, marginTop: 80 },

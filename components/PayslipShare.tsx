@@ -270,7 +270,6 @@ export default function PayslipShare({
 
   return (
     <main style={{ ...wrap, cursor: "pointer" }} onClick={handleCtaClick}>
-      <style>{`@keyframes share-dot-pulse{0%,100%{opacity:1}50%{opacity:.25}}.share-dot{animation:share-dot-pulse 1.8s ease-in-out infinite}`}</style>
       <div style={cardWrap}>
         <ReceiptCard
           d={data}
@@ -293,7 +292,7 @@ export default function PayslipShare({
         >
           {frozen?.hasPresence ? (
             <div style={liveDot}>
-              <span style={dot} className="share-dot" />
+              <span style={dot} />
               현재 접속자 {count.toLocaleString("ko-KR")}명
             </div>
           ) : (
@@ -309,7 +308,7 @@ export default function PayslipShare({
       </div>
 
       <div style={ctaWrap}>
-        <div style={ctaNudge}>{nick}님처럼 돈버는 화장실에서</div>
+        <div style={ctaNudge}>{nick}님처럼</div>
         <div style={cta}>
           <img
             src="/brand-icon.png"
@@ -318,7 +317,7 @@ export default function PayslipShare({
             height={26}
             style={{ display: "block" }}
           />
-          나도 벌어보기
+          돈버는 화장실에서 나도 벌기
         </div>
       </div>
     </main>
@@ -372,8 +371,8 @@ const dot: React.CSSProperties = {
   width: 8,
   height: 8,
   borderRadius: "50%",
-  background: "#36e0a0",
-  boxShadow: "0 0 10px #36e0a0",
+  background: "rgba(54, 224, 160, 0.5)",
+  boxShadow: "0 0 6px rgba(54, 224, 160, 0.35)",
 };
 const liveAmt: React.CSSProperties = {
   color: "#ffd84d",
