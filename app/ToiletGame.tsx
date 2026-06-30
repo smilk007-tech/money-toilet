@@ -240,7 +240,7 @@ export default function ToiletGame() {
         {/* 1row: [시계/내 월급] | [내 채팅/적립] | [총/물내리기] */}
         <div className="deck">
           <div className="deckcol deckcol--salary">
-            <div className="deckcol__top deckcol__timer" id="timer">
+            <div className="deckcol__top deckcol__timer" id="timer" hidden>
               ⏰ <span id="timerVal">00:00</span>
             </div>
             <button className="ctrl-salary" id="salaryToggle" type="button">
