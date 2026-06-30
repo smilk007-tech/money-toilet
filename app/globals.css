@@ -2199,9 +2199,12 @@ body {
     transform: translateX(-8.3333%); /* 1/12 — 한 벌 폭만큼 이동 → 무한 반복 */
   }
 }
-/* 공지가 있을 때 상단 HUD를 배너 아래로 내려 겹침 방지 */
+/* 공지가 있을 때 상단 HUD와 설정 팝오버를 배너 아래로 내려 겹침 방지 */
 #app:has(.notice-bar) .hud {
   padding-top: calc(env(safe-area-inset-top, 0px) + 36px);
+}
+#app:has(.notice-bar) .settings-panel {
+  top: calc(env(safe-area-inset-top, 0px) + 86px);
 }
 
 /* =====================  토스트  ===================== */
