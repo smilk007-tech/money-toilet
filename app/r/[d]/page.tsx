@@ -58,7 +58,7 @@ export default async function ReceiptSharePage({ params }: Props) {
           급여명세서를 불러올 수 없어요 🥲
         </p>
         <Link href="/" style={cta}>
-          🚽 화장실 가기
+          🚽 나도 벌어보기
         </Link>
       </main>
     );

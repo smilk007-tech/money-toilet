@@ -1270,6 +1270,10 @@ body {
 }
 .chat button {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* 패딩만으로는 기기별 높이가 들쑥날쑥 — 최소 44px 터치타깃 보장 */
   background: #d4d8d4;
   color: #555;
   font-weight: 700;
@@ -1337,6 +1341,22 @@ body {
   width: 100%;
   accent-color: var(--accent);
   height: 22px;
+}
+/* 슬라이더 아래 스텝 눈금 라벨 — 인덱스 위치(%)에 절대배치, 끝값은 가장자리 밖으로 안 나가게 */
+.salary-panel__scale {
+  position: relative;
+  height: 12px;
+  margin-top: 2px;
+}
+.salary-panel__scale span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: rgba(233, 244, 238, 0.5);
 }
 .salary-panel input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);

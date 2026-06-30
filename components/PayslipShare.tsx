@@ -45,6 +45,7 @@ export default function PayslipShare({
 }) {
   const router = useRouter();
   const [count, setCount] = useState(0);
+  const nick = data.n || "익명의 볼일러"; // 보낸 사람 닉 — CTA 사회적 증거 문구에 사용
 
   // 인게임에서 뒤로가기로 재진입한 경우 감지 — sessionStorage 플래그 확인 후 즉시 소비
   const [cameFromGame] = useState<boolean>(() => {
@@ -310,15 +311,18 @@ export default function PayslipShare({
         </div>
       </div>
 
-      <div style={cta}>
-        <img
-          src="/brand-icon.png"
-          alt=""
-          width={26}
-          height={26}
-          style={{ display: "block" }}
-        />
-        돈버는 화장실 입장
+      <div style={ctaWrap}>
+        <div style={ctaNudge}>{nick}님처럼 변기에서 월급 줍기 💰</div>
+        <div style={cta}>
+          <img
+            src="/brand-icon.png"
+            alt=""
+            width={26}
+            height={26}
+            style={{ display: "block" }}
+          />
+          나도 벌어보기
+        </div>
       </div>
     </main>
   );
@@ -398,6 +402,18 @@ const liveSub: React.CSSProperties = {
   fontWeight: 600,
   textAlign: "center",
   lineHeight: 1.35,
+};
+const ctaWrap: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 8,
+};
+const ctaNudge: React.CSSProperties = {
+  color: "#9fdcc9",
+  fontSize: 13,
+  fontWeight: 800,
+  textAlign: "center",
 };
 const cta: React.CSSProperties = {
   display: "inline-flex",

@@ -23,6 +23,8 @@ const FIRST_STAMP_TIMING = {
 } as const;
 const REPEAT_STAMP_DELAY_MS = 500;
 const REPEAT_STAMP_SLAM_MS = 1200;
+// 첫 영수증: '확인합니다 👈'를 이 시간 안에 안 누르면 자동으로 도장 — 공유까지 탭 부담 제거
+const FIRST_STAMP_AUTO_MS = 2400;
 // 슬램 애니메이션(receiptStampSlam)에서 도장이 종이에 "딱" 닿는 순간 = 38% 키프레임.
 // 그 타이밍에 도장 효과음을 재생한다.
 const STAMP_IMPACT_RATIO = 0.1;
@@ -196,6 +198,14 @@ export default function PayslipModal() {
         return;
       }
       setStage("idle");
+      // 첫 영수증: 확인 버튼을 보여주되, 일정 시간 안에 안 누르면 스스로 도장을 찍는다.
+      // (직접 '확인합니다'를 누르고 싶은 사람은 그대로 누르면 됨 — confirmStamp가 이 타이머를 정리)
+      stampTimersRef.current.push(
+        window.setTimeout(
+          () => startFirstStampSequence(detail),
+          FIRST_STAMP_AUTO_MS,
+        ),
+      );
     };
     window.addEventListener(APP_EVENTS.payslipOpen, onOpen);
     return () => window.removeEventListener(APP_EVENTS.payslipOpen, onOpen);
