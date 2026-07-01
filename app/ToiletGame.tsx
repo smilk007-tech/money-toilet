@@ -342,9 +342,10 @@ export default function ToiletGame() {
           step="1"
           defaultValue="5"
         />
-        {/* 슬라이더 스텝 눈금 — 인덱스 0·9·14·17 위치(휴식·500만·1천만·1억) */}
+        {/* 슬라이더 스텝 눈금 — 인덱스 0·4·9·14·17 위치(휴식·250만·500만·1천만·1억) */}
         <div className="salary-panel__scale" aria-hidden="true">
           <span style={{ left: "0%", transform: "translateX(0)" }}>휴식</span>
+          <span style={{ left: "23.5%" }}>250만</span>
           <span style={{ left: "52.9%" }}>500만</span>
           <span style={{ left: "82.4%" }}>1천만</span>
           <span style={{ left: "100%", transform: "translateX(-100%)" }}>

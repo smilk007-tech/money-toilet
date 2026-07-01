@@ -1421,7 +1421,7 @@ body {
   left: 9px;
   bottom: 116px;
   z-index: 35;
-  width: min(74%, 270px);
+  width: min(88%, 320px);
   background: rgba(12, 18, 14, 0.94);
   border: 1px solid rgba(125, 255, 176, 0.4);
   border-radius: 12px;
