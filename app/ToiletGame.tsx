@@ -467,7 +467,7 @@ export default function ToiletGame() {
           role="dialog"
           aria-label="기록 초기화 확인"
         >
-          <h2 className="reset-confirm__title">이 기록들이 사라져요</h2>
+          <h2 className="reset-confirm__title">자랑스러운 내 기록 👏👏</h2>
           <dl className="reset-confirm__stats">
             <div className="reset-confirm__stat">
               <dt>물내림</dt>
@@ -482,7 +482,7 @@ export default function ToiletGame() {
               <dd id="resetConfirmTime">0초</dd>
             </div>
           </dl>
-          <p className="reset-confirm__msg">초기화 후엔 되돌릴 수 없어요</p>
+          <p className="reset-confirm__msg">초기화 할까요?</p>
           <div className="reset-confirm__actions">
             <button
               className="reset-confirm__btn reset-confirm__btn--cancel"

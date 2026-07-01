@@ -321,11 +321,16 @@ io.on("connection", async (socket) => {
     const nick = socket.data.nick || "익명의 볼일러";
     if (p.broadcast !== false) {
       const text = clean(p.text, cfg.maxMsgLen);
-      const kind = p.kind === "capped" ? "capped" : undefined; // 1시간 동결 후 물내림 — 다른 유저 화면에 코믹하게 구분 표시
+      const isCapped = p.kind === "capped"; // 1시간 꽉 채운 물내림
+      const kind = isCapped ? "capped" : undefined; // 다른 유저 화면에 코믹하게 구분 표시
       socket.broadcast.emit("flush", { name: nick, amount, total: today.money, me: false, chat: true, text, kind });
       // 물내림도 '채팅'이므로 로그를 남긴다 — 어드민 채팅로그에 정산 활동 포함.
-      // 일반 물내림은 클라가 멘트를 로컬 생성(text=null)하므로 서버에서 금액 멘트로 대체.
-      const logText = text || `💰 ${amount.toLocaleString("ko-KR")}원 물내림!`;
+      // 어드민 로그는 (다른 유저에게 코믹하게 보이는) 멘트와 분리해 항상 금액 멘트로 통일한다.
+      // 1시간 꽉 채운(capped) 물내림만 뒤에 MAX 표기를 붙인다.
+      const amountStr = amount.toLocaleString("ko-KR");
+      const logText = isCapped
+        ? `💰 ${amountStr}원 물내림! MAX`
+        : `💰 ${amountStr}원 물내림!`;
       chatBuf.push({ date: today.date, ts: now, hour: h, vid, nick, text: logText });
       if (adminsConnected()) io.to("admins").emit("adminChat", { ts: now, hour: h, vid, nick, text: logText });
     }

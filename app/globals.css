@@ -730,6 +730,7 @@ body {
   max-width: calc(100% - 12px);
   width: max-content;
   word-break: keep-all;
+  overflow-wrap: break-word;
   text-align: left;
   border-radius: 12px;
   padding: 5.5px 9.9px;
