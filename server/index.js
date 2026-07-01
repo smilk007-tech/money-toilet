@@ -34,7 +34,7 @@ let todayDirty = false; // 마지막 영속 이후 today 변경 여부
 const hoursDirty = new Set(); // 마지막 영속 이후 변경된 시간 인덱스
 
 function freshToday(date) {
-  return { date, visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0 };
+  return { date, visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, bragUrl: 0 };
 }
 function ensureDay() {
   const d = kstDateKey();
@@ -68,6 +68,10 @@ function rateOk(vid, bucket = "chat") {
 // 소켓당으로 두면 재연결마다 1시간 헤드룸이 재무장돼 도배 주입에 악용되므로 vid 기준으로 보존한다.
 const flushClock = new Map(); // vid -> 마지막 물내림 ts(ms)
 const FLUSH_HEADROOM_MS = 3600_000; // 최초/장기부재 후 물내림에 허용하는 적립 헤드룸(=1시간, 클라 부재중 적립 상한과 동일)
+// 공유 집계 연타 방어 — vid당 SHARE_DEDUP_MS 안의 반복 공유는 1회만 집계(악성 연타로 지표 부풀리기 차단).
+// 클릭 즉시 클라가 emit하므로 이탈로 인한 누수는 없고, 여기서 과집계만 걸러낸다.
+const shareClock = new Map(); // vid -> 마지막 공유 집계 ts(ms)
+const SHARE_DEDUP_MS = 60_000;
 const STRIKE_DECAY_MS = 5 * 60 * 1000; // 마지막 위반 후 이 시간 지나면 누적 strike 리셋(선량한 장기세션 보호)
 
 /* ---------- presence 브로드캐스트(디바운스) ---------- */
@@ -122,6 +126,9 @@ async function flushPersist() {
   // flushClock 정리 — 1시간 지난 항목은 기본 헤드룸과 동일해 무의미하므로 제거(메모리 보호).
   const cutoff = Date.now() - FLUSH_HEADROOM_MS;
   for (const [vid, t] of flushClock) if (t < cutoff) flushClock.delete(vid);
+  // shareClock 정리 — dedup 창(60초)을 지난 항목은 무의미하므로 제거(메모리 보호).
+  const shareCutoff = Date.now() - SHARE_DEDUP_MS;
+  for (const [vid, t] of shareClock) if (t < shareCutoff) shareClock.delete(vid);
   if (today && todayDirty) {
     await persistToday(today);
     todayDirty = false;
@@ -338,13 +345,35 @@ io.on("connection", async (socket) => {
     pushAdminLive();
   });
 
+  // 공유하기 클릭 집계 — 클라가 '클릭 즉시'(모든 await 이전) emit → 이탈로 인한 누수 없음.
+  // created:true 면 자랑(명세서) URL 신규 생성(캐시미스)까지 함께 집계.
+  // 악성 연타는 vid당 60초 1회로 제한(집계 왜곡 방지). 실제 URL 생성 자체를 막는 건 아님.
+  socket.on("share", (p = {}) => {
+    const vid = socket.data.vid;
+    if (!vid) return;
+    if (isBanned(vid)) return; // 섀도밴 — 집계 제외
+    // 폭주 방어 — chat/flush와 동일한 슬라이딩 윈도우(rateLimitN/rateWindowMs)로 과도한 emit은 조용히 버린다.
+    // 아래 60초 dedup은 '집계'만 막지만, 이건 '처리 자체'를 throttle해 이벤트루프를 보호한다(방어 심화).
+    if (!rateOk(vid, "share")) return;
+    const now = Date.now();
+    const last = shareClock.get(vid) ?? 0;
+    if (now - last < SHARE_DEDUP_MS) return; // 연타 dedup
+    shareClock.set(vid, now);
+    ensureDay();
+    const h = kstHour();
+    today.share++; hours[h].share++;
+    if (p.created) { today.bragUrl++; hours[h].bragUrl++; }
+    todayDirty = true; hoursDirty.add(h);
+    pushAdminLive();
+  });
+
   socket.on("disconnect", () => {
     const vid = socket.data.vid;
     if (!vid) return;
     const info = presence.get(vid);
     if (info) {
       info.sockets.delete(socket.id);
-      if (info.sockets.size === 0) { presence.delete(vid); rate.delete(vid + ":chat"); rate.delete(vid + ":flush"); }
+      if (info.sockets.size === 0) { presence.delete(vid); rate.delete(vid + ":chat"); rate.delete(vid + ":flush"); rate.delete(vid + ":share"); }
       // presence가 실제로 바뀐 경우에만 브로드캐스트 (공유페이지 방문자는 presence에 없으므로 여기 안 옴)
       broadcastPresence();
       pushAdminLive();

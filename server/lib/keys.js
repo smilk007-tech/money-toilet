@@ -1,7 +1,7 @@
 /* Redis 키 · 상수 · KST 날짜 헬퍼 (소켓서버)
    설계:
-   - mt:today        : 오늘 러닝 합계 JSON {date,visits,newVisitors,chat,flush,money} (TTL 없음, 자정 0 리셋)
-   - mt:hours:<date> : 시간별 HASH (field=0~23, value={visits,newVisitors,chat,flush,money}) — 하루합계는 화면에서 합산
+   - mt:today        : 오늘 러닝 합계 JSON {date,visits,newVisitors,chat,flush,money,share,bragUrl} (TTL 없음, 자정 0 리셋)
+   - mt:hours:<date> : 시간별 HASH (field=0~23, value={visits,newVisitors,chat,flush,money,share,bragUrl}) — 하루합계는 화면에서 합산
    - mt:chatlog:<date>: 채팅 LIST (5분 배치 append, 3일 TTL)
    - 밴/세션은 변경 시에만 write
    라이브(메모리)에서 누적하고 5분마다 위 키에 배치 기록 → Upstash 무료 보호. */
@@ -48,8 +48,8 @@ export const MAX_PER_SEC = Math.ceil(100_000_000 / (20.6 * 8 * 3600)); // 169원
 export const FLUSH_CAP = MAX_PER_SEC * 3600; // 608,400
 export const CHATLOG_MAX = 6000;
 
-/** 빈 시간 버킷 */
-export const emptyBucket = () => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0 });
+/** 빈 시간 버킷 — share: 공유하기 클릭, bragUrl: 자랑(명세서) URL 신규 생성 */
+export const emptyBucket = () => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, bragUrl: 0 });
 
 export const DEFAULTS = {
   rateLimitN: 7,

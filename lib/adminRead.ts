@@ -9,10 +9,11 @@ export const isValidDate = (d: string) => DATE_RE.test(d);
 
 const hoursKey = (date: string) => `mt:hours:${date}`;
 const chatLogKey = (date: string) => `mt:chatlog:${date}`;
+const receiptsKey = (date: string) => `mt:receipts:${date}`;
 const sessionKey = (token: string) => `mt:admin:session:${token}`;
 
-export type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number };
-const empty = (): Bucket => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0 });
+export type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number; share: number; bragUrl: number };
+const empty = (): Bucket => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, bragUrl: 0 });
 
 function bearer(req: Request): string {
   const h = req.headers.get("authorization") || "";
@@ -48,4 +49,13 @@ export async function readChatLog(date: string): Promise<ChatRow[]> {
   if (!r) return [];
   const rows = (await r.lrange(chatLogKey(date), 0, -1)) || [];
   return (rows as unknown[]).filter(Boolean) as ChatRow[];
+}
+
+export type ReceiptRow = { id: string; ts: number; n: string; t: number; f: number };
+/** 해당 날짜에 생성된 자랑 URL 목록(생성순) */
+export async function readReceipts(date: string): Promise<ReceiptRow[]> {
+  const r = getRedis();
+  if (!r) return [];
+  const rows = (await r.lrange(receiptsKey(date), 0, -1)) || [];
+  return (rows as unknown[]).filter(Boolean) as ReceiptRow[];
 }

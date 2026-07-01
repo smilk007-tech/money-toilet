@@ -9,9 +9,12 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { activeNoticeFrom } from "@/lib/notices";
 import { io, type Socket } from "socket.io-client";
 
-type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number };
+type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number; share: number; bragUrl: number };
 type Online = { vid: string; nick: string; conns: number; since: number; banned: boolean };
+// 어드민이 '접속한 이후' 관측한 유저 — 이탈해도 목록에서 지우지 않고 이탈 표기로 남긴다(프론트 전용, 미영속).
+type Tracked = Online & { status: "online" | "left"; leftAt?: number; reconnects: number };
 type ChatRow = { ts: number; hour: number; vid: string; nick: string; text: string };
+type ReceiptRow = { id: string; ts: number; n: string; t: number; f: number };
 type BanRow = { vid: string; expiry: number | null };
 // 서버가 "adminStats"(라이브: presence/today/online)와 "adminHours"(5분 주기)를 분리 push하므로
 // 클라에서는 부분 갱신을 병합해서 들고 있어야 함(매번 전체 스냅샷이 오지 않음).
@@ -28,10 +31,11 @@ const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } c
 
 const won = (n: number) => (n || 0).toLocaleString("ko-KR");
 const hhmm = (ts: number) => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
-const EMPTY: Bucket = { visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0 };
+const EMPTY: Bucket = { visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, bragUrl: 0 };
 const sumDay = (hours: Bucket[]) => hours.reduce((a, h) => ({
   visits: a.visits + h.visits, newVisitors: a.newVisitors + h.newVisitors,
   chat: a.chat + h.chat, flush: a.flush + h.flush, money: a.money + h.money,
+  share: a.share + (h.share || 0), bragUrl: a.bragUrl + (h.bragUrl || 0),
 }), { ...EMPTY });
 const DURATIONS = [{ v: "1d", t: "1일" }, { v: "3d", t: "3일" }, { v: "7d", t: "1주" }, { v: "30d", t: "1달" }, { v: "perm", t: "영구" }];
 
@@ -58,12 +62,14 @@ export default function AdminDashboard() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
-  const [tab, setTab] = useState<"stats" | "online" | "liveChat" | "chatlog" | "bans" | "ops">("stats");
+  const [tab, setTab] = useState<"stats" | "online" | "liveChat" | "chatlog" | "receipts" | "bans" | "ops">("stats");
   const [live, setLive] = useState<Live | null>(null);
   const [liveChats, setLiveChats] = useState<ChatRow[]>([]);
   // vid → 최신 닉네임 맵 — adminChat/adminStats 수신 시마다 갱신.
   // 라이브 채팅 렌더 시 이 맵을 우선 사용해 닉네임 변경을 소급 반영.
   const [nickByVid, setNickByVid] = useState<Record<string, string>>({});
+  // 동접자 추적 — 어드민 소켓 연결 이후 관측한 유저만. 이탈 시각·재접속 횟수를 프론트에서 파생(서버 무관).
+  const [tracked, setTracked] = useState<Record<string, Tracked>>({});
   const [histChats, setHistChats] = useState<Record<string, ChatRow[]>>({});
   const [histHours, setHistHours] = useState<Record<string, Bucket[]>>({});
   const [bans, setBans] = useState<BanRow[]>([]);
@@ -75,6 +81,11 @@ export default function AdminDashboard() {
   const [chatQ, setChatQ] = useState("");
   const [chatlogDay, setChatlogDay] = useState(0); // 채팅로그 서브탭: 0=오늘 1=어제 2=엊그제 3=그끄저께
   const [chatlogLoading, setChatlogLoading] = useState(false);
+  // 자랑URL 탭 — 날짜별 생성 목록
+  const [histReceipts, setHistReceipts] = useState<Record<string, ReceiptRow[]>>({});
+  const [receiptDay, setReceiptDay] = useState(0); // 0=오늘 1=어제 2=엊그제 3=그끄저께
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const loadedReceiptDatesRef = useRef<Set<string>>(new Set());
   const [onSort, setOnSort] = useState<"new" | "old">("new");
   const [onQ, setOnQ] = useState("");
   const [bc, setBc] = useState("");
@@ -95,6 +106,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!authed) return;
+    setTracked({}); // 새 어드민 세션 시작 — 과거 이탈자를 끌고 오지 않도록 초기화(관측은 지금부터)
     const sock = io(SOCKET_BASE || undefined, { auth: { adminToken: getToken() }, transports: ["websocket", "polling"], reconnection: true });
     sockRef.current = sock;
     sock.on("adminStats", (d: LiveStats) => {
@@ -103,6 +115,24 @@ export default function AdminDashboard() {
         setNickByVid((prev) => {
           const next = { ...prev };
           for (const o of d.online) if (o.nick && o.vid) next[o.vid] = o.nick;
+          return next;
+        });
+        // 동접자 추적 갱신 — 신규/유지/재접속/이탈을 스냅샷 대비 diff로 판정(이탈 시각은 관측 시점).
+        const now = Date.now();
+        const onlineVids = new Set(d.online.map((o) => o.vid));
+        setTracked((prev) => {
+          const next: Record<string, Tracked> = { ...prev };
+          for (const o of d.online) {
+            const cur = next[o.vid];
+            if (!cur) next[o.vid] = { ...o, status: "online", reconnects: 0 };
+            else if (cur.status === "left")
+              next[o.vid] = { ...o, status: "online", reconnects: cur.reconnects + 1 }; // 이탈 후 복귀
+            else next[o.vid] = { ...cur, ...o }; // 유지 — 닉/연결수 등 최신화
+          }
+          for (const vid of Object.keys(next)) {
+            if (next[vid].status === "online" && !onlineVids.has(vid))
+              next[vid] = { ...next[vid], status: "left", leftAt: now };
+          }
           return next;
         });
       }
@@ -159,6 +189,24 @@ export default function AdminDashboard() {
     loadChatlog(chatlogDay); // 선택된 서브탭 날짜만 로드(과거는 캐시 적중 시 무요청)
   }, [authed, tab, chatlogDay, loadChatlog]);
 
+  // 자랑URL 로더 — 채팅로그와 동일 정책(과거는 메모리 캐시, 오늘은 항상 라이브).
+  const loadReceipts = useCallback(async (ago: number) => {
+    const date = dateOf(ago);
+    if (ago >= 1 && loadedReceiptDatesRef.current.has(date)) return;
+    setReceiptLoading(true);
+    const bust = ago === 0 ? `&_t=${Date.now()}` : "";
+    const { data } = await vercel(`receipts?date=${date}${bust}`);
+    if (data.ok) {
+      loadedReceiptDatesRef.current.add(date);
+      setHistReceipts((p) => ({ ...p, [date]: data.receipts || [] }));
+    }
+    setReceiptLoading(false);
+  }, []);
+  useEffect(() => {
+    if (!authed || tab !== "receipts") return;
+    loadReceipts(receiptDay);
+  }, [authed, tab, receiptDay, loadReceipts]);
+
   const login = async (e: React.FormEvent) => {
     e.preventDefault(); setErr("");
     const { status, data } = await rail("login", { method: "POST", body: JSON.stringify({ password: pw }) });
@@ -203,11 +251,18 @@ export default function AdminDashboard() {
   const chats = [...baseChats]
     .filter((c) => !q1 || c.text.toLowerCase().includes(q1) || (c.nick || "").toLowerCase().includes(q1) || c.vid.toLowerCase().includes(q1))
     .sort((a, b) => (chatSort === "new" ? b.ts - a.ts : a.ts - b.ts));
-  // 접속자 필터/정렬
+  // 접속자/이탈자 — tracked(어드민 접속 이후 관측분)에서 파생. 과거 이탈자는 포함하지 않음.
   const q2 = onQ.trim().toLowerCase();
-  const onlines = [...(live?.online || [])]
-    .filter((o) => !q2 || (o.nick || "").toLowerCase().includes(q2) || o.vid.toLowerCase().includes(q2))
+  const trackedArr = Object.values(tracked)
+    .filter((o) => !q2 || (o.nick || "").toLowerCase().includes(q2) || o.vid.toLowerCase().includes(q2));
+  const onlines = trackedArr
+    .filter((o) => o.status === "online")
     .sort((a, b) => (onSort === "new" ? b.since - a.since : a.since - b.since));
+  const leftUsers = trackedArr
+    .filter((o) => o.status === "left")
+    .sort((a, b) => (b.leftAt || 0) - (a.leftAt || 0)); // 최근 이탈 먼저
+  // 자랑URL — 선택 날짜의 생성 목록(최신순)
+  const receiptRows = [...(histReceipts[dateOf(receiptDay)] || [])].sort((a, b) => b.ts - a.ts);
 
   const toggleExpandDate = (label: string) => {
     setExpandDates((prev) => {
@@ -226,7 +281,7 @@ export default function AdminDashboard() {
         <button onClick={logout} style={s.btnGhost}>로그아웃</button>
       </header>
       <nav style={s.tabs}>
-        {([["stats", "통계"], ["online", "동접자"], ["liveChat", "현재채팅"], ["chatlog", "채팅로그"], ["ops", "🛠 제어"]] as const).map(([k, t]) => (
+        {([["stats", "통계"], ["online", "동접자"], ["liveChat", "현재채팅"], ["chatlog", "채팅로그"], ["receipts", "자랑URL"], ["ops", "🛠 제어"]] as const).map(([k, t]) => (
           <button key={k} onClick={() => setTab(k)} style={{ ...s.tab, ...(tab === k ? s.tabOn : {}) }}>{t}</button>
         ))}
       </nav>
@@ -248,14 +303,15 @@ export default function AdminDashboard() {
                 <div style={s.stats}>
                   <Stat l="방문" v={won(totals.visits)} /><Stat l="신규" v={won(totals.newVisitors)} />
                   <Stat l="채팅" v={won(totals.chat)} /><Stat l="물내림" v={won(totals.flush)} />
+                  <Stat l="공유" v={won(totals.share)} /><Stat l="자랑URL" v={won(totals.bragUrl)} />
                   <Stat l="번 돈" v={won(totals.money)} />
                 </div>
                 {isExpanded && (
                   <table style={s.htable}>
-                    <thead><tr>{["시", "방문", "신규", "채팅", "물내림", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+                    <thead><tr>{["시", "방문", "신규", "채팅", "물내림", "공유", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                     <tbody>
-                      {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money) ? (
-                        <tr key={hr}><td style={s.td}>{String(hr).padStart(2, "0")}</td><td style={s.td}>{h.visits}</td><td style={s.td}>{h.newVisitors}</td><td style={s.td}>{h.chat}</td><td style={s.td}>{h.flush}</td><td style={s.td}>{won(h.money)}</td></tr>
+                      {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.bragUrl) ? (
+                        <tr key={hr}><td style={s.td}>{String(hr).padStart(2, "0")}</td><td style={s.td}>{h.visits}</td><td style={s.td}>{h.newVisitors}</td><td style={s.td}>{h.chat}</td><td style={s.td}>{h.flush}</td><td style={s.td}>{h.share || 0}</td><td style={s.td}>{h.bragUrl || 0}</td><td style={s.td}>{won(h.money)}</td></tr>
                       ) : null)}
                     </tbody>
                   </table>
@@ -346,15 +402,29 @@ export default function AdminDashboard() {
             <input style={s.search} placeholder="검색: 닉네임 / UUID" value={onQ} onChange={(e) => setOnQ(e.target.value)} />
             <button style={s.sortBtn} onClick={() => setOnSort((v) => (v === "new" ? "old" : "new"))}>{onSort === "new" ? "최신순" : "과거순"}</button>
           </div>
-          <div style={s.note}>접속 {onlines.length}명 (어드민 제외)</div>
-          {onlines.length === 0 && <Empty />}
+          <div style={s.note}>접속 {onlines.length}명 · 이탈 {leftUsers.length}명 (어드민 접속 이후 · 어드민 제외)</div>
+          {onlines.length === 0 && leftUsers.length === 0 && <Empty />}
           {onlines.map((o) => (
             <LogRow
               key={o.vid}
               nick={o.nick || "익명"}
               time={`${hhmm(o.since)}~`}
               vid={o.vid}
-              tags={<>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
+              tags={<>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
+              dur={dur}
+              setDur={setDur}
+              onBan={ban}
+            />
+          ))}
+          {leftUsers.length > 0 && <div style={s.leftDivider}>👋 이탈자 {leftUsers.length}명</div>}
+          {leftUsers.map((o) => (
+            <LogRow
+              key={o.vid}
+              muted
+              nick={o.nick || "익명"}
+              time={`${hhmm(o.since)}~${o.leftAt ? hhmm(o.leftAt) : ""}`}
+              vid={o.vid}
+              tags={<><span style={s.leftTag}>{o.leftAt ? `${hhmm(o.leftAt)} 이탈` : "이탈"}</span>{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
               dur={dur}
               setDur={setDur}
               onBan={ban}
@@ -434,6 +504,38 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {tab === "receipts" && (
+        <div>
+          <div style={s.subtabs}>
+            {["오늘", "어제", "엊그제", "그끄저께"].map((label, i) => (
+              <button key={label} onClick={() => setReceiptDay(i)} style={{ ...s.subtab, ...(receiptDay === i ? s.subtabOn : {}) }}>{label}</button>
+            ))}
+          </div>
+          <div style={s.note}>
+            {dateOf(receiptDay)} · {receiptRows.length}건 생성{receiptDay === 0 ? " · 실시간" : " · 보관본(메모리 캐시)"}
+            {receiptDay === 0 && (
+              <button style={{ ...s.sortBtn, marginLeft: 8, padding: "3px 9px" }} onClick={() => loadReceipts(0)} disabled={receiptLoading} title="오늘 목록 새로고침">{receiptLoading ? "…" : "🔄"}</button>
+            )}
+          </div>
+          <div style={s.receiptHint}>💡 카드를 누르면 새 탭에서 공유 페이지가 열립니다</div>
+          {receiptLoading && receiptRows.length === 0 ? <div style={s.empty}>불러오는 중…</div> : receiptRows.length === 0 ? <Empty /> : null}
+          {receiptRows.map((rc) => (
+            <a key={rc.id} href={`/r/${rc.id}`} target="_blank" rel="noopener noreferrer" style={s.receiptRow}>
+              <div style={s.rowHead}>
+                <b style={s.rowNick}>{rc.n || "익명"}</b>
+                <span style={s.receiptAmt}>{won(rc.t)}원</span>
+                <span style={s.rowTime}>{hhmm(rc.ts)}</span>
+              </div>
+              <div style={s.receiptFoot}>
+                <code style={s.receiptId}>/r/{rc.id}</code>
+                <span style={s.receiptFlush}>물내림 {rc.f}회</span>
+                <span style={s.receiptOpen}>열기 ↗</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
       {tab === "bans" && (
         <div>
           {bans.length === 0 && <Empty />}
@@ -453,12 +555,12 @@ function Stat({ l, v }: { l: string; v: string }) { return <div style={s.stat}><
 function Empty() { return <div style={s.empty}>데이터 없음</div>; }
 
 // 채팅/동접 공통 카드 — [닉네임 (태그)] ………… [시간(우측끝)] / (메시지) / [UUID][차단]
-function LogRow({ nick, time, message, vid, tags, dur, setDur, onBan }: {
+function LogRow({ nick, time, message, vid, tags, dur, setDur, onBan, muted }: {
   nick: string; time: string; message?: string | null; vid: string; tags?: React.ReactNode;
-  dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void;
+  dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void; muted?: boolean;
 }) {
   return (
-    <div style={s.crow}>
+    <div style={muted ? { ...s.crow, ...s.crowMuted } : s.crow}>
       <div style={s.rowHead}>
         <b style={s.rowNick}>{nick}</b>
         {tags}
@@ -545,10 +647,21 @@ const s: Record<string, React.CSSProperties> = {
   uuid: { fontSize: 10, color: "#6f8378", background: "#0f1512", padding: "1px 5px", borderRadius: 4, wordBreak: "break-all", flex: 1, userSelect: "all" },
   tag: { fontSize: 10, background: "#3a2f12", color: "#ffd233", padding: "1px 5px", borderRadius: 4 },
   banTag: { fontSize: 10, background: "#3a1f12", color: "#ffb27f", padding: "1px 5px", borderRadius: 4 },
+  leftTag: { fontSize: 10, background: "#26302b", color: "#9fb3a6", padding: "1px 5px", borderRadius: 4 },
+  crowMuted: { opacity: 0.5 },
+  leftDivider: { color: "#8fa89a", fontSize: 11.5, fontWeight: 700, margin: "12px 2px 6px", borderTop: "1px dashed #2c3a32", paddingTop: 10 },
   dim: { color: "#7a8c80", fontSize: 11, marginLeft: "auto", whiteSpace: "nowrap" },
   dim2: { color: "#7a8c80", fontSize: 11 },
   banCtl: { display: "flex", gap: 5, alignItems: "center" },
   select: { padding: 5, borderRadius: 6, border: "1px solid #2c3a32", background: "#0f1512", color: "#e7efe9", fontSize: 11 },
   btnSm: { padding: "5px 11px", borderRadius: 6, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 12, whiteSpace: "nowrap" },
   empty: { textAlign: "center", color: "#6f8378", padding: 30 },
+  // 자랑URL 카드 — 통째로 탭 가능한 링크(모바일 큰 터치 영역)
+  receiptHint: { fontSize: 11.5, color: "#8fa89a", margin: "0 2px 8px" },
+  receiptRow: { display: "block", textDecoration: "none", background: "#141d18", border: "1px solid #24463a", borderRadius: 9, padding: "10px 11px", marginBottom: 6 },
+  receiptAmt: { fontSize: 13, fontWeight: 800, color: "#ffd84d", marginLeft: 8, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
+  receiptFoot: { display: "flex", alignItems: "center", gap: 8, marginTop: 7, flexWrap: "wrap" as const },
+  receiptId: { fontSize: 11, color: "#7fd0ff", background: "#0f1b22", padding: "2px 6px", borderRadius: 5, wordBreak: "break-all" },
+  receiptFlush: { fontSize: 11, color: "#9fb3a6" },
+  receiptOpen: { marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#7ff0b0", whiteSpace: "nowrap" },
 };

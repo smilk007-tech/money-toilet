@@ -232,6 +232,16 @@ export default function PayslipModal() {
     const encoded = encodeReceiptForShare(data);
     const fp = stableFingerprint(data);
 
+    // 집계 신호는 '클릭 즉시'(모든 await 이전) 발사 — 공유 시트/네트워크 도중 이탈해도 유실되지 않는다.
+    // created = 캐시 미스 = 이 공유로 /r/ 짧은 URL이 새로 생성됨(동기 판정이라 이탈 위험 구간 밖).
+    try {
+      window.dispatchEvent(
+        new CustomEvent(APP_EVENTS.share, {
+          detail: { created: !shareIdCache.has(fp) },
+        }),
+      );
+    } catch {}
+
     // 캐시 히트면 API 재호출 없이 바로 사용
     let shareId = shareIdCache.get(fp) ?? encoded;
     if (!shareIdCache.has(fp)) {
