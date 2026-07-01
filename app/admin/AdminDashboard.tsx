@@ -329,13 +329,13 @@ export default function AdminDashboard() {
                       {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.bragUrl) ? (
                         <tr key={hr} style={s.tr}>
                           <td style={{ ...s.td, ...s.tdTime }}>{String(hr).padStart(2, "0")}시</td>
-                          <td style={s.td}>{h.visits}</td>
+                          <td style={{ ...s.td, color: h.visits ? "#7ff0b0" : undefined }}>{h.visits}</td>
                           <td style={{ ...s.td, color: h.newVisitors ? "#7ff0b0" : undefined }}>{h.newVisitors}</td>
-                          <td style={s.td}>{h.chat}</td>
-                          <td style={s.td}>{h.flush}</td>
-                          <td style={s.td}>{h.share || 0}</td>
-                          <td style={s.td}>{h.bragUrl || 0}</td>
-                          <td style={s.td}>{h.money ? won(h.money) : "-"}</td>
+                          <td style={{ ...s.td, color: h.chat ? "#7ff0b0" : undefined }}>{h.chat}</td>
+                          <td style={{ ...s.td, color: h.flush ? "#7ff0b0" : undefined }}>{h.flush}</td>
+                          <td style={{ ...s.td, color: h.share ? "#7ff0b0" : undefined }}>{h.share || 0}</td>
+                          <td style={{ ...s.td, color: h.bragUrl ? "#7ff0b0" : undefined }}>{h.bragUrl || 0}</td>
+                          <td style={{ ...s.td, color: h.money ? "#7ff0b0" : undefined }}>{h.money ? won(h.money) : "-"}</td>
                         </tr>
                       ) : null)}
                     </tbody>
