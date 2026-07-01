@@ -1688,6 +1688,10 @@ body {
 .settings__link:active {
   background: rgba(125, 255, 176, 0.1);
 }
+/* 개발자 도구 래퍼 — hidden 제거 시 settings-panel flex gap에 자연스럽게 합류 */
+#devTools:not([hidden]) {
+  display: contents;
+}
 /* 개발용 임시 도구 — 위험 액션임을 색으로 표시 */
 .settings__link--danger {
   color: #ff8a7a;
