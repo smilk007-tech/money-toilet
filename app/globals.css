@@ -1492,7 +1492,7 @@ body {
   border-radius: 50%;
   /* 기본색(남은 구간). 지나온 구간은 JS(applySalary)에서 짙은 녹색으로 덮어씀 —
      둘 다 투명도를 크게 줘서 흐릿하게 보이게 한다 */
-  background: rgba(233, 244, 238, 0.3);
+  background: rgba(233, 244, 238, 0.2);
 }
 /* 커스텀 슬라이더 — 네이티브 채움 대신 트랙/thumb 를 직접 그려 눈금과 정확히 맞춘다 */
 .salary-panel input[type="range"] {
