@@ -321,7 +321,7 @@ export default function AdminDashboard() {
                   <Stat l="물내림" v={won(totals.flush)} />
                   <Stat l="공유" v={won(totals.share)} />
                   <Stat l="자랑 URL" v={won(totals.bragUrl)} />
-                  <Stat l="번 돈" v={`${won(totals.money)}원`} hi />
+                  <Stat l="번 돈" v={`${won(totals.money)}원`} hi wide />
                 </div>
                 {isExpanded && (
                   <table style={s.htable}>
@@ -334,13 +334,13 @@ export default function AdminDashboard() {
                       {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.bragUrl) ? (
                         <tr key={hr} style={s.tr}>
                           <td style={{ ...s.td, ...s.tdTime }}>{String(hr).padStart(2, "0")}시</td>
-                          <td style={{ ...s.td, color: h.visits ? "#7ff0b0" : undefined }}>{h.visits}</td>
+                          <td style={s.td}>{h.visits}</td>
                           <td style={{ ...s.td, color: h.newVisitors ? "#7ff0b0" : undefined }}>{h.newVisitors}</td>
-                          <td style={{ ...s.td, color: h.chat ? "#7ff0b0" : undefined }}>{h.chat}</td>
-                          <td style={{ ...s.td, color: h.flush ? "#7ff0b0" : undefined }}>{h.flush}</td>
-                          <td style={{ ...s.td, color: h.share ? "#7ff0b0" : undefined }}>{h.share || 0}</td>
-                          <td style={{ ...s.td, color: h.bragUrl ? "#7ff0b0" : undefined }}>{h.bragUrl || 0}</td>
-                          <td style={{ ...s.td, color: h.money ? "#7ff0b0" : undefined }}>{h.money ? won(h.money) : "-"}</td>
+                          <td style={s.td}>{h.chat}</td>
+                          <td style={s.td}>{h.flush}</td>
+                          <td style={s.td}>{h.share || 0}</td>
+                          <td style={s.td}>{h.bragUrl || 0}</td>
+                          <td style={s.td}>{h.money ? won(h.money) : "-"}</td>
                         </tr>
                       ) : null)}
                     </tbody>
@@ -615,9 +615,9 @@ export default function AdminDashboard() {
   );
 }
 
-function Stat({ l, v, hi }: { l: string; v: string; hi?: boolean }) {
+function Stat({ l, v, hi, wide }: { l: string; v: string; hi?: boolean; wide?: boolean }) {
   return (
-    <div style={s.stat}>
+    <div style={{ ...s.stat, ...(wide ? { gridColumn: "1 / -1" } : {}) }}>
       <span style={s.statL}>{l}</span>
       <span style={{ ...s.statV, ...(hi ? { color: "#ffd84d" } : {}) }}>{v}</span>
     </div>
@@ -678,10 +678,10 @@ const s: Record<string, React.CSSProperties> = {
   cardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" },
   cardTitle: { fontSize: 13, color: "#8fa89a", marginBottom: 8 },
   chevron: { marginLeft: "auto", fontSize: 12, color: "#ffd233" },
-  stats: { display: "flex", flexDirection: "column" as const, gap: 0 },
-  stat: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "7px 2px", borderBottom: "1px solid #1b241e" },
-  statV: { fontSize: 15, fontWeight: 800, color: "#fff", fontVariantNumeric: "tabular-nums" },
-  statL: { fontSize: 12, color: "#8fa89a" },
+  stats: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 },
+  stat: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "4px 4px", borderBottom: "1px solid #1b241e" },
+  statV: { fontSize: 13, fontWeight: 800, color: "#fff", fontVariantNumeric: "tabular-nums" },
+  statL: { fontSize: 11, color: "#8fa89a" },
   htable: { width: "100%", marginTop: 10, borderCollapse: "collapse" as const, fontSize: 12 },
   th: { color: "#7ff0b0", textAlign: "right" as const, padding: "5px 7px", borderBottom: "2px solid #2c3a32", fontWeight: 600, background: "#0f1a14", whiteSpace: "nowrap" as const },
   tr: {},
