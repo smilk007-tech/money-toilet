@@ -330,30 +330,47 @@ export default function ToiletGame() {
           <b id="salaryBig">300만원</b>
           <span className="salary-panel__rate" id="salaryRate">1초에 약 4.7원</span>
         </div>
-        {/* 슬라이더 스텝 눈금 — 인덱스 0·4·9·14·17 위치(휴식·250만·500만·1천만·1억) */}
-        <div className="salary-panel__scale" aria-hidden="true">
-          <span style={{ left: "0%", transform: "translateX(0)" }}>휴식</span>
-          <span style={{ left: "23.5%" }}>250만</span>
-          <span style={{ left: "52.9%" }}>500만</span>
-          <span style={{ left: "82.4%" }}>1천만</span>
-          <span style={{ left: "100%", transform: "translateX(-100%)" }}>
-            1억
-          </span>
-        </div>
-        <div className="salary-panel__slider-wrap">
-          <div className="salary-panel__ticks" aria-hidden="true">
-            {Array.from({ length: 18 }, (_, i) => (
-              <span key={i} style={{ left: `${((i / 17) * 100).toFixed(2)}%` }} />
-            ))}
+        {/* 눈금 라벨 + 슬라이더 — 인덱스 0·4·9·14·17(휴식·250만·500만·1천만·1억).
+            thumb 는 반지름만큼 안쪽에서 움직이므로 라벨·틱도 같은 위치로 보정한다. */}
+        <div className="salary-panel__meter">
+          <div className="salary-panel__scale" aria-hidden="true">
+            <span style={{ left: "calc(0% + (0.5 * var(--thumb)))" }}>휴식</span>
+            <span style={{ left: "calc(23.529% + (0.2647 * var(--thumb)))" }}>
+              250만
+            </span>
+            <span style={{ left: "calc(52.941% + (-0.0294 * var(--thumb)))" }}>
+              500만
+            </span>
+            <span style={{ left: "calc(82.353% + (-0.3235 * var(--thumb)))" }}>
+              1천만
+            </span>
+            <span style={{ left: "calc(100% + (-0.5 * var(--thumb)))" }}>1억</span>
           </div>
-          <input
-            type="range"
-            id="salaryRange"
-            min="0"
-            max="17"
-            step="1"
-            defaultValue="5"
-          />
+          <div className="salary-panel__slider-wrap">
+            <div className="salary-panel__ticks" aria-hidden="true">
+              {Array.from({ length: 18 }, (_, i) => {
+                const f = i / 17;
+                return (
+                  <span
+                    key={i}
+                    style={{
+                      left: `calc(${(f * 100).toFixed(3)}% + (${(
+                        0.5 - f
+                      ).toFixed(4)} * var(--thumb)))`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <input
+              type="range"
+              id="salaryRange"
+              min="0"
+              max="17"
+              step="1"
+              defaultValue="5"
+            />
+          </div>
         </div>
       </div>
 

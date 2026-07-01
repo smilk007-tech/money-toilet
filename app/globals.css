@@ -1416,6 +1416,7 @@ body {
 
 /* 월급 설정 팝오버 */
 .salary-panel {
+  --thumb: 18px;
   position: absolute;
   left: 9px;
   bottom: 116px;
@@ -1423,12 +1424,12 @@ body {
   width: min(88%, 320px);
   background: rgba(12, 18, 14, 0.94);
   border: 1px solid rgba(125, 255, 176, 0.4);
-  border-radius: 12px;
-  padding: 12px 12px 20px;
+  border-radius: 14px;
+  padding: 14px 15px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  gap: 15px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
 }
 .salary-panel[hidden] {
   display: none;
@@ -1446,75 +1447,148 @@ body {
   border-bottom: 1px solid rgba(125, 255, 176, 0.4);
   transform: rotate(45deg);
 }
+/* 눈금 라벨 + 슬라이더를 한 덩어리로 묶어 라벨이 트랙 바로 위에 붙게 한다 */
+.salary-panel__meter {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+/* 슬라이더 위 스텝 눈금 라벨 — thumb 이동 위치(반지름만큼 안쪽)에 정렬 */
+.salary-panel__scale {
+  position: relative;
+  height: 11px;
+}
+.salary-panel__scale span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: rgba(233, 244, 238, 0.62);
+}
 .salary-panel__slider-wrap {
   position: relative;
 }
+/* 틱 점 — thumb 이동 위치에 정렬, 밝은 트랙·네온 채움 위 모두에서 또렷하게 */
 .salary-panel__ticks {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
   transform: translateY(-50%);
+  height: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: 3; /* 트랙 채움 위로 — 지나온 구간에서도 점이 보이게 */
 }
 .salary-panel__ticks span {
   position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35);
-}
-.salary-panel input[type="range"] {
-  position: relative;
-  width: 100%;
-  accent-color: var(--accent);
-  height: 22px;
-}
-/* 슬라이더 위 스텝 눈금 라벨 — 인덱스 위치(%)에 절대배치, 끝값은 가장자리 밖으로 안 나가게 */
-.salary-panel__scale {
-  position: relative;
-  height: 12px;
-}
-.salary-panel__scale span {
-  position: absolute;
   top: 0;
-  transform: translateX(-50%);
-  font-size: 9.5px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-  color: rgba(233, 244, 238, 0.5);
+  transform: translate(-50%, -50%);
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+  /* 기본색(남은 구간). 지나온 구간은 JS(applySalary)에서 짙은 녹색으로 덮어씀 —
+     둘 다 투명도를 크게 줘서 흐릿하게 보이게 한다 */
+  background: rgba(233, 244, 238, 0.3);
+}
+/* 커스텀 슬라이더 — 네이티브 채움 대신 트랙/thumb 를 직접 그려 눈금과 정확히 맞춘다 */
+.salary-panel input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block; /* 인라인 여백 제거 → 래퍼 높이=트랙 높이, 틱이 레일 정중앙에 오게 */
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.salary-panel input[type="range"]:focus {
+  outline: none;
+}
+.salary-panel input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0
+      calc(var(--f, 0) * 100% + (0.5 - var(--f, 0)) * var(--thumb)),
+    rgba(233, 244, 238, 0.16)
+      calc(var(--f, 0) * 100% + (0.5 - var(--f, 0)) * var(--thumb))
+  );
+}
+.salary-panel input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(233, 244, 238, 0.16);
+}
+.salary-panel input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 .salary-panel input[type="range"]::-webkit-slider-thumb {
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  margin-top: calc((6px - var(--thumb)) / 2);
 }
 .salary-panel input[type="range"]::-moz-range-thumb {
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+/* MUI 스타일 — 포커스/누름 시 thumb 둘레로 살짝 번지는 링 */
+.salary-panel input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(40, 167, 143, 0.25);
+}
+.salary-panel input[type="range"]:active::-webkit-slider-thumb {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 6px rgba(40, 167, 143, 0.28);
+}
+.salary-panel input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(40, 167, 143, 0.25);
+}
+.salary-panel input[type="range"]:active::-moz-range-thumb {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 6px rgba(40, 167, 143, 0.28);
 }
 .salary-panel__left {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 3px;
 }
 .salary-panel__cap {
   font-size: 11px;
   font-weight: 700;
-  color: #eafff5;
+  letter-spacing: 0.02em;
+  color: rgba(205, 213, 210, 0.72); /* 옅은 중립 회색 — 최하위 위계 라벨 */
 }
 .salary-panel__left b {
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 900;
   color: var(--neon);
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
 }
 .salary-panel__rate {
-  font-size: 13px;
+  margin-top: 2px;
+  font-size: 12.5px;
   font-weight: 800;
-  color: var(--gold);
+  letter-spacing: 0.01em;
+  color: var(--gold); /* 노란색 — 슬라이더 네온을 뺐으니 골드가 튀지 않고 어울린다 */
   white-space: nowrap;
 }
 
