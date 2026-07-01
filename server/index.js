@@ -11,7 +11,7 @@ import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
 
-import { DEFAULTS, FLUSH_CAP, MAX_PER_SEC, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, emptyBucket, driftPresenceFloor, initialPresenceFloor, PRESENCE_FLOOR_MAX } from "./lib/keys.js";
+import { DEFAULTS, FLUSH_CAP, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, emptyBucket, driftPresenceFloor, initialPresenceFloor, PRESENCE_FLOOR_MAX } from "./lib/keys.js";
 import {
   loadConfig, setConfig, persistToday, loadToday, persistHours, loadHours,
   appendChatLog, loadActiveBans, banVid, unbanVid, listBans, clean,
@@ -64,10 +64,6 @@ function rateOk(vid, bucket = "chat") {
   rate.set(key, arr);
   return arr.length <= cfg.rateLimitN;
 }
-// 물내림 적립 시계 — vid별 마지막 물내림 시각(소켓 재연결과 무관하게 유지).
-// 소켓당으로 두면 재연결마다 1시간 헤드룸이 재무장돼 도배 주입에 악용되므로 vid 기준으로 보존한다.
-const flushClock = new Map(); // vid -> 마지막 물내림 ts(ms)
-const FLUSH_HEADROOM_MS = 3600_000; // 최초/장기부재 후 물내림에 허용하는 적립 헤드룸(=1시간, 클라 부재중 적립 상한과 동일)
 // 공유 집계 연타 방어 — vid당 SHARE_DEDUP_MS 안의 반복 공유는 1회만 집계(악성 연타로 지표 부풀리기 차단).
 // 클릭 즉시 클라가 emit하므로 이탈로 인한 누수는 없고, 여기서 과집계만 걸러낸다.
 const shareClock = new Map(); // vid -> 마지막 공유 집계 ts(ms)
@@ -149,9 +145,6 @@ function pushAdminLive() {
 
 /* ---------- 5분 배치 영속 ---------- */
 async function flushPersist() {
-  // flushClock 정리 — 1시간 지난 항목은 기본 헤드룸과 동일해 무의미하므로 제거(메모리 보호).
-  const cutoff = Date.now() - FLUSH_HEADROOM_MS;
-  for (const [vid, t] of flushClock) if (t < cutoff) flushClock.delete(vid);
   // shareClock 정리 — dedup 창(60초)을 지난 항목은 무의미하므로 제거(메모리 보호).
   const shareCutoff = Date.now() - SHARE_DEDUP_MS;
   for (const [vid, t] of shareClock) if (t < shareCutoff) shareClock.delete(vid);
@@ -337,13 +330,7 @@ io.on("connection", async (socket) => {
     let amount = Math.floor(Number(p.amount) || 0);
     if (amount < 1) return;
     if (cfg.chatDisabled || isBanned(vid) || !rateOk(vid, "flush")) return;
-    const now = Date.now();
-    // 적립 헤드룸은 vid별 마지막 물내림 기준 — 재연결해도 시계가 유지돼 도배 재무장을 막는다.
-    // 최초/장기부재(>1h) 물내림만 1시간치 헤드룸을 받아 부재중 적립분(클라 상한=1시간)을 통과시킨다.
-    const lastFlushAt = flushClock.get(vid) ?? now - FLUSH_HEADROOM_MS;
-    const accrued = Math.ceil((MAX_PER_SEC * (now - lastFlushAt)) / 1000) + MAX_PER_SEC;
-    amount = Math.min(amount, accrued, FLUSH_CAP);
-    flushClock.set(vid, now);
+    amount = Math.min(amount, FLUSH_CAP);
     if (amount < 1) return;
 
     ensureDay();
