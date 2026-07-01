@@ -172,7 +172,7 @@ export default function ToiletGame() {
           role="button"
           aria-label="휴지 한 장 뜯기"
         >
-          <rect x="0" y="-22" width="96" height="176" fill="transparent" />
+          <rect x="0" y="-55" width="96" height="209" fill="transparent" />
           <defs>
             <linearGradient id="tpMetal" x1="0" y1="0" x2="1" y2=".2">
               <stop offset="0" stopColor="#55585b" />
