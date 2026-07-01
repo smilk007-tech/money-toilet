@@ -338,15 +338,15 @@ export default function ToiletGame() {
           type="range"
           id="salaryRange"
           min="0"
-          max="13"
+          max="17"
           step="1"
-          defaultValue="3"
+          defaultValue="5"
         />
-        {/* 슬라이더 스텝 눈금 — 어림잡아 어디쯤인지 보이게(인덱스 0·5·10·13 위치) */}
+        {/* 슬라이더 스텝 눈금 — 인덱스 0·9·14·17 위치(휴식·500만·1천만·1억) */}
         <div className="salary-panel__scale" aria-hidden="true">
           <span style={{ left: "0%", transform: "translateX(0)" }}>휴식</span>
-          <span style={{ left: "38.5%" }}>500만</span>
-          <span style={{ left: "76.9%" }}>1천만</span>
+          <span style={{ left: "52.9%" }}>500만</span>
+          <span style={{ left: "82.4%" }}>1천만</span>
           <span style={{ left: "100%", transform: "translateX(-100%)" }}>
             1억
           </span>
