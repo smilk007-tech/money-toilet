@@ -1338,6 +1338,21 @@ body {
   padding: 4px 6px;
   line-height: 1;
 }
+.chat__nick--reroll {
+  cursor: pointer;
+  user-select: none;
+}
+.chat__nick--reroll:active {
+  opacity: 0.5;
+}
+.chat__nick--flash {
+  animation: nick-flash 0.28s ease;
+}
+@keyframes nick-flash {
+  0% { opacity: 1; }
+  35% { opacity: 0.15; }
+  100% { opacity: 1; }
+}
 .chat__field:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(40, 167, 143, 0.15);
