@@ -332,10 +332,10 @@ export default function AdminDashboard() {
                           <td style={s.td}>{h.visits}</td>
                           <td style={{ ...s.td, color: h.newVisitors ? "#7ff0b0" : undefined }}>{h.newVisitors}</td>
                           <td style={s.td}>{h.chat}</td>
-                          <td style={{ ...s.td, color: h.flush ? "#ffd84d" : undefined }}>{h.flush}</td>
+                          <td style={s.td}>{h.flush}</td>
                           <td style={s.td}>{h.share || 0}</td>
                           <td style={s.td}>{h.bragUrl || 0}</td>
-                          <td style={{ ...s.td, ...s.tdMoney }}>{h.money ? won(h.money) : "-"}</td>
+                          <td style={s.td}>{h.money ? won(h.money) : "-"}</td>
                         </tr>
                       ) : null)}
                     </tbody>
@@ -655,7 +655,6 @@ const s: Record<string, React.CSSProperties> = {
   tr: {},
   td: { textAlign: "right" as const, padding: "5px 7px", borderBottom: "1px solid #1b241e", color: "#cdddd4" },
   tdTime: { color: "#8fa89a", fontWeight: 600, textAlign: "left" as const },
-  tdMoney: { color: "#ffd84d", fontWeight: 700 },
   btnPrimary: { padding: 14, borderRadius: 10, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 16, fontWeight: 700 },
   btnGhost: { padding: "7px 11px", borderRadius: 8, border: "1px solid #2c3a32", background: "transparent", color: "#9fb3a6", fontSize: 12 },
   btnDanger: { padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
