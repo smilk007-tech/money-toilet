@@ -420,12 +420,12 @@ export default function ToiletGame() {
             </span>
             개발자 후원하기
           </button>
-          <button className="settings__link" type="button" data-action="ad">
+          {/* <button className="settings__link" type="button" data-action="ad">
             <span className="settings__link-ico" aria-hidden>
               📢
             </span>
             광고문의
-          </button>
+          </button> */}
         </div>
 
         {/* 개발자 도구 — 일반 사용자에겐 숨김. 우상단 '오늘 다같이' 영역 20번 빠르게 탭으로만 노출됨 */}
