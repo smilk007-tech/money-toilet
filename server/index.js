@@ -78,24 +78,22 @@ const STRIKE_DECAY_MS = 5 * 60 * 1000; // 마지막 위반 후 이 시간 지나
    빈 방 이탈 방지용 최소 표시 인원. 공개 broadcast만 max(실제, 바닥값)으로 패딩하고,
    어드민 스냅샷은 항상 실제 presence.size를 쓴다(운영자는 진짜를 봐야 함). */
 let presenceFloorNow = 0;
-// 공개용 표시 인원 — 실제가 바닥값보다 크면 실제값 그대로(패딩만)
+// 공개용 표시 인원 — 실제 접속자 + 드리프트 추가 인원 (덧셈: 입장 시 바로 체감)
 function publicPresence() {
-  return Math.max(presence.size, presenceFloorNow);
+  return presence.size + presenceFloorNow;
 }
-// 설정 반영 즉시 재동기화 — auto면 지금 시간대 목표치 근처로, 수동이면 상한 고정
+// 설정 반영 즉시 재동기화 — 항상 auto(드리프트 값이 0이 아니면 항상 발동)
 function resyncPresenceFloor() {
-  presenceFloorNow = cfg.presenceFloorAuto
-    ? initialPresenceFloor(cfg.presenceFloorMax)
-    : Math.max(0, Math.min(PRESENCE_FLOOR_MAX, Math.floor(cfg.presenceFloorMax) || 0));
+  presenceFloorNow = initialPresenceFloor(cfg.presenceFloorMax);
 }
-// 자동 드리프트 — auto일 때만 ~10분(8~12분 지터) 간격으로 한 걸음씩 이동 후 (값 변할 때만) 브로드캐스트.
-// 클럭 그리드(:00,:10…)로 안 보이게 매번 지터. 순수 연산 + 디바운스 브로드캐스트뿐 → 부하 무시 수준.
+// 자동 드리프트 — 항상 on. 1.5~3분 간격으로 한 걸음씩 이동, 값이 바뀔 때만 브로드캐스트.
+// 짧은 인터벌로 사용자가 실시간으로 인원 변동을 체감할 수 있게 한다.
 function scheduleFloorDrift() {
-  const delay = 8 * 60_000 + Math.floor(Math.random() * 4 * 60_000); // 8~12분
+  const delay = 90_000 + Math.floor(Math.random() * 90_000); // 1.5~3분
   setTimeout(() => {
-    if (cfg.presenceFloorAuto) {
+    if (cfg.presenceFloorMax > 0) {
       const next = driftPresenceFloor(presenceFloorNow, cfg.presenceFloorMax);
-      if (next !== presenceFloorNow) { presenceFloorNow = next; broadcastPresence(); }
+      if (next !== presenceFloorNow) { presenceFloorNow = next; broadcastPresence(); pushAdminLive(); }
     }
     scheduleFloorDrift();
   }, delay);
@@ -421,7 +419,7 @@ async function boot() {
   hours = await loadHours(d); // 시간별 복구
   for (const b of await loadActiveBans()) bans.set(b.vid, b.expiry);
   resyncPresenceFloor(); // 접속자 바닥값 초기화
-  scheduleFloorDrift(); // 자동 드리프트 시작(auto일 때만 실제로 움직임)
+  scheduleFloorDrift(); // 자동 드리프트 시작(presenceFloorMax > 0이면 항상 발동)
 
   setInterval(() => flushPersist().catch((e) => console.error("[persist]", e)), cfg.persistMs);
   // 시간별 통계는 5분 배치 영속과 같은 주기로만 push(매초 폴링하지 않음) — presence/오늘/online은

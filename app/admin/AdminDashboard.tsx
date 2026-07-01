@@ -12,7 +12,7 @@ import { io, type Socket } from "socket.io-client";
 type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number; share: number; bragUrl: number };
 type Online = { vid: string; nick: string; conns: number; since: number; banned: boolean };
 // 어드민이 '접속한 이후' 관측한 유저 — 이탈해도 목록에서 지우지 않고 이탈 표기로 남긴다(프론트 전용, 미영속).
-type Tracked = Online & { status: "online" | "left"; leftAt?: number; reconnects: number };
+type Tracked = Online & { status: "online" | "left"; leftAt?: number; reconnects: number; initialNick?: string; nickChanged?: boolean };
 type ChatRow = { ts: number; hour: number; vid: string; nick: string; text: string };
 type ReceiptRow = { id: string; ts: number; n: string; t: number; f: number };
 type BanRow = { vid: string; expiry: number | null };
@@ -86,6 +86,7 @@ export default function AdminDashboard() {
   const [receiptDay, setReceiptDay] = useState(0); // 0=오늘 1=어제 2=엊그제 3=그끄저께
   const [receiptLoading, setReceiptLoading] = useState(false);
   const loadedReceiptDatesRef = useRef<Set<string>>(new Set());
+  const [excludeFlush, setExcludeFlush] = useState(false);
   const [onSort, setOnSort] = useState<"new" | "old">("new");
   const [onQ, setOnQ] = useState("");
   const [bc, setBc] = useState("");
@@ -124,10 +125,15 @@ export default function AdminDashboard() {
           const next: Record<string, Tracked> = { ...prev };
           for (const o of d.online) {
             const cur = next[o.vid];
-            if (!cur) next[o.vid] = { ...o, status: "online", reconnects: 0 };
-            else if (cur.status === "left")
-              next[o.vid] = { ...o, status: "online", reconnects: cur.reconnects + 1 }; // 이탈 후 복귀
-            else next[o.vid] = { ...cur, ...o }; // 유지 — 닉/연결수 등 최신화
+            if (!cur) {
+              next[o.vid] = { ...o, status: "online", reconnects: 0, initialNick: o.nick, nickChanged: false };
+            } else if (cur.status === "left") {
+              const initialNick = cur.initialNick ?? cur.nick;
+              next[o.vid] = { ...o, status: "online", reconnects: cur.reconnects + 1, initialNick, nickChanged: !!(initialNick && o.nick && o.nick !== initialNick) };
+            } else {
+              const initialNick = cur.initialNick ?? cur.nick;
+              next[o.vid] = { ...cur, ...o, initialNick, nickChanged: !!(initialNick && o.nick && o.nick !== initialNick) };
+            }
           }
           for (const vid of Object.keys(next)) {
             if (next[vid].status === "online" && !onlineVids.has(vid))
@@ -249,7 +255,13 @@ export default function AdminDashboard() {
   const baseChats = tab === "liveChat" ? liveChats : (histChats[dateOf(chatlogDay)] || []);
   const q1 = chatQ.trim().toLowerCase();
   const chats = [...baseChats]
-    .filter((c) => !q1 || c.text.toLowerCase().includes(q1) || (c.nick || "").toLowerCase().includes(q1) || c.vid.toLowerCase().includes(q1))
+    .filter((c) => {
+      if (excludeFlush && c.text.startsWith("💰")) return false;
+      if (!q1) return true;
+      // 현재채팅은 nickByVid 우선 — 닉 변경 후에도 새 닉으로 검색 가능
+      const nick = (tab === "liveChat" ? nickByVid[c.vid] || c.nick : c.nick) || "";
+      return c.text.toLowerCase().includes(q1) || nick.toLowerCase().includes(q1) || c.vid.toLowerCase().includes(q1);
+    })
     .sort((a, b) => (chatSort === "new" ? b.ts - a.ts : a.ts - b.ts));
   // 접속자/이탈자 — tracked(어드민 접속 이후 관측분)에서 파생. 과거 이탈자는 포함하지 않음.
   const q2 = onQ.trim().toLowerCase();
@@ -308,10 +320,23 @@ export default function AdminDashboard() {
                 </div>
                 {isExpanded && (
                   <table style={s.htable}>
-                    <thead><tr>{["시", "방문", "신규", "채팅", "물내림", "공유", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+                    <thead>
+                      <tr>
+                        {["시간", "방문", "신규", "채팅", "물내림", "공유", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}
+                      </tr>
+                    </thead>
                     <tbody>
                       {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.bragUrl) ? (
-                        <tr key={hr}><td style={s.td}>{String(hr).padStart(2, "0")}</td><td style={s.td}>{h.visits}</td><td style={s.td}>{h.newVisitors}</td><td style={s.td}>{h.chat}</td><td style={s.td}>{h.flush}</td><td style={s.td}>{h.share || 0}</td><td style={s.td}>{h.bragUrl || 0}</td><td style={s.td}>{won(h.money)}</td></tr>
+                        <tr key={hr} style={s.tr}>
+                          <td style={{ ...s.td, ...s.tdTime }}>{String(hr).padStart(2, "0")}시</td>
+                          <td style={s.td}>{h.visits}</td>
+                          <td style={{ ...s.td, color: h.newVisitors ? "#7ff0b0" : undefined }}>{h.newVisitors}</td>
+                          <td style={s.td}>{h.chat}</td>
+                          <td style={{ ...s.td, color: h.flush ? "#ffd84d" : undefined }}>{h.flush}</td>
+                          <td style={s.td}>{h.share || 0}</td>
+                          <td style={s.td}>{h.bragUrl || 0}</td>
+                          <td style={{ ...s.td, ...s.tdMoney }}>{h.money ? won(h.money) : "-"}</td>
+                        </tr>
                       ) : null)}
                     </tbody>
                   </table>
@@ -355,17 +380,13 @@ export default function AdminDashboard() {
             </>)}
           </div>
           <div style={s.card}>
-            <div style={s.cardTitle}>👥 접속자 표시 바닥값 (빈 방 방지)</div>
-            <div style={s.cfgDesc}>실제 접속이 이보다 적으면 이 값까지 채워 보여줍니다(패딩). 통계·이 화면의 접속 숫자는 항상 실제값입니다.</div>
+            <div style={s.cardTitle}>👥 드리프트 인원 부스트</div>
+            <div style={s.cfgDesc}>실제 접속자에 드리프트 인원을 더해 표시합니다. 시간대 패턴(직장인 기준)으로 0~최대값 사이를 자동 조절하며, 사용자는 실시간 인원 변동을 체감합니다. 통계·이 화면의 접속 숫자는 항상 실제값입니다.</div>
             <div style={{ ...s.note, marginTop: 8, marginBottom: 0 }}>
-              현재 적용 바닥값 <b style={{ color: "#ffd233" }}>{live?.floor ?? 0}명</b> · 실제 접속 <b style={{ color: "#7ff0b0" }}>{live?.presence ?? 0}명</b>
+              드리프트 <b style={{ color: "#ffd233" }}>+{live?.floor ?? 0}명</b> 적용 중 · 실제 접속 <b style={{ color: "#7ff0b0" }}>{live?.presence ?? 0}명</b> · 표시 <b style={{ color: "#fff" }}>{(live?.presence ?? 0) + (live?.floor ?? 0)}명</b>
             </div>
             <label style={s.cfgRow}>
-              <div><div style={s.cfgLabel}>자동 드리프트</div><div style={s.cfgDesc}>ON: 0~상한을 시간대(직장인 패턴)로 부드럽게 왕복 · OFF: 상한값으로 고정</div></div>
-              <input type="checkbox" checked={cfg.presenceFloorAuto} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorAuto: e.target.checked }))} />
-            </label>
-            <label style={s.cfgRow}>
-              <div><div style={s.cfgLabel}>{cfg.presenceFloorAuto ? "드리프트 상한(천장)" : "고정 인원"}</div><div style={s.cfgDesc}>0~9. 오픈초기엔 3 권장 (0=끔)</div></div>
+              <div><div style={s.cfgLabel}>드리프트 최대 추가 인원</div><div style={s.cfgDesc}>0~9. 1명 입장 시 최대 이 수만큼 더해 보임. 오픈 초기엔 3 권장 (0=끔)</div></div>
               <div style={s.cfgInputWrap}><input type="number" min={0} max={9} value={cfg.presenceFloorMax} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorMax: Math.max(0, Math.min(9, Math.floor(Number(e.target.value)) || 0)) }))} /><span style={s.cfgUnit}>명</span></div>
             </label>
             <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
@@ -426,7 +447,7 @@ export default function AdminDashboard() {
               nick={o.nick || "익명"}
               time={`${hhmm(o.since)}~`}
               vid={o.vid}
-              tags={<>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
+              tags={<>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.nickChanged && <span style={s.nickTag}>닉변</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
               dur={dur}
               setDur={setDur}
               onBan={ban}
@@ -440,7 +461,7 @@ export default function AdminDashboard() {
               nick={o.nick || "익명"}
               time={`${hhmm(o.since)}~${o.leftAt ? hhmm(o.leftAt) : ""}`}
               vid={o.vid}
-              tags={<><span style={s.leftTag}>{o.leftAt ? `${hhmm(o.leftAt)} 이탈` : "이탈"}</span>{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
+              tags={<>{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.nickChanged && <span style={s.nickTag}>닉변</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
               dur={dur}
               setDur={setDur}
               onBan={ban}
@@ -465,6 +486,7 @@ export default function AdminDashboard() {
           <div style={s.ctrlRow}>
             <input style={s.search} placeholder="검색: 메시지 / 닉네임 / UUID" value={chatQ} onChange={(e) => setChatQ(e.target.value)} />
             <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
+            <button style={{ ...s.sortBtn, ...(excludeFlush ? s.filterOn : {}) }} onClick={() => setExcludeFlush((v) => !v)}>💰제외</button>
           </div>
           <div style={s.note}>{chats.length}건 (접속 후 수신분)</div>
           {chats.length === 0 && <Empty />}
@@ -497,6 +519,7 @@ export default function AdminDashboard() {
           <div style={s.ctrlRow}>
             <input style={s.search} placeholder="검색: 메시지 / 닉네임 / UUID" value={chatQ} onChange={(e) => setChatQ(e.target.value)} />
             <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
+            <button style={{ ...s.sortBtn, ...(excludeFlush ? s.filterOn : {}) }} onClick={() => setExcludeFlush((v) => !v)}>💰제외</button>
             {chatlogDay === 0 && (
               <button style={s.sortBtn} onClick={() => loadChatlog(0)} disabled={chatlogLoading} title="오늘 채팅로그 새로고침(캐시 우회)">{chatlogLoading ? "…" : "🔄"}</button>
             )}
@@ -627,9 +650,12 @@ const s: Record<string, React.CSSProperties> = {
   stat: { flex: "1 0 60px", textAlign: "center" },
   statV: { fontSize: 15, fontWeight: 800, color: "#fff" },
   statL: { fontSize: 10, color: "#8fa89a", marginTop: 3 },
-  htable: { width: "100%", marginTop: 10, borderCollapse: "collapse", fontSize: 11 },
-  th: { color: "#8fa89a", textAlign: "right", padding: "3px 5px", borderBottom: "1px solid #243029", fontWeight: 500 },
-  td: { textAlign: "right", padding: "3px 5px", borderBottom: "1px solid #1b241e" },
+  htable: { width: "100%", marginTop: 10, borderCollapse: "collapse" as const, fontSize: 12 },
+  th: { color: "#7ff0b0", textAlign: "right" as const, padding: "5px 7px", borderBottom: "2px solid #2c3a32", fontWeight: 600, background: "#0f1a14", whiteSpace: "nowrap" as const },
+  tr: {},
+  td: { textAlign: "right" as const, padding: "5px 7px", borderBottom: "1px solid #1b241e", color: "#cdddd4" },
+  tdTime: { color: "#8fa89a", fontWeight: 600, textAlign: "left" as const },
+  tdMoney: { color: "#ffd84d", fontWeight: 700 },
   btnPrimary: { padding: 14, borderRadius: 10, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 16, fontWeight: 700 },
   btnGhost: { padding: "7px 11px", borderRadius: 8, border: "1px solid #2c3a32", background: "transparent", color: "#9fb3a6", fontSize: 12 },
   btnDanger: { padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
@@ -664,6 +690,8 @@ const s: Record<string, React.CSSProperties> = {
   tag: { fontSize: 10, background: "#3a2f12", color: "#ffd233", padding: "1px 5px", borderRadius: 4 },
   banTag: { fontSize: 10, background: "#3a1f12", color: "#ffb27f", padding: "1px 5px", borderRadius: 4 },
   leftTag: { fontSize: 10, background: "#26302b", color: "#9fb3a6", padding: "1px 5px", borderRadius: 4 },
+  nickTag: { fontSize: 10, background: "#1a2a3a", color: "#7fd0ff", padding: "1px 5px", borderRadius: 4 },
+  filterOn: { background: "#1a3a25", color: "#7ff0b0", borderColor: "#1f6b45" },
   crowMuted: { opacity: 0.5 },
   leftDivider: { color: "#8fa89a", fontSize: 11.5, fontWeight: 700, margin: "12px 2px 6px", borderTop: "1px dashed #2c3a32", paddingTop: 10 },
   dim: { color: "#7a8c80", fontSize: 11, marginLeft: "auto", whiteSpace: "nowrap" },
