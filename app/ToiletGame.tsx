@@ -340,12 +340,6 @@ export default function ToiletGame() {
             1억
           </span>
         </div>
-        {/* 18 스텝 틱 */}
-        <div className="salary-panel__ticks" aria-hidden="true">
-          {Array.from({ length: 18 }, (_, i) => (
-            <span key={i} style={{ left: `${((i / 17) * 100).toFixed(2)}%` }} />
-          ))}
-        </div>
         <input
           type="range"
           id="salaryRange"
@@ -353,7 +347,13 @@ export default function ToiletGame() {
           max="17"
           step="1"
           defaultValue="5"
+          list="salaryTicks"
         />
+        <datalist id="salaryTicks">
+          {Array.from({ length: 18 }, (_, i) => (
+            <option key={i} value={i} />
+          ))}
+        </datalist>
       </div>
 
       {/* 설정 팝오버 */}
