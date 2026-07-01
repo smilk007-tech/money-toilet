@@ -325,14 +325,10 @@ export default function ToiletGame() {
 
       {/* 월급 설정 팝오버 */}
       <div className="salary-panel" id="salaryPanel" hidden>
-        <div className="salary-panel__row">
-          <div className="salary-panel__left">
-            <span className="salary-panel__cap">내 월급 대충</span>
-            <b id="salaryBig">300만원</b>
-          </div>
-          <span className="salary-panel__rate" id="salaryRate">
-            1초에 약 4.7원
-          </span>
+        <div className="salary-panel__left">
+          <span className="salary-panel__cap">내 월급 대충</span>
+          <b id="salaryBig">300만원</b>
+          <span className="salary-panel__rate" id="salaryRate">1초에 약 4.7원</span>
         </div>
         {/* 슬라이더 스텝 눈금 — 인덱스 0·4·9·14·17 위치(휴식·250만·500만·1천만·1억) */}
         <div className="salary-panel__scale" aria-hidden="true">
@@ -343,6 +339,12 @@ export default function ToiletGame() {
           <span style={{ left: "100%", transform: "translateX(-100%)" }}>
             1억
           </span>
+        </div>
+        {/* 18 스텝 틱 */}
+        <div className="salary-panel__ticks" aria-hidden="true">
+          {Array.from({ length: 18 }, (_, i) => (
+            <span key={i} style={{ left: `${((i / 17) * 100).toFixed(2)}%` }} />
+          ))}
         </div>
         <input
           type="range"

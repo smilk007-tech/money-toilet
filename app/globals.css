@@ -1452,6 +1452,20 @@ body {
   height: 22px;
 }
 /* 슬라이더 위 스텝 눈금 라벨 — 인덱스 위치(%)에 절대배치, 끝값은 가장자리 밖으로 안 나가게 */
+.salary-panel__ticks {
+  position: relative;
+  height: 5px;
+  margin-top: -8px;
+}
+.salary-panel__ticks span {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(125, 255, 176, 0.28);
+}
 .salary-panel__scale {
   position: relative;
   height: 12px;
@@ -1472,16 +1486,10 @@ body {
 .salary-panel input[type="range"]::-moz-range-thumb {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
 }
-.salary-panel__row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
-}
 .salary-panel__left {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 .salary-panel__cap {
   font-size: 11px;
