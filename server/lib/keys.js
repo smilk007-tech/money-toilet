@@ -62,7 +62,7 @@ export const DEFAULTS = {
   chatDisabled: false,
   notices: [], // 시스템 공지 배너. 어드민에서 관리. Notice[] JSON.
   presenceFloorAuto: true, // 접속자 바닥값 자동 드리프트(오픈초기 기본 ON). 어드민은 항상 실제 presence를 본다.
-  presenceFloorMax: 3, // 바닥값 상한(0~9). auto ON=이 값을 천장으로 시간대 패턴 드리프트, OFF=이 값으로 고정
+  presenceFloorMax: 2, // 드리프트 최대 추가 인원(0~9). 시간대 패턴으로 0~이 값 사이를 자동 조절
 };
 // 자동 차단 상한 — 누적 위반(strike)으로 차단 시간이 늘어나도 이 값을 넘지 않음
 export const MAX_AUTOBLOCK_SEC = 600;
