@@ -330,6 +330,7 @@ io.on("connection", async (socket) => {
     let amount = Math.floor(Number(p.amount) || 0);
     if (amount < 1) return;
     if (cfg.chatDisabled || isBanned(vid) || !rateOk(vid, "flush")) return;
+    const now = Date.now();
     amount = Math.min(amount, FLUSH_CAP);
     if (amount < 1) return;
 
