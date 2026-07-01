@@ -11,7 +11,7 @@ import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
 
-import { DEFAULTS, FLUSH_CAP, MAX_PER_SEC, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, emptyBucket } from "./lib/keys.js";
+import { DEFAULTS, FLUSH_CAP, MAX_PER_SEC, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, emptyBucket, driftPresenceFloor, initialPresenceFloor, PRESENCE_FLOOR_MAX } from "./lib/keys.js";
 import {
   loadConfig, setConfig, persistToday, loadToday, persistHours, loadHours,
   appendChatLog, loadActiveBans, banVid, unbanVid, listBans, clean,
@@ -74,6 +74,33 @@ const shareClock = new Map(); // vid -> 마지막 공유 집계 ts(ms)
 const SHARE_DEDUP_MS = 60_000;
 const STRIKE_DECAY_MS = 5 * 60 * 1000; // 마지막 위반 후 이 시간 지나면 누적 strike 리셋(선량한 장기세션 보호)
 
+/* ---------- 접속자 표시 바닥값(자동 드리프트) ----------
+   빈 방 이탈 방지용 최소 표시 인원. 공개 broadcast만 max(실제, 바닥값)으로 패딩하고,
+   어드민 스냅샷은 항상 실제 presence.size를 쓴다(운영자는 진짜를 봐야 함). */
+let presenceFloorNow = 0;
+// 공개용 표시 인원 — 실제가 바닥값보다 크면 실제값 그대로(패딩만)
+function publicPresence() {
+  return Math.max(presence.size, presenceFloorNow);
+}
+// 설정 반영 즉시 재동기화 — auto면 지금 시간대 목표치 근처로, 수동이면 상한 고정
+function resyncPresenceFloor() {
+  presenceFloorNow = cfg.presenceFloorAuto
+    ? initialPresenceFloor(cfg.presenceFloorMax)
+    : Math.max(0, Math.min(PRESENCE_FLOOR_MAX, Math.floor(cfg.presenceFloorMax) || 0));
+}
+// 자동 드리프트 — auto일 때만 ~10분(8~12분 지터) 간격으로 한 걸음씩 이동 후 (값 변할 때만) 브로드캐스트.
+// 클럭 그리드(:00,:10…)로 안 보이게 매번 지터. 순수 연산 + 디바운스 브로드캐스트뿐 → 부하 무시 수준.
+function scheduleFloorDrift() {
+  const delay = 8 * 60_000 + Math.floor(Math.random() * 4 * 60_000); // 8~12분
+  setTimeout(() => {
+    if (cfg.presenceFloorAuto) {
+      const next = driftPresenceFloor(presenceFloorNow, cfg.presenceFloorMax);
+      if (next !== presenceFloorNow) { presenceFloorNow = next; broadcastPresence(); }
+    }
+    scheduleFloorDrift();
+  }, delay);
+}
+
 /* ---------- presence 브로드캐스트(디바운스) ---------- */
 let pTimer = null, pDirty = false;
 function broadcastPresence() {
@@ -83,7 +110,7 @@ function broadcastPresence() {
     pTimer = null;
     if (!pDirty) return;
     pDirty = false;
-    io.emit("presence", { count: presence.size });
+    io.emit("presence", { count: publicPresence() });
   }, cfg.presenceBroadcastMs);
 }
 
@@ -96,7 +123,8 @@ function onlineList() {
 // 라이브성 데이터(자주 바뀜) — presence/오늘 러닝합계/온라인 목록
 function adminLiveSnapshot() {
   ensureDay();
-  return { presence: presence.size, today: { ...today }, online: onlineList() };
+  // presence는 항상 실제값(운영자 진실), floor는 현재 공개 표시에 적용 중인 바닥값(투명성)
+  return { presence: presence.size, floor: presenceFloorNow, today: { ...today }, online: onlineList() };
 }
 // 시간별 통계(5분 배치 영속과 같은 주기로만 바뀌어도 충분 — 매번 보낼 필요 없음)
 function adminHoursSnapshot() {
@@ -197,6 +225,7 @@ app.get("/admin/config", requireAdmin, (_req, res) => {
 app.post("/admin/config", requireAdmin, async (req, res) => {
   await setConfig(req.body ?? {}); cfg = await loadConfig();
   io.emit("notices", { notices: cfg.notices ?? [] });
+  resyncPresenceFloor(); broadcastPresence(); // 바닥값 설정 변경 즉시 반영
   res.json({ ok: true, config: cfg });
 });
 app.post("/admin/reset-money", requireAdmin, async (_req, res) => {
@@ -228,7 +257,7 @@ io.on("connection", async (socket) => {
   // 연결 즉시 현재 상태 1회 전송 — 'hello'를 보내지 않는 수동 관전자(공유페이지 등)도
   // presence/오늘 합계를 바로 볼 수 있게(이 emit 자체는 presence/visits에 영향 없음)
   ensureDay();
-  socket.emit("presence", { count: presence.size });
+  socket.emit("presence", { count: publicPresence() });
   socket.emit("global", { total: today.money });
 
   socket.on("hello", (p = {}) => {
@@ -249,7 +278,7 @@ io.on("connection", async (socket) => {
     }
 
     socket.emit("global", { total: today ? today.money : 0 });
-    socket.emit("presence", { count: presence.size });
+    socket.emit("presence", { count: publicPresence() });
 
     // 공유페이지 방문자 — 방문 집계는 하지만 presence(실시간 볼일 중) 제외
     if (p.isShare) return;
@@ -391,6 +420,8 @@ async function boot() {
   if (t && t.date === d) today = { ...today, ...t, date: d }; // 같은 날이면 러닝합계 복구
   hours = await loadHours(d); // 시간별 복구
   for (const b of await loadActiveBans()) bans.set(b.vid, b.expiry);
+  resyncPresenceFloor(); // 접속자 바닥값 초기화
+  scheduleFloorDrift(); // 자동 드리프트 시작(auto일 때만 실제로 움직임)
 
   setInterval(() => flushPersist().catch((e) => console.error("[persist]", e)), cfg.persistMs);
   // 시간별 통계는 5분 배치 영속과 같은 주기로만 push(매초 폴링하지 않음) — presence/오늘/online은

@@ -18,8 +18,8 @@ type ReceiptRow = { id: string; ts: number; n: string; t: number; f: number };
 type BanRow = { vid: string; expiry: number | null };
 // 서버가 "adminStats"(라이브: presence/today/online)와 "adminHours"(5분 주기)를 분리 push하므로
 // 클라에서는 부분 갱신을 병합해서 들고 있어야 함(매번 전체 스냅샷이 오지 않음).
-type Live = { presence: number; today: Bucket & { date: string }; hours: Bucket[]; online: Online[] };
-type LiveStats = Pick<Live, "presence" | "today" | "online">;
+type Live = { presence: number; floor: number; today: Bucket & { date: string }; hours: Bucket[]; online: Online[] };
+type LiveStats = Pick<Live, "presence" | "floor" | "today" | "online">;
 type LiveHours = Pick<Live, "hours">;
 
 const SOCKET_BASE = (
@@ -92,8 +92,8 @@ export default function AdminDashboard() {
   const [bcSent, setBcSent] = useState(false);
   // 채팅 레이트리밋 + 공지 설정
   type NoticeEntry = { text: string; start?: string; end?: string; url?: string };
-  type CfgState = { chatDisabled: boolean; rateLimitN: number; rateWindowMs: number; chatMinIntervalMs: number; autoBlockSec: number; maxMsgLen: number; notices: NoticeEntry[] };
-  const CFG_DEFAULTS: CfgState = { chatDisabled: false, rateLimitN: 7, rateWindowMs: 10000, chatMinIntervalMs: 700, autoBlockSec: 10, maxMsgLen: 40, notices: [] };
+  type CfgState = { chatDisabled: boolean; rateLimitN: number; rateWindowMs: number; chatMinIntervalMs: number; autoBlockSec: number; maxMsgLen: number; notices: NoticeEntry[]; presenceFloorAuto: boolean; presenceFloorMax: number };
+  const CFG_DEFAULTS: CfgState = { chatDisabled: false, rateLimitN: 7, rateWindowMs: 10000, chatMinIntervalMs: 700, autoBlockSec: 10, maxMsgLen: 40, notices: [], presenceFloorAuto: true, presenceFloorMax: 3 };
   const [cfg, setCfg] = useState<CfgState>(CFG_DEFAULTS);
   const [cfgLoaded, setCfgLoaded] = useState(false);
   const sockRef = useRef<Socket | null>(null);
@@ -353,6 +353,22 @@ export default function AdminDashboard() {
               </label>
               <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
             </>)}
+          </div>
+          <div style={s.card}>
+            <div style={s.cardTitle}>👥 접속자 표시 바닥값 (빈 방 방지)</div>
+            <div style={s.cfgDesc}>실제 접속이 이보다 적으면 이 값까지 채워 보여줍니다(패딩). 통계·이 화면의 접속 숫자는 항상 실제값입니다.</div>
+            <div style={{ ...s.note, marginTop: 8, marginBottom: 0 }}>
+              현재 적용 바닥값 <b style={{ color: "#ffd233" }}>{live?.floor ?? 0}명</b> · 실제 접속 <b style={{ color: "#7ff0b0" }}>{live?.presence ?? 0}명</b>
+            </div>
+            <label style={s.cfgRow}>
+              <div><div style={s.cfgLabel}>자동 드리프트</div><div style={s.cfgDesc}>ON: 0~상한을 시간대(직장인 패턴)로 부드럽게 왕복 · OFF: 상한값으로 고정</div></div>
+              <input type="checkbox" checked={cfg.presenceFloorAuto} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorAuto: e.target.checked }))} />
+            </label>
+            <label style={s.cfgRow}>
+              <div><div style={s.cfgLabel}>{cfg.presenceFloorAuto ? "드리프트 상한(천장)" : "고정 인원"}</div><div style={s.cfgDesc}>0~9. 오픈초기엔 3 권장 (0=끔)</div></div>
+              <div style={s.cfgInputWrap}><input type="number" min={0} max={9} value={cfg.presenceFloorMax} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorMax: Math.max(0, Math.min(9, Math.floor(Number(e.target.value)) || 0)) }))} /><span style={s.cfgUnit}>명</span></div>
+            </label>
+            <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
           </div>
           <div style={s.card}>
             <div style={s.cardTitle}>📢 공지 배너</div>
