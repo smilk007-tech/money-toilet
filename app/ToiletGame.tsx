@@ -281,6 +281,14 @@ export default function ToiletGame() {
               hidden
             >
               <span
+                className="receipt-hint"
+                id="receiptHint"
+                aria-hidden
+                hidden
+              >
+                👉
+              </span>
+              <span
                 className="flush-receipt__icon"
                 id="receiptBtnIcon"
                 aria-hidden
