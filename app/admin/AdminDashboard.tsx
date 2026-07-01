@@ -63,6 +63,8 @@ export default function AdminDashboard() {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [tab, setTab] = useState<"stats" | "online" | "liveChat" | "chatlog" | "receipts" | "bans" | "ops">("stats");
+  const [opsTab, setOpsTab] = useState<"boost" | "chat" | "notice" | "ops">("boost");
+  const [cfgSaved, setCfgSaved] = useState(false);
   const [live, setLive] = useState<Live | null>(null);
   const [liveChats, setLiveChats] = useState<ChatRow[]>([]);
   // vid → 최신 닉네임 맵 — adminChat/adminStats 수신 시마다 갱신.
@@ -160,7 +162,7 @@ export default function AdminDashboard() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const saveCfg = async () => {
     const { data } = await rail("config", { method: "POST", body: JSON.stringify(cfg) });
-    if (data.ok) { setCfg({ ...CFG_DEFAULTS, ...data.config }); flash("저장됨"); }
+    if (data.ok) { setCfg({ ...CFG_DEFAULTS, ...data.config }); setCfgSaved(true); setTimeout(() => setCfgSaved(false), 2000); }
     else flash("저장 실패");
   };
   const loadBans = useCallback(async () => { const { data } = await rail("bans"); if (data.ok) setBans(data.bans || []); }, []);
@@ -313,10 +315,13 @@ export default function AdminDashboard() {
                   <span style={s.chevron}>{isExpanded ? "▲시간별" : "▼시간별"}</span>
                 </div>
                 <div style={s.stats}>
-                  <Stat l="방문" v={won(totals.visits)} /><Stat l="신규" v={won(totals.newVisitors)} />
-                  <Stat l="채팅" v={won(totals.chat)} /><Stat l="물내림" v={won(totals.flush)} />
-                  <Stat l="공유" v={won(totals.share)} /><Stat l="자랑URL" v={won(totals.bragUrl)} />
-                  <Stat l="번 돈" v={won(totals.money)} />
+                  <Stat l="방문" v={won(totals.visits)} />
+                  <Stat l="신규 방문" v={won(totals.newVisitors)} />
+                  <Stat l="채팅" v={won(totals.chat)} />
+                  <Stat l="물내림" v={won(totals.flush)} />
+                  <Stat l="공유" v={won(totals.share)} />
+                  <Stat l="자랑 URL" v={won(totals.bragUrl)} />
+                  <Stat l="번 돈" v={`${won(totals.money)}원`} hi />
                 </div>
                 {isExpanded && (
                   <table style={s.htable}>
@@ -349,87 +354,107 @@ export default function AdminDashboard() {
 
       {tab === "ops" && (
         <div>
-          <div style={s.card}>
-            <div style={s.cardTitle}>💬 채팅 제어</div>
-            {!cfgLoaded ? <div style={s.dim2}>불러오는 중…</div> : (<>
+          <div style={s.subtabs}>
+            {([["boost", "👥 부스트"], ["chat", "💬 채팅"], ["notice", "📢 공지"], ["ops", "💸 운영"]] as const).map(([k, t]) => (
+              <button key={k} onClick={() => setOpsTab(k)} style={{ ...s.subtab, ...(opsTab === k ? s.subtabOn : {}) }}>{t}</button>
+            ))}
+          </div>
+
+          {/* 저장 인라인 피드백 */}
+          {cfgSaved && <div style={s.saveOk}>✓ 저장됨</div>}
+
+          {opsTab === "boost" && (
+            <div style={s.card}>
+              <div style={s.cardTitle}>👥 드리프트 인원 부스트</div>
+              <div style={s.cfgDesc}>실제 접속자에 드리프트 인원을 더해 표시합니다. 시간대 패턴(직장인 기준)으로 0~최대값 사이를 자동 조절하며, 사용자는 실시간 인원 변동을 체감합니다. 통계·이 화면의 접속 숫자는 항상 실제값입니다.</div>
+              <div style={{ ...s.note, marginTop: 8, marginBottom: 0 }}>
+                드리프트 <b style={{ color: "#ffd233" }}>+{live?.floor ?? 0}명</b> 적용 중 · 실제 접속 <b style={{ color: "#7ff0b0" }}>{live?.presence ?? 0}명</b> · 표시 <b style={{ color: "#fff" }}>{(live?.presence ?? 0) + (live?.floor ?? 0)}명</b>
+              </div>
               <label style={s.cfgRow}>
-                <div><div style={s.cfgLabel}>🚨 긴급 채팅 차단</div><div style={s.cfgDesc}>ON 즉시 모든 유저 채팅 전면 차단</div></div>
-                <input type="checkbox" checked={cfg.chatDisabled} onChange={(e) => setCfg((p) => ({ ...p, chatDisabled: e.target.checked }))} />
-              </label>
-              <label style={s.cfgRow}>
-                <div><div style={s.cfgLabel}>최대 채팅 횟수</div><div style={s.cfgDesc}>아래 시간창 안에 이 횟수 초과하면 서버 차단</div></div>
-                <div style={s.cfgInputWrap}><input type="number" min={1} max={50} value={cfg.rateLimitN} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, rateLimitN: Number(e.target.value) }))} /><span style={s.cfgUnit}>회</span></div>
-              </label>
-              <label style={s.cfgRow}>
-                <div><div style={s.cfgLabel}>측정 시간창</div><div style={s.cfgDesc}>위 횟수를 세는 슬라이딩 윈도우 길이</div></div>
-                <div style={s.cfgInputWrap}><input type="number" min={1} max={60} value={cfg.rateWindowMs / 1000} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, rateWindowMs: Number(e.target.value) * 1000 }))} /><span style={s.cfgUnit}>초</span></div>
-              </label>
-              <label style={s.cfgRow}>
-                <div><div style={s.cfgLabel}>연타 방지 간격</div><div style={s.cfgDesc}>같은 사람 연속 채팅 시 최소 대기시간. 미만이면 무시</div></div>
-                <div style={s.cfgInputWrap}><input type="number" min={0} max={10} step={0.1} value={cfg.chatMinIntervalMs / 1000} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, chatMinIntervalMs: Math.round(Number(e.target.value) * 1000) }))} /><span style={s.cfgUnit}>초</span></div>
-              </label>
-              <label style={s.cfgRow}>
-                <div><div style={s.cfgLabel}>도배 차단 시간</div><div style={s.cfgDesc}>도배 감지 시 1회 차단. 반복 위반할수록 배수로 늘어남</div></div>
-                <div style={s.cfgInputWrap}><input type="number" min={1} max={300} value={cfg.autoBlockSec} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, autoBlockSec: Number(e.target.value) }))} /><span style={s.cfgUnit}>초</span></div>
-              </label>
-              <label style={s.cfgRow}>
-                <div><div style={s.cfgLabel}>메시지 최대 길이</div><div style={s.cfgDesc}>초과 글자는 서버에서 조용히 잘라냄</div></div>
-                <div style={s.cfgInputWrap}><input type="number" min={10} max={200} value={cfg.maxMsgLen} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, maxMsgLen: Number(e.target.value) }))} /><span style={s.cfgUnit}>자</span></div>
+                <div><div style={s.cfgLabel}>드리프트 최대 추가 인원</div><div style={s.cfgDesc}>0~9. 1명 입장 시 최대 이 수만큼 더해 보임. 오픈 초기엔 3 권장 (0=끔)</div></div>
+                <div style={s.cfgInputWrap}><input type="number" min={0} max={9} value={cfg.presenceFloorMax} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorMax: Math.max(0, Math.min(9, Math.floor(Number(e.target.value)) || 0)) }))} /><span style={s.cfgUnit}>명</span></div>
               </label>
               <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
-            </>)}
-          </div>
-          <div style={s.card}>
-            <div style={s.cardTitle}>👥 드리프트 인원 부스트</div>
-            <div style={s.cfgDesc}>실제 접속자에 드리프트 인원을 더해 표시합니다. 시간대 패턴(직장인 기준)으로 0~최대값 사이를 자동 조절하며, 사용자는 실시간 인원 변동을 체감합니다. 통계·이 화면의 접속 숫자는 항상 실제값입니다.</div>
-            <div style={{ ...s.note, marginTop: 8, marginBottom: 0 }}>
-              드리프트 <b style={{ color: "#ffd233" }}>+{live?.floor ?? 0}명</b> 적용 중 · 실제 접속 <b style={{ color: "#7ff0b0" }}>{live?.presence ?? 0}명</b> · 표시 <b style={{ color: "#fff" }}>{(live?.presence ?? 0) + (live?.floor ?? 0)}명</b>
             </div>
-            <label style={s.cfgRow}>
-              <div><div style={s.cfgLabel}>드리프트 최대 추가 인원</div><div style={s.cfgDesc}>0~9. 1명 입장 시 최대 이 수만큼 더해 보임. 오픈 초기엔 3 권장 (0=끔)</div></div>
-              <div style={s.cfgInputWrap}><input type="number" min={0} max={9} value={cfg.presenceFloorMax} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorMax: Math.max(0, Math.min(9, Math.floor(Number(e.target.value)) || 0)) }))} /><span style={s.cfgUnit}>명</span></div>
-            </label>
-            <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
-          </div>
-          <div style={s.card}>
-            <div style={s.cardTitle}>📢 공지 배너</div>
-            <div style={s.cfgDesc}>활성 공지 1건이 상단에 흘러가는 배너로 표시됩니다. 날짜 생략 시 즉시·무한 노출.</div>
-            {cfg.notices.length === 0 && <div style={{ ...s.cfgDesc, marginTop: 10, textAlign: "center" }}>등록된 공지 없음</div>}
-            {cfg.notices.map((n, i) => {
-              const isActive = !!n.text.trim() && activeNoticeFrom(cfg.notices)?.text === n.text.trim();
-              const upd = (patch: Partial<typeof n>) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], ...patch }; return { ...p, notices: ns }; });
-              return (
-                <div key={i} style={s.noticeCard}>
-                  <div style={s.noticeCardHead}>
-                    <span style={{ fontSize: 11, color: isActive ? "#7ff0b0" : "#5a7a6a", fontWeight: isActive ? 700 : 400 }}>{isActive ? "● 현재 표시 중" : "○ 비활성"}</span>
-                    <button style={s.btnSm} onClick={() => setCfg((p) => ({ ...p, notices: p.notices.filter((_, j) => j !== i) }))}>삭제</button>
-                  </div>
-                  <div style={s.cfgDesc}>공지 문구 *</div>
-                  <input value={n.text} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="서버 점검 예정" onChange={(e) => upd({ text: e.target.value })} />
-                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={s.cfgDesc}>시작 (생략=즉시)</div>
-                      <input value={n.start || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="2026-07-05" onChange={(e) => upd({ start: e.target.value || undefined })} />
+          )}
+
+          {opsTab === "chat" && (
+            <div style={s.card}>
+              <div style={s.cardTitle}>💬 채팅 제어</div>
+              {!cfgLoaded ? <div style={s.dim2}>불러오는 중…</div> : (<>
+                <label style={s.cfgRow}>
+                  <div><div style={s.cfgLabel}>🚨 긴급 채팅 차단</div><div style={s.cfgDesc}>ON 즉시 모든 유저 채팅 전면 차단</div></div>
+                  <input type="checkbox" checked={cfg.chatDisabled} onChange={(e) => setCfg((p) => ({ ...p, chatDisabled: e.target.checked }))} />
+                </label>
+                <label style={s.cfgRow}>
+                  <div><div style={s.cfgLabel}>최대 채팅 횟수</div><div style={s.cfgDesc}>아래 시간창 안에 이 횟수 초과하면 서버 차단</div></div>
+                  <div style={s.cfgInputWrap}><input type="number" min={1} max={50} value={cfg.rateLimitN} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, rateLimitN: Number(e.target.value) }))} /><span style={s.cfgUnit}>회</span></div>
+                </label>
+                <label style={s.cfgRow}>
+                  <div><div style={s.cfgLabel}>측정 시간창</div><div style={s.cfgDesc}>위 횟수를 세는 슬라이딩 윈도우 길이</div></div>
+                  <div style={s.cfgInputWrap}><input type="number" min={1} max={60} value={cfg.rateWindowMs / 1000} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, rateWindowMs: Number(e.target.value) * 1000 }))} /><span style={s.cfgUnit}>초</span></div>
+                </label>
+                <label style={s.cfgRow}>
+                  <div><div style={s.cfgLabel}>연타 방지 간격</div><div style={s.cfgDesc}>같은 사람 연속 채팅 시 최소 대기시간. 미만이면 무시</div></div>
+                  <div style={s.cfgInputWrap}><input type="number" min={0} max={10} step={0.1} value={cfg.chatMinIntervalMs / 1000} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, chatMinIntervalMs: Math.round(Number(e.target.value) * 1000) }))} /><span style={s.cfgUnit}>초</span></div>
+                </label>
+                <label style={s.cfgRow}>
+                  <div><div style={s.cfgLabel}>도배 차단 시간</div><div style={s.cfgDesc}>도배 감지 시 1회 차단. 반복 위반할수록 배수로 늘어남</div></div>
+                  <div style={s.cfgInputWrap}><input type="number" min={1} max={300} value={cfg.autoBlockSec} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, autoBlockSec: Number(e.target.value) }))} /><span style={s.cfgUnit}>초</span></div>
+                </label>
+                <label style={s.cfgRow}>
+                  <div><div style={s.cfgLabel}>메시지 최대 길이</div><div style={s.cfgDesc}>초과 글자는 서버에서 조용히 잘라냄</div></div>
+                  <div style={s.cfgInputWrap}><input type="number" min={10} max={200} value={cfg.maxMsgLen} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, maxMsgLen: Number(e.target.value) }))} /><span style={s.cfgUnit}>자</span></div>
+                </label>
+                <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
+              </>)}
+            </div>
+          )}
+
+          {opsTab === "notice" && (
+            <div style={s.card}>
+              <div style={s.cardTitle}>📢 공지 배너</div>
+              <div style={s.cfgDesc}>활성 공지 1건이 상단에 흘러가는 배너로 표시됩니다. 날짜 생략 시 즉시·무한 노출.</div>
+              {cfg.notices.length === 0 && <div style={{ ...s.cfgDesc, marginTop: 10, textAlign: "center" }}>등록된 공지 없음</div>}
+              {cfg.notices.map((n, i) => {
+                const isActive = !!n.text.trim() && activeNoticeFrom(cfg.notices)?.text === n.text.trim();
+                const upd = (patch: Partial<typeof n>) => setCfg((p) => { const ns = [...p.notices]; ns[i] = { ...ns[i], ...patch }; return { ...p, notices: ns }; });
+                return (
+                  <div key={i} style={s.noticeCard}>
+                    <div style={s.noticeCardHead}>
+                      <span style={{ fontSize: 11, color: isActive ? "#7ff0b0" : "#5a7a6a", fontWeight: isActive ? 700 : 400 }}>{isActive ? "● 현재 표시 중" : "○ 비활성"}</span>
+                      <button style={s.btnSm} onClick={() => setCfg((p) => ({ ...p, notices: p.notices.filter((_, j) => j !== i) }))}>삭제</button>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={s.cfgDesc}>종료 (생략=무한)</div>
-                      <input value={n.end || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="2026-07-05T12:00" onChange={(e) => upd({ end: e.target.value || undefined })} />
+                    <div style={s.cfgDesc}>공지 문구 *</div>
+                    <input value={n.text} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="서버 점검 예정" onChange={(e) => upd({ text: e.target.value })} />
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={s.cfgDesc}>시작 (생략=즉시)</div>
+                        <input value={n.start || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="2026-07-05" onChange={(e) => upd({ start: e.target.value || undefined })} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={s.cfgDesc}>종료 (생략=무한)</div>
+                        <input value={n.end || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="2026-07-05T12:00" onChange={(e) => upd({ end: e.target.value || undefined })} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 6 }}>
+                      <div style={s.cfgDesc}>URL (선택 — 클릭 시 이동)</div>
+                      <input value={n.url || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="https://..." onChange={(e) => upd({ url: e.target.value || undefined })} />
                     </div>
                   </div>
-                  <div style={{ marginTop: 6 }}>
-                    <div style={s.cfgDesc}>URL (선택 — 클릭 시 이동)</div>
-                    <input value={n.url || ""} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="https://..." onChange={(e) => upd({ url: e.target.value || undefined })} />
-                  </div>
-                </div>
-              );
-            })}
-            <button style={{ ...s.btnGhost, width: "100%", marginTop: 8 }} onClick={() => setCfg((p) => ({ ...p, notices: [...p.notices, { text: "" }] }))}>+ 공지 추가</button>
-            <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
-          </div>
-          <div style={s.card}>
-            <div style={s.cardTitle}>💸 운영</div>
-            <button style={{ ...s.btnDanger, width: "100%" }} onClick={resetMoney}>다같이 번 돈 초기화</button>
-          </div>
+                );
+              })}
+              <button style={{ ...s.btnGhost, width: "100%", marginTop: 8 }} onClick={() => setCfg((p) => ({ ...p, notices: [...p.notices, { text: "" }] }))}>+ 공지 추가</button>
+              <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
+            </div>
+          )}
+
+          {opsTab === "ops" && (
+            <div style={s.card}>
+              <div style={s.cardTitle}>💸 운영</div>
+              <button style={{ ...s.btnDanger, width: "100%" }} onClick={resetMoney}>다같이 번 돈 초기화</button>
+            </div>
+          )}
         </div>
       )}
 
@@ -590,7 +615,14 @@ export default function AdminDashboard() {
   );
 }
 
-function Stat({ l, v }: { l: string; v: string }) { return <div style={s.stat}><div style={s.statV}>{v}</div><div style={s.statL}>{l}</div></div>; }
+function Stat({ l, v, hi }: { l: string; v: string; hi?: boolean }) {
+  return (
+    <div style={s.stat}>
+      <span style={s.statL}>{l}</span>
+      <span style={{ ...s.statV, ...(hi ? { color: "#ffd84d" } : {}) }}>{v}</span>
+    </div>
+  );
+}
 function Empty() { return <div style={s.empty}>데이터 없음</div>; }
 
 // 채팅/동접 공통 카드 — [닉네임 (태그)] ………… [시간(우측끝)] / (메시지) / [UUID][차단]
@@ -646,10 +678,10 @@ const s: Record<string, React.CSSProperties> = {
   cardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" },
   cardTitle: { fontSize: 13, color: "#8fa89a", marginBottom: 8 },
   chevron: { marginLeft: "auto", fontSize: 12, color: "#ffd233" },
-  stats: { display: "flex", gap: 8, flexWrap: "wrap" as const },
-  stat: { flex: "1 0 60px", textAlign: "center" },
-  statV: { fontSize: 15, fontWeight: 800, color: "#fff" },
-  statL: { fontSize: 10, color: "#8fa89a", marginTop: 3 },
+  stats: { display: "flex", flexDirection: "column" as const, gap: 0 },
+  stat: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "7px 2px", borderBottom: "1px solid #1b241e" },
+  statV: { fontSize: 15, fontWeight: 800, color: "#fff", fontVariantNumeric: "tabular-nums" },
+  statL: { fontSize: 12, color: "#8fa89a" },
   htable: { width: "100%", marginTop: 10, borderCollapse: "collapse" as const, fontSize: 12 },
   th: { color: "#7ff0b0", textAlign: "right" as const, padding: "5px 7px", borderBottom: "2px solid #2c3a32", fontWeight: 600, background: "#0f1a14", whiteSpace: "nowrap" as const },
   tr: {},
@@ -691,6 +723,7 @@ const s: Record<string, React.CSSProperties> = {
   leftTag: { fontSize: 10, background: "#26302b", color: "#9fb3a6", padding: "1px 5px", borderRadius: 4 },
   nickTag: { fontSize: 10, background: "#1a2a3a", color: "#7fd0ff", padding: "1px 5px", borderRadius: 4 },
   filterOn: { background: "#1a3a25", color: "#7ff0b0", borderColor: "#1f6b45" },
+  saveOk: { background: "rgba(127,240,176,0.15)", color: "#7ff0b0", border: "1px solid #1f6b45", borderRadius: 8, padding: "8px 12px", textAlign: "center" as const, fontSize: 13, fontWeight: 700, marginBottom: 8 },
   crowMuted: { opacity: 0.5 },
   leftDivider: { color: "#8fa89a", fontSize: 11.5, fontWeight: 700, margin: "12px 2px 6px", borderTop: "1px dashed #2c3a32", paddingTop: 10 },
   dim: { color: "#7a8c80", fontSize: 11, marginLeft: "auto", whiteSpace: "nowrap" },
