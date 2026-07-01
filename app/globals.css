@@ -1352,12 +1352,12 @@ body {
   opacity: 0.5;
 }
 .chat__nick--flash {
-  animation: nick-flash 0.1s ease;
+  animation: nick-flash 0.25s ease;
 }
 @keyframes nick-flash {
-  0% { opacity: 1; }
-  40% { opacity: 0.1; }
-  100% { opacity: 1; }
+  0%   { box-shadow: 0 0 0 2px rgba(200, 230, 210, 0); }
+  35%  { box-shadow: 0 0 0 2px rgba(200, 230, 210, 0.9); }
+  100% { box-shadow: 0 0 0 2px rgba(200, 230, 210, 0); }
 }
 .chat__field:focus-within {
   border-color: var(--accent);
