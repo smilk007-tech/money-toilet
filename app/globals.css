@@ -1339,18 +1339,24 @@ body {
   line-height: 1;
 }
 .chat__nick--reroll {
+  position: relative;
   cursor: pointer;
   user-select: none;
+}
+.chat__nick--reroll::after {
+  content: "";
+  position: absolute;
+  inset: -10px -8px;
 }
 .chat__nick--reroll:active {
   opacity: 0.5;
 }
 .chat__nick--flash {
-  animation: nick-flash 0.28s ease;
+  animation: nick-flash 0.1s ease;
 }
 @keyframes nick-flash {
   0% { opacity: 1; }
-  35% { opacity: 0.15; }
+  40% { opacity: 0.1; }
   100% { opacity: 1; }
 }
 .chat__field:focus-within {
