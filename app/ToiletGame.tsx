@@ -460,6 +460,16 @@ export default function ToiletGame() {
               </span>
               59분 50초로 변경 (테스트)
             </button>
+            <button
+              className="settings__link"
+              type="button"
+              id="devAddMinBtn"
+            >
+              <span className="settings__link-ico" aria-hidden>
+                ⏩
+              </span>
+              +1분 추가 (테스트)
+            </button>
           </div>
         </div>
       </div>
