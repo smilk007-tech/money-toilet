@@ -2405,6 +2405,37 @@ body {
   fill: #8c6828;
 }
 
+/* 리필 등장 애니메이션 */
+.tp__roll {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: fill 0.4s ease;
+}
+.skin-tp--refill .tp__roll {
+  animation: tp-roll-refill 0.65s cubic-bezier(0.34, 1.56, 0.5, 1) both;
+}
+@keyframes tp-roll-refill {
+  0% {
+    transform: scale(0.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.skin-tp--refill .tp__hang {
+  animation:
+    tp-hang-drop 0.6s 0.14s cubic-bezier(0.34, 1.2, 0.64, 1) both,
+    tp-hang-sway 2.8s 0.75s ease-in-out infinite;
+}
+@keyframes tp-hang-drop {
+  0% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
 /* 뜯겨 바닥으로 떨어지는 휴지 한 장 — 바닥 위에 떨어짐(채팅 아래, 광고와는 안 겹침) */
 .tp-sheet {
   position: absolute;
