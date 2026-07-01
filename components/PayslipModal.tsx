@@ -391,7 +391,7 @@ export default function PayslipModal() {
                 onClick={confirmStamp}
                 disabled={stage === "waiting" || stage === "stamping"}
               >
-                위 내용이 사실임을 확인합니다 👈
+                👉 위 내용이 사실임을 확인합니다
               </button>
             ) : null}
           </div>
