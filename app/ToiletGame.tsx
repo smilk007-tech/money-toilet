@@ -224,10 +224,10 @@ export default function ToiletGame() {
             📢
           </div>
           <div className="ad-a4__head" id="adHead">
-            여기에 광고
+            돈버는 화장실
           </div>
           <div className="ad-a4__sub" id="adSub">
-            문의 환영
+            #변기위의 월급루팡
           </div>
           <span className="ad-a4__tag" id="adTag">
             click
