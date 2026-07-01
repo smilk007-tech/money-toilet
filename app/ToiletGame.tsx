@@ -334,14 +334,6 @@ export default function ToiletGame() {
             1초에 약 4.7원
           </span>
         </div>
-        <input
-          type="range"
-          id="salaryRange"
-          min="0"
-          max="17"
-          step="1"
-          defaultValue="5"
-        />
         {/* 슬라이더 스텝 눈금 — 인덱스 0·4·9·14·17 위치(휴식·250만·500만·1천만·1억) */}
         <div className="salary-panel__scale" aria-hidden="true">
           <span style={{ left: "0%", transform: "translateX(0)" }}>휴식</span>
@@ -352,6 +344,14 @@ export default function ToiletGame() {
             1억
           </span>
         </div>
+        <input
+          type="range"
+          id="salaryRange"
+          min="0"
+          max="17"
+          step="1"
+          defaultValue="5"
+        />
       </div>
 
       {/* 설정 팝오버 */}

@@ -1424,10 +1424,10 @@ body {
   background: rgba(12, 18, 14, 0.94);
   border: 1px solid rgba(125, 255, 176, 0.4);
   border-radius: 12px;
-  padding: 12px;
+  padding: 12px 12px 20px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
 }
 .salary-panel[hidden] {
@@ -1451,11 +1451,10 @@ body {
   accent-color: var(--accent);
   height: 22px;
 }
-/* 슬라이더 아래 스텝 눈금 라벨 — 인덱스 위치(%)에 절대배치, 끝값은 가장자리 밖으로 안 나가게 */
+/* 슬라이더 위 스텝 눈금 라벨 — 인덱스 위치(%)에 절대배치, 끝값은 가장자리 밖으로 안 나가게 */
 .salary-panel__scale {
   position: relative;
   height: 12px;
-  margin-top: 2px;
 }
 .salary-panel__scale span {
   position: absolute;
