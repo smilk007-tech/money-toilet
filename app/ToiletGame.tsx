@@ -209,8 +209,8 @@ export default function ToiletGame() {
         <div className="skin-floor" aria-hidden></div>
 
         {/* 동적 A4 광고 — 문 가운데 포스터 자리(게임 로직 유지) */}
-        <a className="ad-a4" id="adA4" href="#" target="_blank" rel="noopener">
-          {/* 광고 공석 동안 노출하는 브랜드 로고(돈버는 화장실) — 기본 숨김, rotateAd가 토글 */}
+        {/* AD_CREATIVES[0] 은 항상 brand — 초기 HTML을 brand 상태로 맞춰 레이아웃 쉬프트 방지 */}
+        <a className="ad-a4 ad-a4--brand" id="adA4" href="#" target="_blank" rel="noopener">
           <img
             className="ad-a4__brand"
             id="adBrand"
@@ -218,9 +218,8 @@ export default function ToiletGame() {
             alt=""
             width={66}
             height={66}
-            hidden
           />
-          <div className="ad-a4__emoji" id="adEmoji">
+          <div className="ad-a4__emoji" id="adEmoji" hidden>
             📢
           </div>
           <div className="ad-a4__head" id="adHead">
@@ -230,7 +229,7 @@ export default function ToiletGame() {
             #변기위의 월급루팡
           </div>
           <span className="ad-a4__tag" id="adTag">
-            click
+            문의
           </span>
         </a>
 
