@@ -369,22 +369,12 @@ body {
   filter: brightness(0.05);
 }
 /* 암전 오버레이 */
-/* 암전: 배경 스킨(벽·문·바닥)만 어둡게. 문고리·조명·배너·채팅은 영향 없음. */
-.skin-center__base,
-.skin-side,
-.skin-floor {
-  transition: filter 0.55s ease, opacity 0.55s ease;
-}
-.scene--blackout .skin-center__base,
-.scene--blackout .skin-side,
-.scene--blackout .skin-floor {
-  filter: brightness(0.18);
-}
+/* 암전: scene 전체를 어둡게. 내부 요소 z-index 무관하게 전부 같이 어두워짐. */
 .scene {
-  transition: background-color 0.55s ease;
+  transition: filter 0.55s ease;
 }
 .scene--blackout {
-  background-color: #101212;
+  filter: brightness(0.15);
 }
 
 /* 문 경첩(좌측 모서리) */
