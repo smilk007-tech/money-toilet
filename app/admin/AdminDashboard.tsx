@@ -437,7 +437,8 @@ export default function AdminDashboard() {
                     ["공유", won(totals.share)],
                     ["후원", won(totals.donate)],
                     ["자랑", won(totals.brag)],
-                    ["평균체류", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"],
+                    ["체류", fmtDur(totals.dwellSec)],
+                    ["평균", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"],
                   ] as [string, string][]).map(([l, v]) => (
                     <div key={l} style={s.sumCell}>
                       <span style={s.sumCellL}>{l}</span>
@@ -815,7 +816,7 @@ const s: Record<string, React.CSSProperties> = {
   dayDate: { fontSize: 11, color: "#6f8378", fontVariantNumeric: "tabular-nums" as const },
   liveBadge: { fontSize: 9.5, fontWeight: 800, color: "#0d120f", background: "#7ff0b0", padding: "1px 5px", borderRadius: 4, letterSpacing: 0.3 },
   // 요약 — 아주 작은 그리드(상하배치 셀). 값 볼드/노랑 없이 통일. 번 돈은 값이 길어 전폭(gridColumn 1/-1).
-  sumGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "7px 8px" },
+  sumGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "7px 8px" },
   sumCell: { display: "flex", flexDirection: "column", gap: 2, padding: "6px 9px", background: "#12190f", borderRadius: 7, minWidth: 0 },
   sumCellL: { fontSize: 10.5, color: "#8fa89a" },
   sumCellV: { fontSize: 14, fontWeight: 600, color: "#e7efe9", fontVariantNumeric: "tabular-nums" as const, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
