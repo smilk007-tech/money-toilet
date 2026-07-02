@@ -1417,6 +1417,7 @@ body {
 /* 월급 설정 팝오버 */
 .salary-panel {
   --thumb: 18px;
+  --slider: #39ffb0; /* 슬라이더 채움·thumb 형광 민트그린(기본 --accent보다 밝게) */
   position: absolute;
   left: 9px;
   bottom: 116px;
@@ -1515,7 +1516,7 @@ body {
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    var(--accent) 0
+    var(--slider) 0
       calc(var(--f, 0) * 100% + (0.5 - var(--f, 0)) * var(--thumb)),
     rgba(233, 244, 238, 0.16)
       calc(var(--f, 0) * 100% + (0.5 - var(--f, 0)) * var(--thumb))
@@ -1529,7 +1530,7 @@ body {
 .salary-panel input[type="range"]::-moz-range-progress {
   height: 6px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--slider);
 }
 .salary-panel input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -1538,8 +1539,8 @@ body {
   height: var(--thumb);
   border-radius: 50%;
   border: none;
-  background: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  background: var(--slider);
+  box-shadow: 0 0 7px rgba(57, 255, 176, 0.75), 0 2px 6px rgba(0, 0, 0, 0.5); /* 형광 글로우 */
   margin-top: calc((6px - var(--thumb)) / 2);
 }
 .salary-panel input[type="range"]::-moz-range-thumb {
@@ -1547,21 +1548,21 @@ body {
   height: var(--thumb);
   border-radius: 50%;
   border: none;
-  background: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  background: var(--slider);
+  box-shadow: 0 0 7px rgba(57, 255, 176, 0.75), 0 2px 6px rgba(0, 0, 0, 0.5); /* 형광 글로우 */
 }
-/* MUI 스타일 — 포커스/누름 시 thumb 둘레로 살짝 번지는 링 */
+/* MUI 스타일 — 포커스/누름 시 thumb 둘레로 살짝 번지는 링(형광톤) */
 .salary-panel input[type="range"]:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(40, 167, 143, 0.25);
+  box-shadow: 0 0 8px rgba(57, 255, 176, 0.8), 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(57, 255, 176, 0.3);
 }
 .salary-panel input[type="range"]:active::-webkit-slider-thumb {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 6px rgba(40, 167, 143, 0.28);
+  box-shadow: 0 0 10px rgba(57, 255, 176, 0.9), 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 6px rgba(57, 255, 176, 0.32);
 }
 .salary-panel input[type="range"]:focus-visible::-moz-range-thumb {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(40, 167, 143, 0.25);
+  box-shadow: 0 0 8px rgba(57, 255, 176, 0.8), 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(57, 255, 176, 0.3);
 }
 .salary-panel input[type="range"]:active::-moz-range-thumb {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 6px rgba(40, 167, 143, 0.28);
+  box-shadow: 0 0 10px rgba(57, 255, 176, 0.9), 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 0 6px rgba(57, 255, 176, 0.32);
 }
 .salary-panel__left {
   display: flex;
