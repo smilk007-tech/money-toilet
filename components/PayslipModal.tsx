@@ -21,10 +21,7 @@ const FIRST_STAMP_TIMING = {
   actions: 350,
   hint: 400,
 } as const;
-const REPEAT_STAMP_DELAY_MS = 500;
-const REPEAT_STAMP_SLAM_MS = 1200;
-// 슬램 애니메이션(receiptStampSlam)에서 도장이 종이에 "딱" 닿는 순간 = 38% 키프레임.
-// 그 타이밍에 도장 효과음을 재생한다.
+// 슬램 애니메이션(receiptStampSlam)에서 도장이 종이에 "딱" 닿는 순간 = 10% 키프레임.
 const STAMP_IMPACT_RATIO = 0.1;
 
 // 도장 효과음(종이 착지 순간 1회). 모듈 싱글톤으로 재사용.
@@ -101,13 +98,10 @@ export default function PayslipModal() {
     "idle" | "waiting" | "stamping" | "revealed" | "done"
   >("idle");
   const [animateReveal, setAnimateReveal] = useState(false); // 최초 확인 버튼 플로우에서만 하단 등장 애니
-  const [stampSlamMs, setStampSlamMs] = useState<number>(
-    FIRST_STAMP_TIMING.slam,
-  );
+  const [shakeBrag, setShakeBrag] = useState(false); // 재열람 시 자랑하기 버튼 흔들림
   const hintDelayRef = useRef<number>(FIRST_STAMP_TIMING.hint);
   const stampTimersRef = useRef<number[]>([]);
   const stampFromConfirmRef = useRef(false);
-  const repeatStampRef = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
   const siteUrlHref =
@@ -121,17 +115,16 @@ export default function PayslipModal() {
   const close = useCallback(() => {
     clearStampTimers();
     stampFromConfirmRef.current = false;
-    repeatStampRef.current = false;
     setData(null);
     setStage("idle");
     setAnimateReveal(false);
+    setShakeBrag(false);
   }, [clearStampTimers]);
 
   const startFirstStampSequence = useCallback(
     (receipt: ReceiptData) => {
       clearStampTimers();
       hintDelayRef.current = FIRST_STAMP_TIMING.hint;
-      setStampSlamMs(FIRST_STAMP_TIMING.slam);
       setAnimateReveal(true);
       setStage("waiting");
       const pushTimer = (fn: () => void, ms: number) => {
@@ -144,7 +137,7 @@ export default function PayslipModal() {
         try {
           window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
         } catch {}
-        // 도장이 종이에 닿는 순간(슬램 38%)에 효과음
+        // 도장이 종이에 닿는 순간(슬램 10%)에 효과음
         pushTimer(playStampSound, FIRST_STAMP_TIMING.slam * STAMP_IMPACT_RATIO);
         pushTimer(() => {
           pushTimer(() => setStage("revealed"), FIRST_STAMP_TIMING.actions);
@@ -154,59 +147,54 @@ export default function PayslipModal() {
     [clearStampTimers],
   );
 
-  const startRepeatStampSequence = useCallback(
-    (receipt: ReceiptData) => {
-      clearStampTimers();
-      repeatStampRef.current = true;
-      setAnimateReveal(false);
-      setStampSlamMs(REPEAT_STAMP_SLAM_MS);
-      setStage("waiting");
-      const pushTimer = (fn: () => void, ms: number) => {
-        stampTimersRef.current.push(window.setTimeout(fn, ms));
-      };
-      pushTimer(() => {
-        setStage("stamping");
-        saveConfirmedVersion(receipt);
-        markEverStamped();
-        try {
-          window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
-        } catch {}
-        // 도장이 종이에 닿는 순간(슬램 38%)에 효과음
-        pushTimer(playStampSound, REPEAT_STAMP_SLAM_MS * STAMP_IMPACT_RATIO);
-        pushTimer(() => setStage("done"), REPEAT_STAMP_SLAM_MS);
-      }, REPEAT_STAMP_DELAY_MS);
-    },
-    [clearStampTimers],
-  );
-
   useEffect(() => {
     const onOpen = (e: Event) => {
       const detail = (e as CustomEvent<ReceiptData>).detail;
       clearStampTimers();
       stampFromConfirmRef.current = false;
-      repeatStampRef.current = false;
       setData(detail);
       setAnimateReveal(false);
+      setShakeBrag(false);
+
       if (isStampConfirmedFor(detail)) {
+        // 같은 회차 명세서 재열람 — 즉시 done, 자랑하기 버튼 흔들기
         setStage("done");
+        stampTimersRef.current.push(
+          window.setTimeout(() => setShakeBrag(true), 80),
+        );
         return;
       }
       if (hasEverStamped()) {
-        startRepeatStampSequence(detail);
+        // 2회차 이상 물내림 — 도장 애니 없이 즉시 done, 자랑하기 버튼 흔들기
+        saveConfirmedVersion(detail);
+        markEverStamped();
+        try {
+          window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
+        } catch {}
+        setStage("done");
+        stampTimersRef.current.push(
+          window.setTimeout(() => setShakeBrag(true), 80),
+        );
         return;
       }
       // 첫 영수증: '위 내용이 사실임을 확인합니다 👉'를 직접 눌러야만 도장이 찍힌다.
-      // (한 번이라도 찍으면 payslipStampEver 로컬스토리지에 남아 이후엔 자동 도장 — hasEverStamped 분기)
       setStage("idle");
     };
     window.addEventListener(APP_EVENTS.payslipOpen, onOpen);
     return () => window.removeEventListener(APP_EVENTS.payslipOpen, onOpen);
-  }, [clearStampTimers, startFirstStampSequence, startRepeatStampSequence]);
+  }, [clearStampTimers, startFirstStampSequence]);
 
   // 도장 착지 → 버튼 등장 → 안내문구 등장 순으로 한 단계씩 늦게 보여준다
   useEffect(() => {
     if (!animateReveal || stage !== "revealed") return;
     const t = window.setTimeout(() => setStage("done"), hintDelayRef.current);
+    return () => window.clearTimeout(t);
+  }, [stage, animateReveal]);
+
+  // 첫 도장 플로우: 모든 등장 애니가 끝난 뒤 자랑하기 버튼 흔들기
+  useEffect(() => {
+    if (!animateReveal || stage !== "done") return;
+    const t = window.setTimeout(() => setShakeBrag(true), 800);
     return () => window.clearTimeout(t);
   }, [stage, animateReveal]);
 
@@ -302,14 +290,8 @@ export default function PayslipModal() {
     ((stage === "waiting" || stage === "stamping") &&
       stampFromConfirmRef.current);
 
-  const showActionButtons =
-    stage === "revealed" ||
-    stage === "done" ||
-    (repeatStampRef.current && (stage === "waiting" || stage === "stamping"));
-
-  const showHint =
-    stage === "done" ||
-    (repeatStampRef.current && (stage === "waiting" || stage === "stamping"));
+  const showActionButtons = stage === "revealed" || stage === "done";
+  const showHint = stage === "done";
 
   return (
     <div className="receipt-modal" role="presentation">
@@ -336,7 +318,7 @@ export default function PayslipModal() {
               maxHeight="calc(var(--app-h, 100dvh) - 176px)"
               stampVisible={stage !== "idle" && stage !== "waiting"}
               stampAnimate={stage === "stamping"}
-              stampSlamMs={stampSlamMs}
+              stampSlamMs={FIRST_STAMP_TIMING.slam}
             />
           </div>
           <div className="receipt-modal__export" aria-hidden>
@@ -366,7 +348,10 @@ export default function PayslipModal() {
                   📷 저장
                 </button>
                 <button
-                  className="receipt-btn receipt-btn--share btn-yellow"
+                  className={
+                    "receipt-btn receipt-btn--share btn-yellow" +
+                    (shakeBrag ? " receipt-btn--shake" : "")
+                  }
                   type="button"
                   onClick={share}
                 >

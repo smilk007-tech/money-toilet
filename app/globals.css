@@ -1709,6 +1709,31 @@ body {
     transform: translateY(0) rotate(360deg);
   }
 }
+/* 설정 패널 주사위 넛지 — receiptIconPulse와 같은 결 */
+.nick-random--nudge {
+  animation: nickDiceNudge 0.75s cubic-bezier(0.34, 1.2, 0.5, 1);
+}
+@keyframes nickDiceNudge {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  18% {
+    transform: translateY(-5px) scale(1.14) rotate(-18deg);
+  }
+  34% {
+    transform: translateY(-6px) scale(1.18) rotate(18deg);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.1) rotate(-10deg);
+  }
+  66% {
+    transform: translateY(-2px) scale(1.05) rotate(5deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
 /* 액션 버튼(공통) — 자랑/초기화 동일 골격, 색만 다름 */
 .settings__actions {
   display: flex;
@@ -2298,6 +2323,31 @@ body {
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* 재열람 시 자랑하기 버튼 흔들림 — receiptIconPulse와 같은 결 */
+.receipt-btn--shake {
+  animation: bragsShake 0.75s cubic-bezier(0.34, 1.2, 0.5, 1);
+}
+@keyframes bragsShake {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+  18% {
+    transform: translateY(-4px) scale(1.04) rotate(-8deg);
+  }
+  34% {
+    transform: translateY(-5px) scale(1.06) rotate(8deg);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.03) rotate(-4deg);
+  }
+  66% {
+    transform: translateY(-1px) scale(1.01) rotate(2deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
   }
 }
 
