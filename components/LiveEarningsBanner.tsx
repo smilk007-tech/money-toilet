@@ -52,13 +52,12 @@ export default function LiveEarningsBanner() {
         const base = total > 0 ? Math.floor(total * 0.65) : 0; // 65%에서 시작 — 여유 갭 확보
         dispRef.current = base;
         setDisplayWon(base);
-        anim.current.pauseUntil = performance.now() + 1500; // 영수증 읽을 여유 후 등반 시작
+        anim.current.pauseUntil = performance.now() + 1200; // 영수증 읽을 여유 후 등반 시작
       }
     }
 
-    // 개별 물내림 이벤트 시뮬레이션 — 누군가 방금 돈을 벌었다는 느낌.
-    // 금액(real의 0.3~2%)도, 다음 이벤트까지 쿨타임(0.8~4s)도 완전 불규칙.
-    // 갭 기반 분할 없이 real 기준 절대 단위 → 남은 갭이 줄어도 템포 변화 없음.
+    // 남은 갭의 30~55%씩 기하급수적으로 접근 — 10초 안에 목표치 96% 근접, 20초면 잔여 갭 극소화.
+    // 절대 단위가 아닌 갭 비율이므로 틱이 거듭될수록 스텝이 작아지며 자연스럽게 수렴.
     const EASE = (t: number) => 1 - Math.pow(1 - t, 3);
     const tick = () => {
       const now = performance.now();
@@ -73,25 +72,25 @@ export default function LiveEarningsBanner() {
           dispRef.current = a.to;
           setDisplayWon(a.to);
           a.mode = "idle";
-          // 쿨타임: 짧게 0.8s ~ 길게 4s, 고르지 않은 분포로 사람 냄새 나게
+          // 쿨타임: 짧게 0.2s ~ 길게 1.4s — 초반엔 빠르게 여러 번, 후반엔 갭이 작아 느려도 무방
           const r = Math.random();
-          const pause = r < 0.3
-            ? 800  + Math.random() * 700   // 30%: 빠른 연타 (0.8~1.5s)
-            : r < 0.7
-            ? 1500 + Math.random() * 1500  // 40%: 보통 (1.5~3s)
-            : 2500 + Math.random() * 1500; // 30%: 긴 텀 (2.5~4s)
+          const pause = r < 0.4
+            ? 200  + Math.random() * 300   // 40%: 0.2~0.5s (빠른 연타)
+            : r < 0.8
+            ? 400  + Math.random() * 500   // 40%: 0.4~0.9s (보통)
+            : 700  + Math.random() * 700;  // 20%: 0.7~1.4s (숨 고르기)
           a.pauseUntil = now + pause;
         }
       } else if (dispRef.current < real - 0.5 && now >= a.pauseUntil) {
-        // 이벤트 1건 금액: real의 0.3~2% 사이에서 랜덤 — 크기도 매번 다름
-        const pct = 0.003 + Math.random() * Math.random() * 0.017; // 오른쪽 꼬리 분포
-        const amount = Math.max(Math.ceil(real * pct), 1);
-        const step = Math.min(real - dispRef.current, amount);
+        // 남은 갭의 30~55% — 초반엔 큰 덩어리, 갈수록 잔여분이 줄어 자연스럽게 수렴
+        const gap = real - dispRef.current;
+        const pct = 0.30 + Math.random() * 0.25;
+        const step = Math.max(1, Math.floor(gap * pct));
         a.mode = "rolling";
         a.from = dispRef.current;
         a.to = dispRef.current + step;
         a.start = now;
-        a.dur = 900 + Math.random() * 900; // 0.9~1.8s
+        a.dur = 1000 + Math.random() * 1000; // 1.0~2.0s (전보다 약간 느리게)
       }
       raf = requestAnimationFrame(tick);
     };
