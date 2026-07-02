@@ -1654,7 +1654,7 @@ body {
   animation: salaryItemIn 0.28s 500ms ease-out both;
 }
 .salary-panel--stagger .salary-panel__meter {
-  animation: salaryItemIn 0.28s 500ms ease-out both;
+  animation: salaryItemIn 0.28s 1000ms ease-out both;
 }
 @keyframes salaryItemIn {
   from { opacity: 0; transform: translateY(14px); }
