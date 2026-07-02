@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props) {
   const data = await resolveData(d);
   const nick = data?.n || "익명의 볼일러";
   const hero = data ? heroAmount(data) : 0;
-  return buildShareMetadata({ nick, amount: fmtWon(hero), tier: data?.p });
+  return buildShareMetadata({ nick, amount: fmtWon(hero) });
 }
 
 export default async function ReceiptSharePage({ params }: Props) {

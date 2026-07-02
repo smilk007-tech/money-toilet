@@ -15,8 +15,6 @@ import { isPC } from "@/lib/engine/device";
 
 const STAMP_CONFIRM_KEY = STORAGE_KEY.payslipConfirmed;
 
-// 열림 → 잠깐 대기 → 도장 쾅 — 티어(상위 N%)가 도장에 실리므로 클릭 허들 없이 즉시 보여준다.
-// (구 "위 내용이 사실임을 확인합니다" 확인 버튼은 명세서 안 인쇄 문구로 이전 — ReceiptCard)
 const STAMP_DELAY_MS = 500;
 const STAMP_SLAM_MS = 1200;
 // 슬램 애니메이션(receiptStampSlam)에서 도장이 종이에 "딱" 닿는 순간에 효과음 재생
@@ -79,21 +77,6 @@ function markEverStamped() {
   } catch {}
 }
 
-// game.js가 payslipOpen detail에 실어 보내는 인게임 전용 메타 —
-// 공유 URL 인코딩(encodeReceiptForShare)에 절대 섞이면 안 되므로 onOpen에서 분리 수거한다.
-type PayslipOpenDetail = ReceiptData & {
-  prevP?: number | null; // 직전 물내림 티어(상위 %) — 델타 메모용
-  todaySec?: number | null; // 오늘 루팡시간(초) — 모달 크롬 표기용
-};
-
-function fmtDwell(secs: number): string {
-  const s = Math.max(0, Math.floor(secs));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (h > 0) return `${h}시간 ${m}분`;
-  if (m > 0) return `${m}분 ${s % 60}초`;
-  return `${s % 60}초`;
-}
 
 /* 게임 미리보기 팝업 — 공유 페이지와 동일한 ReceiptCard 를 렌더한다. */
 export default function PayslipModal() {
@@ -102,10 +85,6 @@ export default function PayslipModal() {
   const [stage, setStage] = useState<"waiting" | "stamping" | "done">(
     "waiting",
   );
-  const [meta, setMeta] = useState<{
-    prevP: number | null;
-    todaySec: number | null;
-  }>({ prevP: null, todaySec: null });
   const stampTimersRef = useRef<number[]>([]);
   const cardRef = useRef<HTMLDivElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
@@ -121,7 +100,6 @@ export default function PayslipModal() {
     clearStampTimers();
     setData(null);
     setStage("waiting");
-    setMeta({ prevP: null, todaySec: null });
   }, [clearStampTimers]);
 
   const startStampSequence = useCallback(
@@ -148,18 +126,14 @@ export default function PayslipModal() {
 
   useEffect(() => {
     const onOpen = (e: Event) => {
-      const { prevP, todaySec, ...receipt } = (
-        e as CustomEvent<PayslipOpenDetail>
-      ).detail;
+      const receipt = (e as CustomEvent<ReceiptData>).detail;
       clearStampTimers();
       setData(receipt);
-      setMeta({ prevP: prevP ?? null, todaySec: todaySec ?? null });
       if (isStampConfirmedFor(receipt)) {
-        // 같은 명세서 버전을 다시 연 것 — 도장은 이미 찍힌 상태로 즉시 표시
         setStage("done");
         return;
       }
-      startStampSequence(receipt);
+      setStage("waiting");
     };
     window.addEventListener(APP_EVENTS.payslipOpen, onOpen);
     return () => window.removeEventListener(APP_EVENTS.payslipOpen, onOpen);
@@ -275,10 +249,6 @@ export default function PayslipModal() {
               stampVisible={stage !== "waiting"}
               stampAnimate={stage === "stamping"}
               stampSlamMs={STAMP_SLAM_MS}
-              // 델타 빨간펜 메모는 도장이 착지한 뒤에만 — 인게임 미리보기 전용(내보내기/공유 미포함)
-              prevTierPercent={
-                stage === "done" && meta.prevP != null ? meta.prevP : undefined
-              }
             />
           </div>
           <div className="receipt-modal__export" aria-hidden>
@@ -293,29 +263,34 @@ export default function PayslipModal() {
             </div>
           </div>
           <div className="receipt-modal__actions">
-            <div className="receipt-modal__actions-row">
+            {stage !== "done" ? (
               <button
-                className="receipt-btn receipt-btn--save"
+                className={`receipt-btn receipt-btn--confirm${stage === "stamping" ? " receipt-btn--fading" : ""}`}
                 type="button"
-                onClick={save}
+                disabled={stage === "stamping"}
+                onClick={() => data && startStampSequence(data)}
               >
-                📷 저장
+                위 내용이 사실임을 확인합니다
               </button>
-              <button
-                className="receipt-btn receipt-btn--share btn-yellow"
-                type="button"
-                onClick={share}
-              >
-                🔗 자랑하기
-              </button>
-            </div>
+            ) : (
+              <div className="receipt-modal__actions-row receipt-modal__actions-row--in">
+                <button
+                  className="receipt-btn receipt-btn--save"
+                  type="button"
+                  onClick={save}
+                >
+                  📷 저장
+                </button>
+                <button
+                  className="receipt-btn receipt-btn--share btn-yellow"
+                  type="button"
+                  onClick={share}
+                >
+                  🔗 자랑하기
+                </button>
+              </div>
+            )}
           </div>
-          {/* 오늘 루팡시간 — 서류(카드) 밖 모달 크롬. 저장 PNG·공유 페이지엔 안 들어간다(월급 역산 방지) */}
-          {meta.todaySec != null && (
-            <p className="receipt-modal__hint receipt-modal__hint--today">
-              오늘 루팡시간 <b>{fmtDwell(meta.todaySec)}</b>
-            </p>
-          )}
           <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
         </div>
       </div>

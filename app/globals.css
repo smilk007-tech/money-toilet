@@ -2233,15 +2233,6 @@ body {
   color: #9fdcc9;
   text-align: center;
 }
-/* 오늘 루팡시간 — 모달 크롬 전용(저장 PNG/공유 페이지 미포함) */
-.receipt-modal__hint--today {
-  margin-bottom: -4px; /* 아래 힌트 줄과 붙여 한 덩어리로 읽히게 */
-  color: #cfeee0;
-}
-.receipt-modal__hint--today b {
-  color: #ffd84d;
-  font-weight: 900;
-}
 /* 지급완료 도장 — 위에서 내려와 박히고 두어 번 통통 튀며 자리를 잡음 (STAMP_SLAM_MS와 길이 맞출 것) */
 .receipt-stamp--slam {
   animation: receiptStampSlam 1.35s cubic-bezier(0.18, 0.9, 0.32, 1) both;
@@ -2257,6 +2248,14 @@ body {
   }
 }
 
+/* 확인 버튼 */
+.receipt-btn--confirm {
+  background: rgba(20, 30, 24, 0.95);
+  color: #9fdcc9;
+  border-color: rgba(125, 255, 176, 0.35);
+  width: 100%;
+  letter-spacing: -0.2px;
+}
 /* 확인 버튼 — 도장 찍히는 동안 자연스럽게 사라짐 */
 .receipt-btn--fading {
   opacity: 0.25;

@@ -521,7 +521,7 @@ export default function ToiletGame() {
               <dd id="resetConfirmTotal">0원</dd>
             </div>
             <div className="reset-confirm__stat">
-              <dt>오늘 루팡시간</dt>
+              <dt>전체 루팡시간</dt>
               <dd id="resetConfirmTime">0초</dd>
             </div>
           </dl>

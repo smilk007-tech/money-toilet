@@ -5,23 +5,12 @@ export const SITE_NAME = "돈버는 화장실";
 type ShareMetaInput = {
   nick: string;
   amount: string;
-  tier?: number | null; // 루팡 티어(상위 %) — 구버전 링크엔 없음
 };
 
-/** 공유 페이지 title · description · og:description (길이 가이드 준수)
-    제목의 "상위 N%"는 라벨 없이 — 병맛 닉네임+푼돈 금액이 소득 오독을 자체 교정(이중 반전이 훅).
-    "월급루팡" 라벨은 og:description과 OG 이미지 속 도장이 담당한다. */
-export function buildShareCopy({ nick, amount, tier }: ShareMetaInput) {
-  const title = tier
-    ? `상위 ${tier}% ${nick}님이 변기 위에서 ${amount} 벌었어요💰`
-    : `${nick}님이 변기 위에서 ${amount} 벌었어요💰`;
-
-  const ogDescription = tier
-    ? `월급루팡 인증 급여명세서 👇`
-    : `이 사람 급여명세서 확인 👇`;
-
+export function buildShareCopy({ nick, amount }: ShareMetaInput) {
+  const title = `${nick}님이 변기 위에서 ${amount} 벌었어요💰`;
+  const ogDescription = `이 사람 급여명세서 확인 👇`;
   const description = `근무 시간에 화장실에서 돈 벌기, 변기위의 월급루팡! 실시간 수입을 인증해 보세요`;
-
   return { title, description, ogDescription };
 }
 

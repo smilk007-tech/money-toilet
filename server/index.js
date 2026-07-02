@@ -148,10 +148,9 @@ function publicPresence() {
 function resyncPresenceFloor() {
   presenceFloorNow = initialPresenceFloor(cfg.presenceFloorMax);
 }
-// 자동 드리프트 — 항상 on. 1.5~3분 간격으로 한 걸음씩 이동, 값이 바뀔 때만 브로드캐스트.
-// 짧은 인터벌로 사용자가 실시간으로 인원 변동을 체감할 수 있게 한다.
+// 자동 드리프트 — 20~50초 간격으로 이동, 값이 바뀔 때만 브로드캐스트.
 function scheduleFloorDrift() {
-  const delay = 300_000 + Math.floor(Math.random() * 300_000); // 5~10분
+  const delay = 20_000 + Math.floor(Math.random() * 30_000); // 20~50초
   setTimeout(() => {
     if (cfg.presenceFloorMax > 0) {
       const next = driftPresenceFloor(presenceFloorNow, cfg.presenceFloorMax);

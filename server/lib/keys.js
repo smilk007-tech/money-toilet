@@ -74,19 +74,19 @@ export const DEFAULTS = {
   chatDisabled: false,
   notices: [], // 시스템 공지 배너. 어드민에서 관리. Notice[] JSON.
   presenceFloorAuto: true, // 접속자 바닥값 자동 드리프트(오픈초기 기본 ON). 어드민은 항상 실제 presence를 본다.
-  presenceFloorMax: 2, // 드리프트 최대 추가 인원(0~9). 시간대 패턴으로 0~이 값 사이를 자동 조절
+  presenceFloorMax: 10, // 드리프트 최대 추가 인원(0~99). 시간대 패턴으로 0~이 값 사이를 자동 조절
 };
 // 자동 차단 상한 — 누적 위반(strike)으로 차단 시간이 늘어나도 이 값을 넘지 않음
 export const MAX_AUTOBLOCK_SEC = 600;
 
 /* ===== 접속자 표시 바닥값(자동 드리프트) =====
    빈 방 이탈 방지용 최소 표시 인원. 실제 presence가 이보다 크면 실제값을 그대로 쓴다(패딩만).
-   - 어드민이 정한 presenceFloorMax(0~9) = 드리프트 '천장'.
+   - 어드민이 정한 presenceFloorMax(0~99) = 드리프트 '천장'.
    - auto ON: 0~천장 사이를, 시간대 목표치(=천장×활발도)를 따라 ±1씩 '부드럽게' 랜덤워크.
      (매 틱 독립 재추첨=순간이동이라 가짜 티가 남 → 한 걸음씩 드리프트라 실제 입·퇴장처럼 보임)
    - 활발도(0..1) = 한국 직장인(20~50대) '화장실 월루' 패턴: 평일 오전/오후 집중근무=피크(몰래 화장실),
      점심=저조(다들 밥), 밤·심야=최저, 주말=완만·저조. */
-export const PRESENCE_FLOOR_MAX = 9; // 어드민이 설정 가능한 천장의 상한
+export const PRESENCE_FLOOR_MAX = 99; // 어드민이 설정 가능한 천장의 상한
 // 시(0~23)별 활발도 — 평일
 const FLOOR_WEEKDAY = [
   0.02, 0.02, 0.01, 0.01, 0.02, 0.04, // 0-5 심야(거의 없음)
@@ -108,18 +108,100 @@ export function presencePattern(at = Date.now()) {
   const weekend = d.getUTCDay() === 0 || d.getUTCDay() === 6;
   return (weekend ? FLOOR_WEEKEND : FLOOR_WEEKDAY)[d.getUTCHours()] ?? 0;
 }
-/** 부드러운 드리프트 1스텝 — cur에서 시간대 목표치(천장×활발도)로 ±1씩 이동, [0,max] 유지. */
-export function driftPresenceFloor(cur, max, at = Date.now()) {
+
+/* ===== 시간대별 드리프트 파라미터 =====
+   [ceilRatio, biasUp]
+   · ceilRatio: max 설정값 대비 실효 상한 비율 (예: max=10, ratio=0.3 → 상한=3)
+   · biasUp: 이번 틱에서 올라갈 확률 (0.5=중립, >0.5=상승 경향, <0.5=하락 경향)
+   20-50대 한국 직장인 평일/주말 화장실 패턴 기준 */
+// 평일 (Mon-Fri)
+const WD = [
+  [0.25, 0.35], // 00 자정 — 새벽 시작, 하락
+  [0.20, 0.33], // 01
+  [0.20, 0.33], // 02 심야 최저
+  [0.20, 0.33], // 03
+  [0.22, 0.38], // 04 이른 기상
+  [0.28, 0.43], // 05
+  [0.40, 0.53], // 06 출근준비
+  [0.55, 0.60], // 07 출근길
+  [0.72, 0.63], // 08 오전업무 시작
+  [0.88, 0.65], // 09 오전집중
+  [1.00, 0.58], // 10 오전 피크
+  [0.95, 0.52], // 11
+  [0.55, 0.28], // 12 점심 — 급락
+  [0.80, 0.63], // 13 오후 시작
+  [1.00, 0.63], // 14 오후 피크
+  [1.00, 0.55], // 15
+  [0.88, 0.47], // 16 퇴근 준비
+  [0.72, 0.37], // 17 퇴근
+  [0.55, 0.38], // 18 저녁
+  [0.45, 0.40], // 19
+  [0.38, 0.40], // 20
+  [0.32, 0.38], // 21
+  [0.27, 0.36], // 22
+  [0.25, 0.35], // 23
+];
+// 주말 (Sat-Sun) — 출퇴근 패턴 없음, 전반적으로 완만·저조
+const WE = [
+  [0.25, 0.35], // 00
+  [0.20, 0.33], // 01
+  [0.20, 0.33], // 02
+  [0.20, 0.33], // 03
+  [0.22, 0.37], // 04
+  [0.25, 0.40], // 05
+  [0.28, 0.43], // 06
+  [0.35, 0.48], // 07 늦은 기상
+  [0.45, 0.52], // 08
+  [0.55, 0.52], // 09
+  [0.60, 0.50], // 10
+  [0.62, 0.50], // 11
+  [0.58, 0.48], // 12
+  [0.58, 0.50], // 13
+  [0.62, 0.50], // 14
+  [0.60, 0.50], // 15
+  [0.58, 0.48], // 16
+  [0.50, 0.45], // 17
+  [0.44, 0.42], // 18
+  [0.38, 0.40], // 19
+  [0.33, 0.38], // 20
+  [0.30, 0.37], // 21
+  [0.26, 0.36], // 22
+  [0.22, 0.35], // 23
+];
+function timeBand(at = Date.now()) {
+  const d = new Date(at + KST);
+  const weekend = d.getUTCDay() === 0 || d.getUTCDay() === 6;
+  return (weekend ? WE : WD)[d.getUTCHours()];
+}
+
+/** 랜덤 드리프트 1스텝 — 시간대별 실효 상한·방향 가중치 적용.
+ *  - 6%:  범위 내 임의 위치로 점프 (갑작스러운 변동)
+ *  - 15%: 큰 이동 ±2~4 (biasUp 방향 경향)
+ *  - 79%: ±1 (biasUp 확률로 상승, 1-biasUp으로 하락) */
+export function driftPresenceFloor(cur, max) {
   const m = clampMax(max);
   if (m === 0) return 0;
-  let v = Math.max(0, Math.min(m, Math.floor(Number(cur)) || 0));
-  const target = m * presencePattern(at); // 실수 목표치 0..m
-  if (v < target - 0.5) { if (Math.random() < 0.75) v++; } // 목표보다 낮으면 대체로 +1
-  else if (v > target + 0.5) { if (Math.random() < 0.75) v--; } // 높으면 대체로 -1
-  else if (Math.random() < 0.35) v += Math.random() < 0.5 ? 1 : -1; // 목표 근처면 가벼운 지터
-  return Math.max(0, Math.min(m, v));
+  const [ceilRatio, biasUp] = timeBand();
+  const ceiling = Math.max(0, Math.min(m, Math.round(m * ceilRatio)));
+  if (ceiling === 0) return 0;
+  let v = Math.max(0, Math.min(ceiling, Math.floor(Number(cur)) || 0));
+  const r = Math.random();
+  if (r < 0.06) {
+    return Math.floor(Math.random() * (ceiling + 1));               // 점프
+  }
+  if (r < 0.21) {
+    const s = 2 + Math.floor(Math.random() * 3);                   // 큰 이동 ±2~4
+    v += Math.random() < biasUp ? s : -s;
+  } else {
+    v += Math.random() < biasUp ? 1 : -1;                         // ±1
+  }
+  return Math.max(0, Math.min(ceiling, v));
 }
-/** 초기값 — 부팅 직후 0에서 기어오르지 않게 지금 시간대 목표치 근처에서 시작 */
-export function initialPresenceFloor(max, at = Date.now()) {
-  return Math.round(clampMax(max) * presencePattern(at));
+/** 초기값 — 부팅 시각의 시간대 실효 상한 내 임의 위치 */
+export function initialPresenceFloor(max) {
+  const m = clampMax(max);
+  if (m === 0) return 0;
+  const [ceilRatio] = timeBand();
+  const ceiling = Math.max(0, Math.min(m, Math.round(m * ceilRatio)));
+  return Math.floor(Math.random() * (ceiling + 1));
 }
