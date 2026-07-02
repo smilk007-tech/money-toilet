@@ -25,8 +25,9 @@ const kstDateOf = (daysAgo: number) => {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 };
 
-const CHART_TICKS = [1, 3, 5, 10, 15, 30, 60];
-const TABLE_TICKS = [15, 30, 60];
+const CHART_TICKS = [1, 3, 5, 10, 15, 30, 60, 120, 180];
+const TABLE_TICKS = [15, 30, 60, 120, 180];
+const tickLabel = (t: number) => (t >= 60 ? `${t / 60}시간` : `${t}분`);
 
 // key: 데이터 필드, kind: 막대/선, axis: 좌(카운트)/우(금액), on: 기본 표시 여부
 type Metric = { key: keyof SeriesPoint; label: string; kind: "bar" | "line"; axis: "left" | "right"; color: string; on: boolean };
@@ -59,14 +60,14 @@ async function fetchSeries(start: string, end: string, tick: number) {
   return { status: res.status, data };
 }
 
-// 조회 가능한 프리셋 범위(최근 7일 이내). from/to = N일 전(from>=to). minTick: 포인트 3000 상한을 넘지 않는 최소 틱.
+// 조회 가능한 프리셋(최근 7일 이내). from/to=N일 전. chartTick/tableTick: 프리셋별 가장 보기좋은 틱
+// (표는 ~24행 목표: 하루=60분, 3일=3시간). minTick: 포인트 3000 상한을 넘지 않는 최소 차트틱.
 const RANGES = [
-  { key: "d0", label: "오늘", from: 0, to: 0, tick: 15, minTick: 1 },
-  { key: "d1", label: "어제", from: 1, to: 1, tick: 15, minTick: 1 },
-  { key: "d2", label: "엊그제", from: 2, to: 2, tick: 15, minTick: 1 },
-  { key: "d3", label: "그끄저께", from: 3, to: 3, tick: 15, minTick: 1 },
-  { key: "r3", label: "최근 3일", from: 2, to: 0, tick: 30, minTick: 3 },
-  { key: "r7", label: "최근 일주일", from: 6, to: 0, tick: 60, minTick: 5 },
+  { key: "d0", label: "오늘", from: 0, to: 0, chartTick: 15, tableTick: 60, minTick: 1 },
+  { key: "d1", label: "어제", from: 1, to: 1, chartTick: 15, tableTick: 60, minTick: 1 },
+  { key: "d2", label: "엊그제", from: 2, to: 2, chartTick: 15, tableTick: 60, minTick: 1 },
+  { key: "r3", label: "최근 3일", from: 2, to: 0, chartTick: 60, tableTick: 180, minTick: 3 },
+  { key: "r7", label: "최근 일주일", from: 6, to: 0, chartTick: 180, tableTick: 180, minTick: 5 },
 ] as const;
 
 export default function StatsChart() {
@@ -103,10 +104,11 @@ export default function StatsChart() {
 
   useEffect(() => { load(); }, [load]);
 
-  // 프리셋 선택 → 조회 날짜 변경 + 범위별 기본 틱(최소 틱으로 클램프)
+  // 프리셋 선택 → 조회 날짜 변경 + 범위별 가장 보기좋은 차트틱·표틱 자동 세팅(최소 틱으로 클램프)
   const pickRange = (r: (typeof RANGES)[number]) => {
     setRangeKey(r.key);
-    setChartTick(Math.max(r.tick, r.minTick));
+    setChartTick(Math.max(r.chartTick, r.minTick));
+    setTableTick(r.tableTick);
   };
 
   const activeMetrics = useMemo(() => METRICS.filter((m) => visible[m.key]), [visible]);
@@ -132,11 +134,11 @@ export default function StatsChart() {
         <div style={s.ctrlRow3}>
           <label style={s.ctrlItem}><span style={s.ctrlLbl}>차트 틱</span>
             <select value={chartTick} onChange={(e) => setChartTick(Number(e.target.value))} style={s.sel}>
-              {tickOpts.map((t) => <option key={t} value={t}>{t}분</option>)}
+              {tickOpts.map((t) => <option key={t} value={t}>{tickLabel(t)}</option>)}
             </select></label>
           <label style={s.ctrlItem}><span style={s.ctrlLbl}>표 틱</span>
             <select value={tableTick} onChange={(e) => setTableTick(Number(e.target.value))} style={s.sel}>
-              {TABLE_TICKS.map((t) => <option key={t} value={t}>{t}분</option>)}
+              {TABLE_TICKS.map((t) => <option key={t} value={t}>{tickLabel(t)}</option>)}
             </select></label>
           <button style={s.reloadBtn} onClick={load} disabled={loading}>{loading ? "…" : "조회"}</button>
         </div>
@@ -231,7 +233,7 @@ const s: Record<string, React.CSSProperties> = {
   chips: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 },
   chip: { padding: "5px 10px", borderRadius: 20, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 11.5, fontWeight: 600 },
   tableHead: { fontSize: 12, color: "#8fa89a", marginBottom: 8 },
-  tableWrap: { maxHeight: 420, overflow: "auto", border: "1px solid #243029", borderRadius: 8 },
+  tableWrap: { border: "1px solid #243029", borderRadius: 8, overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 11, fontVariantNumeric: "tabular-nums" },
   // sticky 헤더 — 불투명 배경 + 그림자로 스크롤되는 행 위에서 또렷하게(투명도 문제 해결)
   th: { position: "sticky", top: 0, zIndex: 1, background: "#0d120f", color: "#cfe5d8", textAlign: "right", padding: "8px 7px", borderBottom: "1px solid #33463b", fontWeight: 700, whiteSpace: "nowrap", boxShadow: "0 2px 5px rgba(0,0,0,0.5)" },

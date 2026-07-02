@@ -60,7 +60,7 @@ export const CHATLOG_MAX = 6000;
     dwellSec: 체류시간 집계 = Σ(동접 인원 × 흐른 초). '총 체류(사용자-초)'이자 평균세션(=dwellSec/visits)의 분자.
     (분단위 버킷은 여기에 presence 게이지 샘플을 추가로 얹는다 — 카운터가 아니므로 tick 합산 시 max로 집계) */
 export const emptyBucket = () => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, donate: 0, brag: 0, dwellSec: 0 });
-// 카운터 필드(합산 대상) — presence는 게이지라 제외
+// 카운터 필드(합산 대상) — presence는 게이지라 제외(max로 별도 집계)
 export const COUNTER_FIELDS = ["visits", "newVisitors", "chat", "flush", "money", "share", "donate", "brag", "dwellSec"];
 
 export const DEFAULTS = {

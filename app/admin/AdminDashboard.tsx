@@ -36,6 +36,13 @@ const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } c
 const won = (n: number) => (n || 0).toLocaleString("ko-KR");
 const hhmm = (ts: number) => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
 const EMPTY: Bucket = { visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, donate: 0, brag: 0, dwellSec: 0 };
+// 통계탭 시간별 표 컬럼 — 한눈에 다 보이게(모바일) 9열 고정: 시간 + 아래 8개
+const HOUR_COLS: { key: keyof Bucket; label: string }[] = [
+  { key: "visits", label: "방문" }, { key: "newVisitors", label: "신규" },
+  { key: "chat", label: "채팅" }, { key: "flush", label: "물내림" },
+  { key: "share", label: "공유" }, { key: "donate", label: "후원" }, { key: "brag", label: "자랑" },
+  { key: "money", label: "금액" },
+];
 const sumDay = (hours: Bucket[]) => hours.reduce((a, h) => ({
   visits: a.visits + h.visits, newVisitors: a.newVisitors + h.newVisitors,
   chat: a.chat + h.chat, flush: a.flush + h.flush, money: a.money + h.money,
@@ -368,9 +375,9 @@ export default function AdminDashboard() {
     return (
       <>
         {o.nickChanged && <span style={s.nickTag}>닉변</span>}
-        {o.reconnects > 0 && <span style={s.tag}>재접 {o.reconnects}</span>}
-        {c.chat > 0 && <span style={s.tag}>챗 {c.chat}</span>}
-        {c.flush > 0 && <span style={s.tag}>내림 {c.flush}</span>}
+        {o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}</span>}
+        {c.chat > 0 && <span style={s.tag}>채팅 {c.chat}</span>}
+        {c.flush > 0 && <span style={s.tag}>물내림 {c.flush}</span>}
         {o.banned && <span style={s.banTag}>차단</span>}
       </>
     );
@@ -391,9 +398,12 @@ export default function AdminDashboard() {
     <div style={s.wrap}>{css}
       <header style={s.top}>
         <b>🚽 어드민</b>
-        <span style={s.liveN}>
-          <span className="admin-live-dot">●</span> 실제 <b style={s.liveReal}>{live?.presence ?? 0}</b> · 표시 <b style={s.liveShown}>{(live?.presence ?? 0) + (live?.floor ?? 0)}</b>명
-        </span>
+        <div style={s.headRight}>
+          <span style={s.headStat}>
+            <span className="admin-live-dot">●</span> 실제 <b style={s.liveReal}>{live?.presence ?? 0}</b> · 표시 <b style={s.liveShown}>{(live?.presence ?? 0) + (live?.floor ?? 0)}</b>명
+          </span>
+          <span style={s.headMoney}>오늘 다같이 <b style={s.headMoneyV}>{won(live?.today?.money ?? 0)}</b>원</span>
+        </div>
         <button onClick={logout} style={s.btnGhost}>로그아웃</button>
       </header>
       <nav style={s.tabs}>
@@ -418,26 +428,23 @@ export default function AdminDashboard() {
                   {d.live && <span style={s.liveBadge}>LIVE</span>}
                   <span style={s.chevron}>{isExpanded ? "시간별 ▴" : "시간별 ▾"}</span>
                 </div>
-                <div style={s.sumHero}>
-                  <span style={s.sumHeroL}>번 돈</span>
-                  <span style={s.sumHeroV}>{won(totals.money)}원</span>
-                </div>
-                <div style={s.sumStrip}>
+                <div style={s.sumGrid}>
                   {([
-                    ["방문", won(totals.visits)],
-                    ["신규", won(totals.newVisitors)],
-                    ["채팅", won(totals.chat)],
-                    ["물내림", won(totals.flush)],
-                    ["공유", won(totals.share)],
-                    ["후원", won(totals.donate)],
-                    ["자랑", won(totals.brag)],
-                    ["체류", fmtDur(totals.dwellSec)],
-                    ["평균", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"],
-                  ] as [string, string][]).map(([l, v]) => (
-                    <span key={l} style={s.sumItem}>
-                      <span style={s.sumItemL}>{l}</span>
-                      <span style={s.sumItemV}>{v}</span>
-                    </span>
+                    ["방문", won(totals.visits), false],
+                    ["신규", won(totals.newVisitors), false],
+                    ["채팅", won(totals.chat), false],
+                    ["물내림", won(totals.flush), false],
+                    ["공유", won(totals.share), false],
+                    ["후원", won(totals.donate), false],
+                    ["자랑", won(totals.brag), false],
+                    ["체류", fmtDur(totals.dwellSec), false],
+                    ["평균", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-", false],
+                    ["번 돈", `${won(totals.money)}원`, true],
+                  ] as [string, string, boolean][]).map(([l, v, full]) => (
+                    <div key={l} style={full ? { ...s.sumCell, gridColumn: "1 / -1" } : s.sumCell}>
+                      <span style={s.sumCellL}>{l}</span>
+                      <span style={s.sumCellV}>{v}</span>
+                    </div>
                   ))}
                 </div>
                 {isExpanded && (
@@ -445,23 +452,22 @@ export default function AdminDashboard() {
                     <table style={s.htable}>
                       <thead>
                         <tr>
-                          {["시간", "방문", "신규", "채팅", "물내림", "공유", "후원", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}
+                          <th style={{ ...s.th, textAlign: "left" }}>시간</th>
+                          {HOUR_COLS.map((c) => <th key={c.key} style={s.th}>{c.label}</th>)}
                         </tr>
                       </thead>
                       <tbody>
-                        {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.donate || h.brag) ? (
-                          <tr key={hr}>
-                            <td style={{ ...s.td, ...s.tdTime }}>{String(hr).padStart(2, "0")}시</td>
-                            <td style={s.td}>{h.visits || "-"}</td>
-                            <td style={{ ...s.td, color: h.newVisitors ? "#7ff0b0" : "#3f5148" }}>{h.newVisitors || "-"}</td>
-                            <td style={s.td}>{h.chat || "-"}</td>
-                            <td style={s.td}>{h.flush || "-"}</td>
-                            <td style={s.td}>{h.share || "-"}</td>
-                            <td style={s.td}>{h.donate || "-"}</td>
-                            <td style={s.td}>{h.brag || "-"}</td>
-                            <td style={{ ...s.td, color: "#ffd84d" }}>{h.money ? won(h.money) : "-"}</td>
-                          </tr>
-                        ) : null)}
+                        {(d.hours || Array.from({ length: 24 }, () => EMPTY)).map((h, hr) => {
+                          const zero = HOUR_COLS.every((c) => !h[c.key]);
+                          return (
+                            <tr key={hr} style={zero ? { opacity: 0.4 } : undefined}>
+                              <td style={{ ...s.td, textAlign: "left", color: "#7ff0b0" }}>{String(hr).padStart(2, "0")}:00</td>
+                              {HOUR_COLS.map((c) => (
+                                <td key={c.key} style={s.td}>{c.key === "money" ? won(h.money) : (h[c.key] || 0)}</td>
+                              ))}
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -591,7 +597,6 @@ export default function AdminDashboard() {
           {onlines.map((o) => (
             <LogRow
               key={o.vid}
-              timeInFoot
               nick={o.nick || "익명"}
               time={`${hhmm(o.since)}~`}
               vid={o.vid}
@@ -606,7 +611,6 @@ export default function AdminDashboard() {
             <LogRow
               key={o.vid}
               muted
-              timeInFoot
               nick={o.nick || "익명"}
               time={`${hhmm(o.since)}~${o.leftAt ? hhmm(o.leftAt) : ""}`}
               vid={o.vid}
@@ -744,21 +748,23 @@ export default function AdminDashboard() {
 function Empty() { return <div style={s.empty}>데이터 없음</div>; }
 
 // 채팅/동접 공통 카드 — [닉네임 (태그)] ………… [시간(우측끝)] / (메시지) / [UUID][차단]
-function LogRow({ nick, time, message, vid, tags, dur, setDur, onBan, muted, timeInFoot }: {
+function LogRow({ nick, time, message, vid, tags, dur, setDur, onBan, muted }: {
   nick: string; time: string; message?: string | null; vid: string; tags?: React.ReactNode;
-  dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void; muted?: boolean; timeInFoot?: boolean;
+  dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void; muted?: boolean;
 }) {
-  // timeInFoot: 동접 탭처럼 태그가 많은 행은 시간을 아랫줄로 내려 머리줄(닉+태그)을 한 줄에 담는다(모바일 2줄 목표).
+  // 동접·챗 공용 3영역 카드: (1) 닉 · 시간  (2) 내용=메시지 또는 태그(전폭, 자연 줄바꿈)  (3) uuid · 차단
   return (
     <div style={muted ? { ...s.crow, ...s.crowMuted } : s.crow}>
       <div style={s.rowHead}>
         <b style={s.rowNick}>{nick}</b>
-        {tags ? <span style={s.rowTags}>{tags}</span> : null}
-        {!timeInFoot && <span style={s.rowTime}>{time}</span>}
+        <span style={s.rowTime}>{time}</span>
       </div>
-      {message ? <div style={s.rowBody}>{message}</div> : null}
+      {message ? (
+        <div style={s.rowBody}>{message}</div>
+      ) : tags ? (
+        <div style={s.rowTags}>{tags}</div>
+      ) : null}
       <div style={s.cfoot}>
-        {timeInFoot && <span style={s.footTime}>{time}</span>}
         <code style={s.uuid}>{vid}</code>
         <BanCtl vid={vid} dur={dur} setDur={setDur} onBan={onBan} />
       </div>
@@ -784,7 +790,10 @@ const s: Record<string, React.CSSProperties> = {
   input: { padding: 14, fontSize: 16, borderRadius: 10, border: "1px solid #2c3a32", background: "#16201b", color: "#fff" },
   err: { color: "#ff8a8a", textAlign: "center" },
   top: { display: "flex", alignItems: "center", gap: 10, padding: "4px 2px 10px", position: "sticky", top: 0, background: "#0f1512", zIndex: 10 },
-  liveN: { color: "#8fa89a", fontSize: 12, marginLeft: "auto", whiteSpace: "nowrap" },
+  headRight: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, marginLeft: "auto" },
+  headStat: { color: "#8fa89a", fontSize: 11.5, whiteSpace: "nowrap" },
+  headMoney: { color: "#8fa89a", fontSize: 11, whiteSpace: "nowrap" },
+  headMoneyV: { color: "#ffd84d", fontWeight: 700, fontVariantNumeric: "tabular-nums" as const },
   liveReal: { color: "#7ff0b0", fontVariantNumeric: "tabular-nums" as const },
   liveShown: { color: "#ffd84d", fontVariantNumeric: "tabular-nums" as const },
   tabs: { display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" },
@@ -807,16 +816,13 @@ const s: Record<string, React.CSSProperties> = {
   dayLabel: { fontSize: 15, fontWeight: 800, color: "#eafff5" },
   dayDate: { fontSize: 11, color: "#6f8378", fontVariantNumeric: "tabular-nums" as const },
   liveBadge: { fontSize: 9.5, fontWeight: 800, color: "#0d120f", background: "#7ff0b0", padding: "1px 5px", borderRadius: 4, letterSpacing: 0.3 },
-  // 요약 — 번 돈 히어로 + 나머지 지표는 담백한 인라인 스트립(그리드/과한 볼드 제거)
-  sumHero: { display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: 9, marginBottom: 9, borderBottom: "1px solid #243029" },
-  sumHeroL: { fontSize: 12.5, color: "#8fa89a" },
-  sumHeroV: { fontSize: 22, fontWeight: 800, color: "#ffd84d", fontVariantNumeric: "tabular-nums" as const },
-  sumStrip: { display: "flex", flexWrap: "wrap" as const, rowGap: 7, columnGap: 15 },
-  sumItem: { display: "inline-flex", alignItems: "baseline", gap: 5 },
-  sumItemL: { fontSize: 11.5, color: "#8fa89a" },
-  sumItemV: { fontSize: 13.5, fontWeight: 500, color: "#d7e6dd", fontVariantNumeric: "tabular-nums" as const },
-  // 시간별 테이블 — 차트 탭 테이블과 동일 톤(스크롤 래퍼 + 불투명 sticky 헤더)
-  htableWrap: { maxHeight: 360, overflow: "auto", border: "1px solid #243029", borderRadius: 8, marginTop: 12 },
+  // 요약 — 아주 작은 그리드(상하배치 셀). 값 볼드/노랑 없이 통일. 번 돈은 값이 길어 전폭(gridColumn 1/-1).
+  sumGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "7px 8px" },
+  sumCell: { display: "flex", flexDirection: "column", gap: 2, padding: "6px 9px", background: "#12190f", borderRadius: 7, minWidth: 0 },
+  sumCellL: { fontSize: 10.5, color: "#8fa89a" },
+  sumCellV: { fontSize: 14, fontWeight: 600, color: "#e7efe9", fontVariantNumeric: "tabular-nums" as const, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  // 시간별 테이블 — 차트 탭 테이블과 동일 톤(불투명 sticky 헤더). 24행 무스크롤(페이지 스크롤 사용)
+  htableWrap: { border: "1px solid #243029", borderRadius: 8, marginTop: 12, overflowX: "auto" },
   htable: { width: "100%", borderCollapse: "collapse" as const, fontSize: 11.5, fontVariantNumeric: "tabular-nums" as const },
   th: { position: "sticky" as const, top: 0, zIndex: 1, background: "#0d120f", color: "#cfe5d8", textAlign: "right" as const, padding: "8px 7px", borderBottom: "1px solid #33463b", fontWeight: 700, whiteSpace: "nowrap" as const, boxShadow: "0 2px 5px rgba(0,0,0,0.5)" },
   tr: {},
@@ -840,11 +846,10 @@ const s: Record<string, React.CSSProperties> = {
   subtabOn: { background: "#1f6b45", color: "#fff", borderColor: "#1f6b45", fontWeight: 700 },
   // 채팅/동접 공통 카드 — 개선된 레이아웃(닉 좌측, 시간 우측끝)
   crow: { background: "#141d18", border: "1px solid #1f2a23", borderRadius: 7, padding: "8px", marginBottom: 4 },
-  rowHead: { display: "flex", alignItems: "center", gap: 6, lineHeight: 1.35, flexWrap: "wrap" as const },
-  rowNick: { fontSize: 12.5, color: "#ffd84d", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "45%", flexShrink: 0 },
-  rowTags: { display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" as const, minWidth: 0, flex: "1 1 auto" },
+  rowHead: { display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1.35 },
+  rowNick: { fontSize: 12.5, color: "#ffd84d", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "72%" },
   rowTime: { marginLeft: "auto", fontSize: 10.5, color: "#7ff0b0", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
-  footTime: { fontSize: 10.5, color: "#7ff0b0", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
+  rowTags: { display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" as const, marginTop: 5 },
   rowBody: { marginTop: 5, fontSize: 13, color: "#e7efe9", wordBreak: "break-word", lineHeight: 1.4 },
   cline: { display: "flex", alignItems: "baseline", gap: 6, fontSize: 13, flexWrap: "wrap", lineHeight: 1.35 },
   clineNew: { display: "flex", alignItems: "baseline", gap: 8, fontSize: 12.5, lineHeight: 1.4 },
