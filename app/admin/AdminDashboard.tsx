@@ -456,10 +456,10 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(d.hours || Array.from({ length: 24 }, () => EMPTY)).map((h, hr) => {
-                          const zero = HOUR_COLS.every((c) => !h[c.key]);
+                        {(d.hours || []).map((h, hr) => {
+                          if (HOUR_COLS.every((c) => !h[c.key])) return null; // 데이터 없는 시간대는 숨김
                           return (
-                            <tr key={hr} style={zero ? { opacity: 0.4 } : undefined}>
+                            <tr key={hr}>
                               <td style={{ ...s.td, textAlign: "left", color: "#7ff0b0" }}>{String(hr).padStart(2, "0")}:00</td>
                               {HOUR_COLS.map((c) => (
                                 <td key={c.key} style={s.td}>{c.key === "money" ? won(h.money) : (h[c.key] || 0)}</td>
