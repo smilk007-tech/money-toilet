@@ -49,16 +49,16 @@ export default function LiveEarningsBanner() {
       if (total > realRef.current) realRef.current = total;
       if (!seededRef.current) {
         seededRef.current = true;
-        const base = total > 0 ? Math.floor(total * 0.7) : 0; // 70%에서 시작 → 슬롯머신처럼 real까지 등반
+        const base = total > 0 ? Math.floor(total * 0.65) : 0; // 65%에서 시작 — 여유 갭 확보
         dispRef.current = base;
         setDisplayWon(base);
-        anim.current.pauseUntil = performance.now() + 1400; // 처음 영수증 읽을 여유 후 등반 시작
+        anim.current.pauseUntil = performance.now() + 1500; // 영수증 읽을 여유 후 등반 시작
       }
     }
 
-    // 슬롯머신 롤업 루프 — 남은 갭의 25~60%를 랜덤 중간목표로 잡아 ease-out으로 촤르르륵 오르고,
-    // 짧게 멈췄다(0.6~1.5s) 다음 목표로 또 오른다. real 도달 시 정지(초과 없음). real이 오르면 재개.
-    const EASE = (t: number) => 1 - Math.pow(1 - t, 3); // ease-out cubic — 부드러운 감속
+    // 슬롯머신 롤업 — 고정 금액 단위(1원~최대 수천원)로 올려서 자연스러운 적립처럼 보임.
+    // real의 0.4~0.9% 단위로 끊어 올림 → 20초 뷰잉 기준 5~6틱 노출, real에 완전 도달 안 함.
+    const EASE = (t: number) => 1 - Math.pow(1 - t, 3); // ease-out cubic
     const tick = () => {
       const now = performance.now();
       const a = anim.current;
@@ -72,16 +72,17 @@ export default function LiveEarningsBanner() {
           dispRef.current = a.to;
           setDisplayWon(a.to);
           a.mode = "idle";
-          a.pauseUntil = now + 600 + Math.random() * 900;
+          a.pauseUntil = now + 800 + Math.random() * 1000; // 0.8~1.8s 숨 고르기
         }
       } else if (dispRef.current < real - 0.5 && now >= a.pauseUntil) {
-        const gap = real - dispRef.current;
-        const step = Math.min(gap, Math.max(gap * (0.25 + Math.random() * 0.35), Math.ceil(real * 0.02) + 1));
+        // 남은 갭이 아니라 real 기준 고정 단위로 쪼갬 → 갭이 커도 작아도 같은 템포
+        const unit = Math.max(Math.ceil(real * (0.004 + Math.random() * 0.005)), 1);
+        const step = Math.min(real - dispRef.current, unit);
         a.mode = "rolling";
         a.from = dispRef.current;
         a.to = dispRef.current + step;
         a.start = now;
-        a.dur = 500 + Math.random() * 500; // 0.5~1.0s 롤링
+        a.dur = 1200 + Math.random() * 1000; // 1.2~2.2s 롤링
       }
       raf = requestAnimationFrame(tick);
     };
