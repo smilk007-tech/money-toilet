@@ -373,10 +373,12 @@ body {
 .skin-center__base,
 .skin-side,
 .skin-floor,
-.skin-latch,
 .ad-a4,
 .skin-tp {
   transition: filter 0.55s ease;
+}
+.skin-latch {
+  transition: opacity 0.55s ease;
 }
 .scene {
   transition: background-color 0.55s ease;
@@ -387,10 +389,13 @@ body {
 .scene--blackout .skin-center__base,
 .scene--blackout .skin-side,
 .scene--blackout .skin-floor,
-.scene--blackout .skin-latch,
 .scene--blackout .ad-a4,
 .scene--blackout .skin-tp {
-  filter: brightness(0.15);
+  filter: brightness(0.22);
+}
+.scene--blackout .skin-latch,
+.scene--blackout .latch-knob-socket {
+  opacity: 0.22;
 }
 
 /* 문 경첩(좌측 모서리) */
@@ -572,7 +577,7 @@ body {
   top: 16%;
   bottom: 42%;
   width: 30%;
-  z-index: 12;
+  z-index: 40;
   pointer-events: none;
 }
 .bubbles--left {
@@ -2825,12 +2830,13 @@ body {
 /* 손잡이 떨어진 자리 — 음각 소켓 */
 .latch-knob-socket {
   position: absolute;
-  z-index: 34;
+  z-index: 42;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: radial-gradient(circle at 44% 38%, #767a7a 0%, #626666 55%, #575b5b 100%);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28), inset 0 0 3px rgba(0, 0, 0, 0.18);
+  background: radial-gradient(circle at 44% 38%, #909494 0%, #7e8282 55%, #747878 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.14), inset 0 0 3px rgba(0, 0, 0, 0.10);
   transform: translate(-50%, -50%);
   pointer-events: none;
+  transition: opacity 0.55s ease;
 }
