@@ -347,7 +347,7 @@ app.get("/admin/config", requireAdmin, (_req, res) => {
 app.post("/admin/config", requireAdmin, async (req, res) => {
   await setConfig(req.body ?? {}); cfg = await loadConfig();
   io.emit("notices", { notices: cfg.notices ?? [] });
-  resyncPresenceFloor(); broadcastPresence(); // 바닥값 설정 변경 즉시 반영
+  resyncPresenceFloor(); broadcastPresence(); pushAdminLive(); // 바닥값 설정 변경 즉시 반영
   res.json({ ok: true, config: cfg });
 });
 app.post("/admin/reset-money", requireAdmin, async (_req, res) => {
