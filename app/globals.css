@@ -369,11 +369,27 @@ body {
   filter: brightness(0.05);
 }
 /* 암전 오버레이 */
-/* 암전: scene 전체를 어둡게. 내부 요소 z-index 무관하게 전부 같이 어두워짐. */
-.scene {
+/* 암전: 화장실 스킨 개별 요소에 직접 적용 — 채팅 버블은 제외 */
+.skin-center__base,
+.skin-side,
+.skin-floor,
+.skin-latch,
+.ad-a4,
+.skin-tp {
   transition: filter 0.55s ease;
 }
+.scene {
+  transition: background-color 0.55s ease;
+}
 .scene--blackout {
+  background-color: #0a0a0a;
+}
+.scene--blackout .skin-center__base,
+.scene--blackout .skin-side,
+.scene--blackout .skin-floor,
+.scene--blackout .skin-latch,
+.scene--blackout .ad-a4,
+.scene--blackout .skin-tp {
   filter: brightness(0.15);
 }
 
