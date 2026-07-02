@@ -56,9 +56,10 @@ export default function LiveEarningsBanner() {
       }
     }
 
-    // 슬롯머신 롤업 — 고정 금액 단위(1원~최대 수천원)로 올려서 자연스러운 적립처럼 보임.
-    // real의 0.4~0.9% 단위로 끊어 올림 → 20초 뷰잉 기준 5~6틱 노출, real에 완전 도달 안 함.
-    const EASE = (t: number) => 1 - Math.pow(1 - t, 3); // ease-out cubic
+    // 개별 물내림 이벤트 시뮬레이션 — 누군가 방금 돈을 벌었다는 느낌.
+    // 금액(real의 0.3~2%)도, 다음 이벤트까지 쿨타임(0.8~4s)도 완전 불규칙.
+    // 갭 기반 분할 없이 real 기준 절대 단위 → 남은 갭이 줄어도 템포 변화 없음.
+    const EASE = (t: number) => 1 - Math.pow(1 - t, 3);
     const tick = () => {
       const now = performance.now();
       const a = anim.current;
@@ -72,17 +73,25 @@ export default function LiveEarningsBanner() {
           dispRef.current = a.to;
           setDisplayWon(a.to);
           a.mode = "idle";
-          a.pauseUntil = now + 800 + Math.random() * 1000; // 0.8~1.8s 숨 고르기
+          // 쿨타임: 짧게 0.8s ~ 길게 4s, 고르지 않은 분포로 사람 냄새 나게
+          const r = Math.random();
+          const pause = r < 0.3
+            ? 800  + Math.random() * 700   // 30%: 빠른 연타 (0.8~1.5s)
+            : r < 0.7
+            ? 1500 + Math.random() * 1500  // 40%: 보통 (1.5~3s)
+            : 2500 + Math.random() * 1500; // 30%: 긴 텀 (2.5~4s)
+          a.pauseUntil = now + pause;
         }
       } else if (dispRef.current < real - 0.5 && now >= a.pauseUntil) {
-        // 남은 갭이 아니라 real 기준 고정 단위로 쪼갬 → 갭이 커도 작아도 같은 템포
-        const unit = Math.max(Math.ceil(real * (0.004 + Math.random() * 0.005)), 1);
-        const step = Math.min(real - dispRef.current, unit);
+        // 이벤트 1건 금액: real의 0.3~2% 사이에서 랜덤 — 크기도 매번 다름
+        const pct = 0.003 + Math.random() * Math.random() * 0.017; // 오른쪽 꼬리 분포
+        const amount = Math.max(Math.ceil(real * pct), 1);
+        const step = Math.min(real - dispRef.current, amount);
         a.mode = "rolling";
         a.from = dispRef.current;
         a.to = dispRef.current + step;
         a.start = now;
-        a.dur = 1200 + Math.random() * 1000; // 1.2~2.2s 롤링
+        a.dur = 900 + Math.random() * 900; // 0.9~1.8s
       }
       raf = requestAnimationFrame(tick);
     };
