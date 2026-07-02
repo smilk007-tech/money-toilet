@@ -49,15 +49,16 @@ export default function LiveEarningsBanner() {
       if (total > realRef.current) realRef.current = total;
       if (!seededRef.current) {
         seededRef.current = true;
-        const base = total > 0 ? Math.floor(total * 0.65) : 0; // 65%에서 시작 — 여유 갭 확보
+        const base = total > 0 ? Math.floor(total * 0.95) : 0; // 95%에서 시작 — 5% 갭을 20s·10롤로 수렴
         dispRef.current = base;
         setDisplayWon(base);
-        anim.current.pauseUntil = performance.now() + 1200; // 영수증 읽을 여유 후 등반 시작
+        anim.current.pauseUntil = performance.now() + 3500; // 영수증 먼저 읽을 여유 확보
       }
     }
 
-    // 남은 갭의 30~55%씩 기하급수적으로 접근 — 10초 안에 목표치 96% 근접, 20초면 잔여 갭 극소화.
-    // 절대 단위가 아닌 갭 비율이므로 틱이 거듭될수록 스텝이 작아지며 자연스럽게 수렴.
+    // 95%에서 출발, 20초·10번 롤로 최대치 근접.
+    // 남은 갭의 35~55%씩 기하급수 수렴 → 10번이면 갭의 0.3% 미만 잔존 ≈ 사실상 max.
+    // 롤 1회 ~1.5s + 쉼 ~0.5s = 2s × 10 = 20s.
     const EASE = (t: number) => 1 - Math.pow(1 - t, 3);
     const tick = () => {
       const now = performance.now();
@@ -72,25 +73,17 @@ export default function LiveEarningsBanner() {
           dispRef.current = a.to;
           setDisplayWon(a.to);
           a.mode = "idle";
-          // 쿨타임: 짧게 0.2s ~ 길게 1.4s — 초반엔 빠르게 여러 번, 후반엔 갭이 작아 느려도 무방
-          const r = Math.random();
-          const pause = r < 0.4
-            ? 200  + Math.random() * 300   // 40%: 0.2~0.5s (빠른 연타)
-            : r < 0.8
-            ? 400  + Math.random() * 500   // 40%: 0.4~0.9s (보통)
-            : 700  + Math.random() * 700;  // 20%: 0.7~1.4s (숨 고르기)
-          a.pauseUntil = now + pause;
+          a.pauseUntil = now + 300 + Math.random() * 400; // 0.3~0.7s 쉬고 다음 롤
         }
       } else if (dispRef.current < real - 0.5 && now >= a.pauseUntil) {
-        // 남은 갭의 30~55% — 초반엔 큰 덩어리, 갈수록 잔여분이 줄어 자연스럽게 수렴
         const gap = real - dispRef.current;
-        const pct = 0.30 + Math.random() * 0.25;
+        const pct = 0.35 + Math.random() * 0.20; // 35~55%
         const step = Math.max(1, Math.floor(gap * pct));
         a.mode = "rolling";
         a.from = dispRef.current;
         a.to = dispRef.current + step;
         a.start = now;
-        a.dur = 1000 + Math.random() * 1000; // 1.0~2.0s (전보다 약간 느리게)
+        a.dur = 1200 + Math.random() * 600; // 1.2~1.8s
       }
       raf = requestAnimationFrame(tick);
     };
