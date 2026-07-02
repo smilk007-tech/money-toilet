@@ -148,16 +148,24 @@ function publicPresence() {
 function resyncPresenceFloor() {
   presenceFloorNow = initialPresenceFloor(cfg.presenceFloorMax);
 }
-// 자동 드리프트 — 20~50초 간격으로 이동, 값이 바뀔 때만 브로드캐스트.
+// 드리프트 인터벌 — 10초~10분을 가중치 구간으로 쪼개 인간적으로 불규칙하게.
+// 짧은 간격(빠른 연속 이동)이 자주 일어나되, 조용한 긴 텀도 드물게 섞인다.
+function driftDelay() {
+  const r = Math.random();
+  if (r < 0.15) return  10_000 + Math.floor(Math.random() *  20_000); // 10~30s  (15%) 순간 연속
+  if (r < 0.40) return  30_000 + Math.floor(Math.random() *  60_000); // 30~90s  (25%) 빠른 편
+  if (r < 0.65) return  90_000 + Math.floor(Math.random() *  90_000); // 90~180s (25%) 보통
+  if (r < 0.85) return 180_000 + Math.floor(Math.random() * 180_000); // 180~360s(20%) 느린 편
+  return               360_000 + Math.floor(Math.random() * 240_000); // 360~600s(15%) 긴 정적
+}
 function scheduleFloorDrift() {
-  const delay = 20_000 + Math.floor(Math.random() * 30_000); // 20~50초
   setTimeout(() => {
     if (cfg.presenceFloorMax > 0) {
       const next = driftPresenceFloor(presenceFloorNow, cfg.presenceFloorMax);
       if (next !== presenceFloorNow) { presenceFloorNow = next; broadcastPresence(); pushAdminLive(); }
     }
     scheduleFloorDrift();
-  }, delay);
+  }, driftDelay());
 }
 
 /* ---------- presence 브로드캐스트(디바운스) ---------- */
