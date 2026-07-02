@@ -2827,7 +2827,7 @@ body {
 /* 손잡이 떨어진 자리 — 음각 소켓 */
 .latch-knob-socket {
   position: absolute;
-  z-index: 42;
+  z-index: 35;
   width: 12px;
   height: 12px;
   border-radius: 50%;
