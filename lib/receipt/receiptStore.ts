@@ -4,7 +4,7 @@
    - 환경변수 미설정 시 null 반환 → 호출부에서 base64url 폴백
    =================================================================== */
 
-import type { ReceiptData } from "@/lib/receipt/receiptShare";
+import { sanitizeTier, type ReceiptData } from "@/lib/receipt/receiptShare";
 import { getRedis } from "@/lib/redis";
 
 const TTL_SECONDS = 60 * 60 * 24 * 30; // 30일
@@ -50,6 +50,7 @@ function normalizeLoaded(o: unknown): ReceiptData | null {
     f: Math.max(0, Math.floor(Number(r.f) || 0)),
     ts: Number(r.ts) || Date.now(),
     sl: Math.max(0, Math.floor(Number(r.sl) || 0)),
+    p: sanitizeTier(r.p), // 루팡 티어 — 누락 시(구버전 저장분) undefined → 지급완료 도장 폴백
   };
 }
 

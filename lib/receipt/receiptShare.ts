@@ -18,6 +18,7 @@ export interface ReceiptData {
   f: number; // 총 물내림 횟수
   ts: number; // 발급 시각(epoch ms, 벽시계 — 누적시간 아님)
   sl: number; // 명언 인덱스 (RECEIPT_SLOGANS)
+  p?: number; // 루팡 티어(오늘 체류 상위 %) — 물내림 시점 스냅샷. 굵은 티어만 담아 체류시간 역산을 흐린다. 구버전 링크엔 없음
 }
 
 function randomSloganIndex(): number {
@@ -112,6 +113,13 @@ export function receiptDocNo(d: ReceiptData): string {
 const clampNum = (x: unknown) =>
   Math.max(0, Math.min(Math.floor(Number(x) || 0), 1e15));
 
+/** 루팡 티어(상위 %) — 1~99 정수만 유효, 그 외(구버전 링크 포함)는 undefined */
+export function sanitizeTier(raw: unknown): number | undefined {
+  const n = Math.floor(Number(raw));
+  if (Number.isFinite(n) && n >= 1 && n <= 99) return n;
+  return undefined;
+}
+
 function sanitizeHistory(raw: unknown): number[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -165,6 +173,7 @@ export function decodeReceipt(s: string): ReceiptData | null {
       f: clampNum(o.f),
       ts: Number(o.ts) || Date.now(),
       sl: normalizeSloganIndex(o.sl),
+      p: sanitizeTier(o.p),
     };
   } catch {
     return null;

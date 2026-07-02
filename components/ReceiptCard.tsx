@@ -84,6 +84,7 @@ export default function ReceiptCard({
   stampVisible = true,
   stampAnimate = false,
   stampSlamMs,
+  prevTierPercent,
 }: {
   d: ReceiptData;
   siteUrlHref?: string;
@@ -93,6 +94,9 @@ export default function ReceiptCard({
   stampVisible?: boolean;
   stampAnimate?: boolean;
   stampSlamMs?: number;
+  /** 직전 물내림 티어(상위 %) — 인게임 모달 전용. 티어가 오른 경우에만 도장 밑 빨간펜 델타 표시.
+      공유 페이지·PNG 내보내기 인스턴스에는 절대 넘기지 말 것(체류시간 역산 방지). */
+  prevTierPercent?: number;
 }) {
   const hero = heroAmount(d);
   const issued = receiptIssuedAt(d);
@@ -293,7 +297,14 @@ export default function ReceiptCard({
         </span>
       </div>
 
-      {/* 슬로건 + 지급완료 도장 */}
+      {/* 사실 확인 인쇄 문구 — 구 확인 버튼의 개그를 서류 문구로 이전(모든 렌더에 포함) */}
+      <div style={{ ...center, marginTop: 7 }}>
+        <span style={{ display: "flex", fontSize: 9, color: SUB }}>
+          위 내용이 사실임을 확인합니다
+        </span>
+      </div>
+
+      {/* 슬로건 + 루팡 티어 인증 도장 (구버전 링크는 지급완료 도장) */}
       <div style={{ ...dash, margin: "10px 0" }} />
       <div
         style={{
@@ -345,38 +356,101 @@ export default function ReceiptCard({
                 : {}),
             }}
           >
-            <span
-              style={{
-                display: "flex",
-                fontSize: 13,
-                fontWeight: 900,
-                letterSpacing: -0.5,
-              }}
-            >
-              지급완료
-            </span>
-            <div
-              style={{
-                display: "flex",
-                width: "80%",
-                borderTop: `1px solid ${STAMP}`,
-                opacity: 0.5,
-              }}
-            />
-            <span
-              style={{
-                display: "flex",
-                fontSize: 8.5,
-                fontWeight: 700,
-                letterSpacing: -0.2,
-                textAlign: "center",
-                lineHeight: 1.3,
-              }}
-            >
-              돈버는화장실
-            </span>
+            {typeof d.p === "number" ? (
+              <>
+                {/* 3단: 상위(관형어) / N%(매번 바뀌는 주인공) / 월급루팡 인증 */}
+                <span style={{ display: "flex", fontSize: 8, fontWeight: 700 }}>
+                  상위
+                </span>
+                <span
+                  style={{
+                    display: "flex",
+                    fontSize: 19,
+                    fontWeight: 900,
+                    letterSpacing: -0.5,
+                  }}
+                >
+                  {d.p}%
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    width: "80%",
+                    borderTop: `1px solid ${STAMP}`,
+                    opacity: 0.5,
+                  }}
+                />
+                <span
+                  style={{
+                    display: "flex",
+                    fontSize: 8.5,
+                    fontWeight: 700,
+                    letterSpacing: -0.2,
+                    textAlign: "center",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  월급루팡 인증
+                </span>
+              </>
+            ) : (
+              <>
+                <span
+                  style={{
+                    display: "flex",
+                    fontSize: 13,
+                    fontWeight: 900,
+                    letterSpacing: -0.5,
+                  }}
+                >
+                  지급완료
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    width: "80%",
+                    borderTop: `1px solid ${STAMP}`,
+                    opacity: 0.5,
+                  }}
+                />
+                <span
+                  style={{
+                    display: "flex",
+                    fontSize: 8.5,
+                    fontWeight: 700,
+                    letterSpacing: -0.2,
+                    textAlign: "center",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  돈버는화장실
+                </span>
+              </>
+            )}
           </div>
         )}
+        {/* 델타 빨간펜 메모 — 티어 상승 시에만, 인게임 전용(prevTierPercent를 받은 인스턴스만) */}
+        {stampVisible &&
+          typeof d.p === "number" &&
+          typeof prevTierPercent === "number" &&
+          prevTierPercent > d.p && (
+            <span
+              style={{
+                display: "flex",
+                position: "absolute",
+                right: -10,
+                bottom: -13,
+                fontSize: 9,
+                fontWeight: 800,
+                color: STAMP,
+                transform: "rotate(-6deg)",
+                whiteSpace: "nowrap",
+                opacity: 0.9,
+              }}
+            >
+              상위 {prevTierPercent}% → {d.p}% ▲
+            </span>
+          )}
       </div>
     </div>
   );

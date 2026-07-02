@@ -76,6 +76,7 @@ const FALLBACK: ReceiptData = {
 };
 
 const canvas: React.CSSProperties = {
+  position: "relative",
   width: "100%",
   height: "100%",
   display: "flex",
@@ -86,17 +87,22 @@ const canvas: React.CSSProperties = {
   fontFamily: '"Noto Sans KR"',
 };
 
+// 루팡 티어 인증 도장 — ReceiptCard 도장과 동일한 3단 구성(상위/N%/월급루팡 인증)
+const OG_STAMP = "#e0574b";
+
 function OgImage({
   nick,
   amount,
   headline,
   slogan,
+  tier,
   fonts,
 }: {
   nick?: string;
   amount?: string;
   headline: string;
   slogan?: string;
+  tier?: number;
   fonts: OgFont[];
 }) {
   return new ImageResponse(
@@ -181,6 +187,53 @@ function OgImage({
           &quot;{slogan}&quot;
         </div>
       )}
+
+      {typeof tier === "number" && (
+        <div
+          style={{
+            position: "absolute",
+            top: 44,
+            right: 56,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            width: 190,
+            height: 190,
+            borderRadius: 95,
+            border: `7px solid ${OG_STAMP}`,
+            color: OG_STAMP,
+            transform: "rotate(13deg)",
+            opacity: 0.92,
+          }}
+        >
+          <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>
+            상위
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 58,
+              fontWeight: 800,
+              lineHeight: 1,
+            }}
+          >
+            {tier}%
+          </div>
+          <div
+            style={{
+              display: "flex",
+              width: "64%",
+              borderTop: `3px solid ${OG_STAMP}`,
+              opacity: 0.6,
+            }}
+          />
+          <div style={{ display: "flex", fontSize: 22, fontWeight: 700 }}>
+            월급루팡 인증
+          </div>
+        </div>
+      )}
     </div>,
     { ...size, fonts, emoji: "twemoji" },
   );
@@ -208,11 +261,12 @@ export default async function Image({
   }
 
   const glyphs =
-    `🚽${SITE_NAME}0123456789,.` +
+    `🚽${SITE_NAME}0123456789,.%` +
     data.n +
     "님이" +
     amount +
     "벌었다ㅋㅋ" +
+    "상위월급루팡인증" +
     slogan;
   const fonts = await loadFonts(glyphs);
 
@@ -221,6 +275,7 @@ export default async function Image({
     amount,
     headline: "벌었다ㅋㅋ",
     slogan,
+    tier: data.p,
     fonts,
   });
 }

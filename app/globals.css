@@ -1789,6 +1789,11 @@ body {
 .settings__link--danger:active {
   background: rgba(255, 110, 90, 0.12);
 }
+/* 기록 없음 등으로 비활성화된 링크(기록 초기화 등) — 흐리게 + 클릭 차단 */
+.settings__link:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
 /* 토글 스위치 */
 .sw {
   appearance: none;
@@ -2227,6 +2232,15 @@ body {
   font-weight: 600;
   color: #9fdcc9;
   text-align: center;
+}
+/* 오늘 루팡시간 — 모달 크롬 전용(저장 PNG/공유 페이지 미포함) */
+.receipt-modal__hint--today {
+  margin-bottom: -4px; /* 아래 힌트 줄과 붙여 한 덩어리로 읽히게 */
+  color: #cfeee0;
+}
+.receipt-modal__hint--today b {
+  color: #ffd84d;
+  font-weight: 900;
 }
 /* 지급완료 도장 — 위에서 내려와 박히고 두어 번 통통 튀며 자리를 잡음 (STAMP_SLAM_MS와 길이 맞출 것) */
 .receipt-stamp--slam {

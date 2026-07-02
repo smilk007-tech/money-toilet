@@ -408,7 +408,8 @@ export default function ToiletGame() {
           </div>
         </div>
 
-        {/* 내 기록 — 총 N원 노출(mt_total_visible) 시에만 표시 */}
+        {/* 내 기록 — 총 N원 노출(mt_total_visible) 시에만 표시.
+            명세서가 곧 내 기록(티어·오늘 루팡시간은 명세서 모달에서) — 초기화는 하단 danger 링크로 강등 */}
         <div className="settings__group" id="settingsHistoryGroup">
           <div className="settings__group-title">내 기록</div>
           <div className="settings__actions">
@@ -418,13 +419,6 @@ export default function ToiletGame() {
               type="button"
             >
               🧾 급여명세서
-            </button>
-            <button
-              className="settings__btn settings__btn--reset"
-              id="resetTotalBtn"
-              type="button"
-            >
-              초기화
             </button>
           </div>
         </div>
@@ -447,6 +441,17 @@ export default function ToiletGame() {
               💜
             </span>
             개발자 후원하기
+          </button>
+          {/* 파괴적 액션 — 1급 버튼에서 강등, 리스트 맨 끝의 작은 danger 링크 */}
+          <button
+            className="settings__link settings__link--danger"
+            type="button"
+            id="resetTotalBtn"
+          >
+            <span className="settings__link-ico" aria-hidden>
+              🧹
+            </span>
+            기록 초기화
           </button>
           {/* <button className="settings__link" type="button" data-action="ad">
             <span className="settings__link-ico" aria-hidden>
@@ -516,7 +521,7 @@ export default function ToiletGame() {
               <dd id="resetConfirmTotal">0원</dd>
             </div>
             <div className="reset-confirm__stat">
-              <dt>화장실 체류시간</dt>
+              <dt>오늘 루팡시간</dt>
               <dd id="resetConfirmTime">0초</dd>
             </div>
           </dl>
