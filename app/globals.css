@@ -2232,6 +2232,7 @@ body {
   font-weight: 600;
   color: #9fdcc9;
   text-align: center;
+  opacity: 0; /* 확인 버튼 구간엔 숨김 — --in 클래스가 애니메이션으로 등장시킴 */
 }
 /* 지급완료 도장 — 위에서 내려와 박히고 두어 번 통통 튀며 자리를 잡음 (STAMP_SLAM_MS와 길이 맞출 것) */
 .receipt-stamp--slam {
@@ -2286,9 +2287,9 @@ body {
   }
 }
 
-/* 버튼 등장 후 안내문구가 한 박자 늦게 등장 */
+/* 저장/자랑 버튼 애니메이션(0.38s) 끝난 뒤 한 박자 늦게 등장 */
 .receipt-modal__hint--in {
-  animation: receiptHintIn 0.32s ease both;
+  animation: receiptHintIn 0.32s 0.38s ease both;
 }
 @keyframes receiptHintIn {
   0% {
