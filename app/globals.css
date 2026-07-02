@@ -373,12 +373,11 @@ body {
 .skin-center__base,
 .skin-side,
 .skin-floor,
+.skin-latch,
+.latch-knob-socket,
 .ad-a4,
 .skin-tp {
   transition: filter 0.85s ease;
-}
-.skin-latch {
-  transition: opacity 0.85s ease;
 }
 .scene {
   transition: background-color 0.55s ease;
@@ -389,13 +388,11 @@ body {
 .scene--blackout .skin-center__base,
 .scene--blackout .skin-side,
 .scene--blackout .skin-floor,
+.scene--blackout .skin-latch,
+.scene--blackout .latch-knob-socket,
 .scene--blackout .ad-a4,
 .scene--blackout .skin-tp {
   filter: brightness(0.22);
-}
-.scene--blackout .skin-latch,
-.scene--blackout .latch-knob-socket {
-  opacity: 0.22;
 }
 
 /* 문 경첩(좌측 모서리) */
