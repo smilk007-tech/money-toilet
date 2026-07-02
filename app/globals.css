@@ -2232,10 +2232,6 @@ body {
   font-weight: 600;
   color: #9fdcc9;
   text-align: center;
-  opacity: 0; /* 확인 버튼 구간엔 숨김 — --in(애니메이션) 또는 --visible(즉시 표시)로 등장 */
-}
-.receipt-modal__hint--visible {
-  opacity: 1;
 }
 /* 지급완료 도장 — 위에서 내려와 박히고 두어 번 통통 튀며 자리를 잡음 (STAMP_SLAM_MS와 길이 맞출 것) */
 .receipt-stamp--slam {
