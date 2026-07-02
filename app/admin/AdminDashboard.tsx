@@ -499,8 +499,8 @@ export default function AdminDashboard() {
                 드리프트 <b style={{ color: "#ffd233" }}>+{live?.floor ?? 0}명</b> 적용 중 · 실제 접속 <b style={{ color: "#7ff0b0" }}>{live?.presence ?? 0}명</b> · 표시 <b style={{ color: "#fff" }}>{(live?.presence ?? 0) + (live?.floor ?? 0)}명</b>
               </div>
               <label style={s.cfgRow}>
-                <div><div style={s.cfgLabel}>드리프트 최대 추가 인원</div><div style={s.cfgDesc}>0~9. 1명 입장 시 최대 이 수만큼 더해 보임. 오픈 초기엔 3 권장 (0=끔)</div></div>
-                <div style={s.cfgInputWrap}><input type="number" min={0} max={9} value={cfg.presenceFloorMax} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorMax: Math.max(0, Math.min(9, Math.floor(Number(e.target.value)) || 0)) }))} /><span style={s.cfgUnit}>명</span></div>
+                <div><div style={s.cfgLabel}>드리프트 최대 추가 인원</div><div style={s.cfgDesc}>0~99. 시간대 패턴으로 0~이 값 사이를 자동 조절. (0=끔)</div></div>
+                <div style={s.cfgInputWrap}><input type="number" min={0} max={99} value={cfg.presenceFloorMax} style={s.cfgNum} onChange={(e) => setCfg((p) => ({ ...p, presenceFloorMax: Math.max(0, Math.min(99, Math.floor(Number(e.target.value)) || 0)) }))} /><span style={s.cfgUnit}>명</span></div>
               </label>
               <button style={{ ...s.btnPrimary, width: "100%", marginTop: 8 }} onClick={saveCfg}>저장</button>
             </div>
