@@ -25,8 +25,8 @@ const kstDateOf = (daysAgo: number) => {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 };
 
-const CHART_TICKS = [1, 3, 5, 10, 15, 30, 60, 120, 180];
-const TABLE_TICKS = [15, 30, 60, 120, 180];
+const CHART_TICKS = [1, 3, 5, 10, 15, 30, 60];
+const TABLE_TICKS = [15, 30, 60];
 const tickLabel = (t: number) => (t >= 60 ? `${t / 60}시간` : `${t}분`);
 
 // key: 데이터 필드, kind: 막대/선, axis: 좌(카운트)/우(금액), on: 기본 표시 여부
@@ -60,14 +60,12 @@ async function fetchSeries(start: string, end: string, tick: number) {
   return { status: res.status, data };
 }
 
-// 조회 가능한 프리셋(최근 7일 이내). from/to=N일 전. chartTick/tableTick: 프리셋별 가장 보기좋은 틱
-// (표는 ~24행 목표: 하루=60분, 3일=3시간). minTick: 포인트 3000 상한을 넘지 않는 최소 차트틱.
+// 조회 프리셋 — 24시간 단위 4일(오늘/어제/엊그제/그끄저께). chartTick 15분(96포인트)·tableTick 60분(24행).
 const RANGES = [
   { key: "d0", label: "오늘", from: 0, to: 0, chartTick: 15, tableTick: 60, minTick: 1 },
   { key: "d1", label: "어제", from: 1, to: 1, chartTick: 15, tableTick: 60, minTick: 1 },
   { key: "d2", label: "엊그제", from: 2, to: 2, chartTick: 15, tableTick: 60, minTick: 1 },
-  { key: "r3", label: "최근 3일", from: 2, to: 0, chartTick: 60, tableTick: 180, minTick: 3 },
-  { key: "r7", label: "최근 일주일", from: 6, to: 0, chartTick: 180, tableTick: 180, minTick: 5 },
+  { key: "d3", label: "그끄저께", from: 3, to: 3, chartTick: 15, tableTick: 60, minTick: 1 },
 ] as const;
 
 export default function StatsChart() {

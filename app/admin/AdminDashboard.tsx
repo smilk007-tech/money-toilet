@@ -430,18 +430,16 @@ export default function AdminDashboard() {
                 </div>
                 <div style={s.sumGrid}>
                   {([
-                    ["방문", won(totals.visits), false],
-                    ["신규", won(totals.newVisitors), false],
-                    ["채팅", won(totals.chat), false],
-                    ["물내림", won(totals.flush), false],
-                    ["공유", won(totals.share), false],
-                    ["후원", won(totals.donate), false],
-                    ["자랑", won(totals.brag), false],
-                    ["체류", fmtDur(totals.dwellSec), false],
-                    ["평균", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-", false],
-                    ["번 돈", `${won(totals.money)}원`, true],
-                  ] as [string, string, boolean][]).map(([l, v, full]) => (
-                    <div key={l} style={full ? { ...s.sumCell, gridColumn: "1 / -1" } : s.sumCell}>
+                    ["방문", won(totals.visits)],
+                    ["신규", won(totals.newVisitors)],
+                    ["채팅", won(totals.chat)],
+                    ["물내림", won(totals.flush)],
+                    ["공유", won(totals.share)],
+                    ["후원", won(totals.donate)],
+                    ["자랑", won(totals.brag)],
+                    ["평균체류", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"],
+                  ] as [string, string][]).map(([l, v]) => (
+                    <div key={l} style={s.sumCell}>
                       <span style={s.sumCellL}>{l}</span>
                       <span style={s.sumCellV}>{v}</span>
                     </div>
@@ -795,7 +793,7 @@ const s: Record<string, React.CSSProperties> = {
   headMoney: { color: "#8fa89a", fontSize: 11, whiteSpace: "nowrap" },
   headMoneyV: { color: "#ffd84d", fontWeight: 700, fontVariantNumeric: "tabular-nums" as const },
   liveReal: { color: "#7ff0b0", fontVariantNumeric: "tabular-nums" as const },
-  liveShown: { color: "#ffd84d", fontVariantNumeric: "tabular-nums" as const },
+  liveShown: { color: "#ffffff", fontVariantNumeric: "tabular-nums" as const },
   tabs: { display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" },
   tab: { flex: 1, padding: "10px 4px", borderRadius: 9, borderWidth: 1, borderStyle: "solid", borderColor: "#2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12, whiteSpace: "nowrap" },
   tabOn: { background: "#ffd233", color: "#1a1a1a", borderColor: "#ffd233", fontWeight: 700 },
@@ -817,7 +815,7 @@ const s: Record<string, React.CSSProperties> = {
   dayDate: { fontSize: 11, color: "#6f8378", fontVariantNumeric: "tabular-nums" as const },
   liveBadge: { fontSize: 9.5, fontWeight: 800, color: "#0d120f", background: "#7ff0b0", padding: "1px 5px", borderRadius: 4, letterSpacing: 0.3 },
   // 요약 — 아주 작은 그리드(상하배치 셀). 값 볼드/노랑 없이 통일. 번 돈은 값이 길어 전폭(gridColumn 1/-1).
-  sumGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "7px 8px" },
+  sumGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "7px 8px" },
   sumCell: { display: "flex", flexDirection: "column", gap: 2, padding: "6px 9px", background: "#12190f", borderRadius: 7, minWidth: 0 },
   sumCellL: { fontSize: 10.5, color: "#8fa89a" },
   sumCellV: { fontSize: 14, fontWeight: 600, color: "#e7efe9", fontVariantNumeric: "tabular-nums" as const, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
