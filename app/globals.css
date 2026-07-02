@@ -370,6 +370,7 @@ body {
 }
 /* 암전 오버레이 */
 /* 암전: 화장실 스킨 개별 요소에 직접 적용 — 채팅 버블은 제외 */
+/* 암전 복구 속도 (빠름) */
 .skin-center__base,
 .skin-side,
 .skin-floor,
@@ -378,14 +379,15 @@ body {
 .latch-knob-socket,
 .ad-a4,
 .skin-tp {
-  transition: filter 0.85s ease;
+  transition: filter 0.7s ease;
 }
 .scene {
-  transition: background-color 0.55s ease;
+  transition: background-color 0.7s ease;
 }
 .scene--blackout {
   background-color: #0a0a0a;
 }
+/* 암전 진입 속도 (천천히) */
 .scene--blackout .skin-center__base,
 .scene--blackout .skin-side,
 .scene--blackout .skin-floor,
@@ -395,6 +397,7 @@ body {
 .scene--blackout .ad-a4,
 .scene--blackout .skin-tp {
   filter: brightness(0.22);
+  transition: filter 1.8s ease;
 }
 
 /* 문 경첩(좌측 모서리) */
