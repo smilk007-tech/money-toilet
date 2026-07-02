@@ -270,7 +270,7 @@ export default function PayslipModal() {
                 disabled={stage === "stamping"}
                 onClick={() => data && startStampSequence(data)}
               >
-                위 내용이 사실임을 확인합니다 👈
+                👉 위 내용이 사실임을 확인합니다
               </button>
             ) : (
               <div className="receipt-modal__actions-row receipt-modal__actions-row--in">
