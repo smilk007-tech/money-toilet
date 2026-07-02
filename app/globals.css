@@ -1651,10 +1651,10 @@ body {
 
 /* 내월급 최초 오픈 — cap·금액 즉시 노출, 초당(600ms)·슬라이더(1200ms) 순차 떠오름 */
 .salary-panel--stagger .salary-panel__rate {
-  animation: salaryItemIn 0.28s 600ms ease-out both;
+  animation: salaryItemIn 0.28s 500ms ease-out both;
 }
 .salary-panel--stagger .salary-panel__meter {
-  animation: salaryItemIn 0.28s 1200ms ease-out both;
+  animation: salaryItemIn 0.28s 500ms ease-out both;
 }
 @keyframes salaryItemIn {
   from { opacity: 0; transform: translateY(14px); }
