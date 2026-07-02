@@ -270,7 +270,7 @@ export default function PayslipModal() {
                 disabled={stage === "stamping"}
                 onClick={() => data && startStampSequence(data)}
               >
-                위 내용이 사실임을 확인합니다
+                위 내용이 사실임을 확인합니다 👈
               </button>
             ) : (
               <div className="receipt-modal__actions-row receipt-modal__actions-row--in">
@@ -291,7 +291,7 @@ export default function PayslipModal() {
               </div>
             )}
           </div>
-          <p className="receipt-modal__hint">내 월급은 공개되지 않습니다</p>
+          <p className={`receipt-modal__hint${stage === "done" ? " receipt-modal__hint--in" : ""}`}>내 월급은 공개되지 않습니다</p>
         </div>
       </div>
     </div>
