@@ -373,6 +373,7 @@ body {
 .skin-center__base,
 .skin-side,
 .skin-floor,
+.skin-hinge,
 .skin-latch,
 .latch-knob-socket,
 .ad-a4,
@@ -388,6 +389,7 @@ body {
 .scene--blackout .skin-center__base,
 .scene--blackout .skin-side,
 .scene--blackout .skin-floor,
+.scene--blackout .skin-hinge,
 .scene--blackout .skin-latch,
 .scene--blackout .latch-knob-socket,
 .scene--blackout .ad-a4,
@@ -574,7 +576,7 @@ body {
   top: 16%;
   bottom: 42%;
   width: 30%;
-  z-index: 40;
+  z-index: 29;
   pointer-events: none;
 }
 .bubbles--left {
