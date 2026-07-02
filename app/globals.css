@@ -1593,6 +1593,40 @@ body {
   white-space: nowrap;
 }
 
+/* 월급/설정 팝퍼 등장 — 반복 오픈 시 미세한 슬라이드+페이드 */
+.salary-panel--in {
+  animation: salaryPanelIn 0.12s ease-out both;
+}
+@keyframes salaryPanelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.settings-panel--in {
+  animation: settingsPanelIn 0.12s ease-out both;
+}
+@keyframes settingsPanelIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 내월급 최초 오픈 — 항목 순차 떠오름 (0·80·160·240ms) */
+.salary-panel--stagger .salary-panel__cap {
+  animation: salaryItemIn 0.22s 0ms ease-out both;
+}
+.salary-panel--stagger .salary-panel__left b {
+  animation: salaryItemIn 0.22s 80ms ease-out both;
+}
+.salary-panel--stagger .salary-panel__rate {
+  animation: salaryItemIn 0.22s 160ms ease-out both;
+}
+.salary-panel--stagger .salary-panel__meter {
+  animation: salaryItemIn 0.22s 240ms ease-out both;
+}
+@keyframes salaryItemIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* 설정 팝오버 — 좌상단 톱니에서 드롭다운 */
 .settings-panel {
   position: absolute;
@@ -2326,28 +2360,28 @@ body {
   }
 }
 
-/* 재열람 시 자랑하기 버튼 흔들림 — receiptIconPulse와 같은 결 */
+/* 자랑하기 버튼 흔들림 — 5회마다 조용하게 */
 .receipt-btn--shake {
-  animation: bragsShake 0.75s cubic-bezier(0.34, 1.2, 0.5, 1);
+  animation: bragsShake 0.6s ease-out both;
 }
 @keyframes bragsShake {
   0% {
-    transform: translateY(0) scale(1) rotate(0deg);
+    transform: rotate(0deg) translateY(0);
   }
-  18% {
-    transform: translateY(-4px) scale(1.04) rotate(-8deg);
+  20% {
+    transform: rotate(-3deg) translateY(-2px);
   }
-  34% {
-    transform: translateY(-5px) scale(1.06) rotate(8deg);
+  40% {
+    transform: rotate(3deg) translateY(-2px);
   }
-  50% {
-    transform: translateY(-3px) scale(1.03) rotate(-4deg);
+  60% {
+    transform: rotate(-2deg) translateY(-1px);
   }
-  66% {
-    transform: translateY(-1px) scale(1.01) rotate(2deg);
+  80% {
+    transform: rotate(1deg) translateY(0);
   }
   100% {
-    transform: translateY(0) scale(1) rotate(0deg);
+    transform: rotate(0deg) translateY(0);
   }
 }
 

@@ -157,24 +157,23 @@ export default function PayslipModal() {
       setShakeBrag(false);
 
       if (isStampConfirmedFor(detail)) {
-        // 같은 회차 명세서 재열람 — 즉시 done, 자랑하기 버튼 흔들기
+        // 같은 회차 명세서 재열람
         setStage("done");
-        stampTimersRef.current.push(
-          window.setTimeout(() => setShakeBrag(true), 80),
-        );
+        // 3·8·13·18회차 물내림 시에만 조용하게 한 번 흔들기
+        if (detail.f % 5 === 3)
+          stampTimersRef.current.push(window.setTimeout(() => setShakeBrag(true), 400));
         return;
       }
       if (hasEverStamped()) {
-        // 2회차 이상 물내림 — 도장 애니 없이 즉시 done, 자랑하기 버튼 흔들기
+        // 2회차 이상 물내림 — 도장 애니 없이 즉시 done
         saveConfirmedVersion(detail);
         markEverStamped();
         try {
           window.dispatchEvent(new CustomEvent(APP_EVENTS.payslipStamped));
         } catch {}
         setStage("done");
-        stampTimersRef.current.push(
-          window.setTimeout(() => setShakeBrag(true), 80),
-        );
+        if (detail.f % 5 === 3)
+          stampTimersRef.current.push(window.setTimeout(() => setShakeBrag(true), 400));
         return;
       }
       // 첫 영수증: '위 내용이 사실임을 확인합니다 👉'를 직접 눌러야만 도장이 찍힌다.
@@ -191,12 +190,6 @@ export default function PayslipModal() {
     return () => window.clearTimeout(t);
   }, [stage, animateReveal]);
 
-  // 첫 도장 플로우: 모든 등장 애니가 끝난 뒤 자랑하기 버튼 흔들기
-  useEffect(() => {
-    if (!animateReveal || stage !== "done") return;
-    const t = window.setTimeout(() => setShakeBrag(true), 800);
-    return () => window.clearTimeout(t);
-  }, [stage, animateReveal]);
 
   function confirmStamp() {
     if (stage !== "idle" || !data) return;
