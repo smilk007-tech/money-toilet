@@ -18,7 +18,7 @@ export type Bucket = { visits: number; newVisitors: number; chat: number; flush:
 const empty = (): Bucket => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, donate: 0, brag: 0, dwellSec: 0 });
 const COUNTER_FIELDS: (keyof Bucket)[] = ["visits", "newVisitors", "chat", "flush", "money", "share", "donate", "brag", "dwellSec"];
 const KST = 9 * 3600 * 1000;
-export const ALLOWED_TICKS = [1, 3, 5, 10, 15, 30, 60];
+export const ALLOWED_TICKS = [1, 3, 5, 10, 15, 30, 60, 120];
 const MAX_POINTS = 3000; // 차트/테이블 과다 포인트 방지(초과 시 route에서 거절 → UI가 tick 상향)
 
 function bearer(req: Request): string {

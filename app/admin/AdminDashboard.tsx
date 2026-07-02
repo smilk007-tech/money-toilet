@@ -430,17 +430,18 @@ export default function AdminDashboard() {
                 </div>
                 <div style={s.sumGrid}>
                   {([
-                    ["방문", won(totals.visits)],
-                    ["신규", won(totals.newVisitors)],
-                    ["채팅", won(totals.chat)],
-                    ["물내림", won(totals.flush)],
-                    ["공유", won(totals.share)],
-                    ["후원", won(totals.donate)],
-                    ["자랑", won(totals.brag)],
-                    ["체류", fmtDur(totals.dwellSec)],
-                    ["평균", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"],
-                  ] as [string, string][]).map(([l, v]) => (
-                    <div key={l} style={s.sumCell}>
+                    ["방문", won(totals.visits), false],
+                    ["신규", won(totals.newVisitors), false],
+                    ["채팅", won(totals.chat), false],
+                    ["물내림", won(totals.flush), false],
+                    ["공유", won(totals.share), false],
+                    ["후원", won(totals.donate), false],
+                    ["자랑", won(totals.brag), false],
+                    ["체류", fmtDur(totals.dwellSec), false],
+                    ["평균", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-", false],
+                    ["번 돈", `${won(totals.money)}원`, true],
+                  ] as [string, string, boolean][]).map(([l, v, full]) => (
+                    <div key={l} style={full ? { ...s.sumCell, gridColumn: "1 / -1" } : s.sumCell}>
                       <span style={s.sumCellL}>{l}</span>
                       <span style={s.sumCellV}>{v}</span>
                     </div>

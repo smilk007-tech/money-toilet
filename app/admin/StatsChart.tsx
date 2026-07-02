@@ -25,8 +25,8 @@ const kstDateOf = (daysAgo: number) => {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 };
 
-const CHART_TICKS = [1, 3, 5, 10, 15, 30, 60];
-const TABLE_TICKS = [15, 30, 60];
+const CHART_TICKS = [1, 3, 5, 10, 15, 30, 60, 120];
+const TABLE_TICKS = [5, 10, 15, 30, 60, 120];
 const tickLabel = (t: number) => (t >= 60 ? `${t / 60}시간` : `${t}분`);
 
 // key: 데이터 필드, kind: 막대/선, axis: 좌(카운트)/우(금액), on: 기본 표시 여부
