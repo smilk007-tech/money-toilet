@@ -77,6 +77,14 @@ function markEverStamped() {
   } catch {}
 }
 
+function hasEverStamped(): boolean {
+  try {
+    return localStorage.getItem(STORAGE_KEY.payslipStampEver) === "1";
+  } catch {
+    return false;
+  }
+}
+
 
 /* 게임 미리보기 팝업 — 공유 페이지와 동일한 ReceiptCard 를 렌더한다. */
 export default function PayslipModal() {
@@ -129,7 +137,7 @@ export default function PayslipModal() {
       const receipt = (e as CustomEvent<ReceiptData>).detail;
       clearStampTimers();
       setData(receipt);
-      if (isStampConfirmedFor(receipt)) {
+      if (hasEverStamped() || isStampConfirmedFor(receipt)) {
         setStage("done");
         return;
       }
