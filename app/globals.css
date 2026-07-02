@@ -363,10 +363,11 @@ body {
 }
 /* 형광등 이스터에그 — 암전 */
 .skin-light {
-  transition: filter 0.5s ease;
+  transition: filter 0.5s ease; /* 복구 속도 */
 }
 .skin-light--off {
   filter: brightness(0.05);
+  transition: filter 0s; /* 켜짐→꺼짐: 즉시 */
 }
 /* 암전 오버레이 */
 /* 암전: 화장실 스킨 개별 요소에 직접 적용 — 채팅 버블은 제외 */
@@ -382,12 +383,13 @@ body {
   transition: filter 0.7s ease;
 }
 .scene {
-  transition: background-color 0.7s ease;
+  transition: background-color 0.7s ease; /* 복구 속도 */
 }
 .scene--blackout {
   background-color: #0a0a0a;
+  transition: background-color 0s; /* 켜짐→꺼짐: 즉시 */
 }
-/* 암전 진입 속도 (천천히) */
+/* 암전 진입: 즉시 / 복구: 0.7s(base에 정의) */
 .scene--blackout .skin-center__base,
 .scene--blackout .skin-side,
 .scene--blackout .skin-floor,
@@ -397,7 +399,7 @@ body {
 .scene--blackout .ad-a4,
 .scene--blackout .skin-tp {
   filter: brightness(0.22);
-  transition: filter 1.8s ease;
+  transition: filter 0s;
 }
 
 /* 문 경첩(좌측 모서리) */
