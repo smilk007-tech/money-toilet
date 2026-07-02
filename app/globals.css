@@ -361,6 +361,33 @@ body {
     filter: none;
   }
 }
+/* 형광등 이스터에그 — 암전 */
+.skin-light {
+  transition: filter 0.5s ease;
+}
+.skin-light--off {
+  filter: brightness(0.05);
+}
+/* 암전 오버레이 */
+.blackout-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.93);
+  pointer-events: none;
+  animation: blackout-in 0.55s ease both;
+}
+.blackout-overlay--out {
+  animation: blackout-out 0.8s ease both;
+}
+@keyframes blackout-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes blackout-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
 
 /* 문 경첩(좌측 모서리) */
 .skin-hinge {
@@ -1609,12 +1636,12 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 내월급 최초 오픈 — cap·금액 즉시 노출, 초당(800ms)·슬라이더(1600ms) 순차 떠오름 */
+/* 내월급 최초 오픈 — cap·금액 즉시 노출, 초당(600ms)·슬라이더(1200ms) 순차 떠오름 */
 .salary-panel--stagger .salary-panel__rate {
-  animation: salaryItemIn 0.28s 800ms ease-out both;
+  animation: salaryItemIn 0.28s 600ms ease-out both;
 }
 .salary-panel--stagger .salary-panel__meter {
-  animation: salaryItemIn 0.28s 1600ms ease-out both;
+  animation: salaryItemIn 0.28s 1200ms ease-out both;
 }
 @keyframes salaryItemIn {
   from { opacity: 0; transform: translateY(14px); }
@@ -2726,4 +2753,40 @@ body {
 .skin-latch--open .latch__catch {
   transform: translateX(-15px);
   opacity: 0;
+}
+/* 문고리 박살 — 원형 손잡이·스위치 사라짐, 베이스만 남음 */
+.skin-latch--broken {
+  pointer-events: none;
+  cursor: default;
+}
+.skin-latch--broken circle,
+.skin-latch--broken .latch__switch {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+/* 박살 후 걸쇠는 잠긴 위치 고정 */
+.skin-latch--broken .latch__catch {
+  transform: none;
+  opacity: 0.6;
+}
+/* 손잡이 낙하 연출 */
+.latch-knob-fall {
+  position: absolute;
+  z-index: 35;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c1c4c5;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.14);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: latch-knob-fall 1.5s cubic-bezier(0.4, 0, 0.8, 0.6) forwards;
+}
+@keyframes latch-knob-fall {
+  0%   { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
+  12%  { transform: translate(calc(-50% + 3px), calc(-50% - 9px)) rotate(-20deg); }
+  50%  { transform: translate(calc(-50% + 14px), calc(-50% + 18vh)) rotate(38deg); opacity: 1; }
+  68%  { transform: translate(calc(-50% + 10px), calc(-50% + 15vh)) rotate(28deg); }
+  84%  { transform: translate(calc(-50% + 16px), calc(-50% + 20vh)) rotate(42deg); opacity: 0.5; }
+  100% { transform: translate(calc(-50% + 14px), calc(-50% + 21vh)) rotate(38deg); opacity: 0; }
 }
