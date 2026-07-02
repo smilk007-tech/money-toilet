@@ -1609,18 +1609,18 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* 내월급 최초 오픈 — 항목 순차 떠오름 (200·400·600·800ms) */
+/* 내월급 최초 오픈 — 항목 순차 떠오름 (200·600·1000·1400ms) */
 .salary-panel--stagger .salary-panel__cap {
   animation: salaryItemIn 0.28s 200ms ease-out both;
 }
 .salary-panel--stagger .salary-panel__left b {
-  animation: salaryItemIn 0.28s 400ms ease-out both;
-}
-.salary-panel--stagger .salary-panel__rate {
   animation: salaryItemIn 0.28s 600ms ease-out both;
 }
+.salary-panel--stagger .salary-panel__rate {
+  animation: salaryItemIn 0.28s 1000ms ease-out both;
+}
 .salary-panel--stagger .salary-panel__meter {
-  animation: salaryItemIn 0.28s 800ms ease-out both;
+  animation: salaryItemIn 0.28s 1400ms ease-out both;
 }
 @keyframes salaryItemIn {
   from { opacity: 0; transform: translateY(14px); }
