@@ -355,6 +355,26 @@ export default function AdminDashboard() {
   const leftUsers = trackedArr
     .filter((o) => o.status === "left")
     .sort((a, b) => (b.leftAt || 0) - (a.leftAt || 0)); // 최근 이탈 먼저
+  // vid별 오늘 채팅/물내림 횟수 — 라이브 채팅로그에서 파생(물내림 로그는 "💰"로 시작).
+  const countsByVid: Record<string, { chat: number; flush: number }> = {};
+  for (const c of liveChats) {
+    if (!c.vid) continue;
+    const m = countsByVid[c.vid] || (countsByVid[c.vid] = { chat: 0, flush: 0 });
+    if (c.text.startsWith("💰")) m.flush++; else m.chat++;
+  }
+  // 동접 행 태그 — 있는 데이터만: [닉변][재접N][챗N][내림N][차단]
+  const onlineTags = (o: Tracked) => {
+    const c = countsByVid[o.vid] || { chat: 0, flush: 0 };
+    return (
+      <>
+        {o.nickChanged && <span style={s.nickTag}>닉변</span>}
+        {o.reconnects > 0 && <span style={s.tag}>재접 {o.reconnects}</span>}
+        {c.chat > 0 && <span style={s.tag}>챗 {c.chat}</span>}
+        {c.flush > 0 && <span style={s.tag}>내림 {c.flush}</span>}
+        {o.banned && <span style={s.banTag}>차단</span>}
+      </>
+    );
+  };
   // 자랑URL — 선택 날짜의 생성 목록(최신순)
   const receiptRows = [...(histReceipts[dateOf(receiptDay)] || [])].sort((a, b) => b.ts - a.ts);
 
@@ -371,11 +391,13 @@ export default function AdminDashboard() {
     <div style={s.wrap}>{css}
       <header style={s.top}>
         <b>🚽 어드민</b>
-        <span style={s.liveN}><span className="admin-live-dot">●</span> 실시간 {live?.presence ?? 0}명</span>
+        <span style={s.liveN}>
+          <span className="admin-live-dot">●</span> 실제 <b style={s.liveReal}>{live?.presence ?? 0}</b> · 표시 <b style={s.liveShown}>{(live?.presence ?? 0) + (live?.floor ?? 0)}</b>명
+        </span>
         <button onClick={logout} style={s.btnGhost}>로그아웃</button>
       </header>
       <nav style={s.tabs}>
-        {([["stats", "통계"], ["chart", "📊 차트"], ["online", "동접자"], ["liveChat", "현재채팅"], ["chatlog", "채팅로그"], ["receipts", "자랑URL"], ["bans", "🚫 차단"], ["ops", "🛠 제어"]] as const).map(([k, t]) => (
+        {([["stats", "통계"], ["chart", "차트"], ["online", "동접"], ["liveChat", "챗 Now"], ["chatlog", "챗 Log"], ["receipts", "자랑"], ["bans", "차단"], ["ops", "🛠 제어"]] as const).map(([k, t]) => (
           <button key={k} onClick={() => setTab(k)} style={{ ...s.tab, ...(tab === k ? s.tabOn : {}) }}>{t}</button>
         ))}
       </nav>
@@ -391,44 +413,58 @@ export default function AdminDashboard() {
             return (
               <div key={key} style={s.card}>
                 <div style={s.cardHead} onClick={() => toggleExpandDate(key)}>
-                  <b>{d.label}</b><span style={s.dim2}>{dateOf(d.ago)}{d.live ? " · LIVE" : ""}</span>
-                  <span style={s.chevron}>{isExpanded ? "▲시간별" : "▼시간별"}</span>
+                  <b style={s.dayLabel}>{d.label}</b>
+                  <span style={s.dayDate}>{dateOf(d.ago)}</span>
+                  {d.live && <span style={s.liveBadge}>LIVE</span>}
+                  <span style={s.chevron}>{isExpanded ? "시간별 ▴" : "시간별 ▾"}</span>
                 </div>
-                <div style={s.stats}>
-                  <Stat l="방문" v={won(totals.visits)} />
-                  <Stat l="신규 방문" v={won(totals.newVisitors)} />
-                  <Stat l="채팅" v={won(totals.chat)} />
-                  <Stat l="물내림" v={won(totals.flush)} />
-                  <Stat l="공유" v={won(totals.share)} />
-                  <Stat l="후원" v={won(totals.donate)} />
-                  <Stat l="자랑" v={won(totals.brag)} />
-                  <Stat l="총 체류" v={fmtDur(totals.dwellSec)} />
-                  <Stat l="평균 체류" v={totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"} />
-                  <Stat l="번 돈" v={`${won(totals.money)}원`} hi wide />
+                <div style={s.sumHero}>
+                  <span style={s.sumHeroL}>번 돈</span>
+                  <span style={s.sumHeroV}>{won(totals.money)}원</span>
+                </div>
+                <div style={s.sumStrip}>
+                  {([
+                    ["방문", won(totals.visits)],
+                    ["신규", won(totals.newVisitors)],
+                    ["채팅", won(totals.chat)],
+                    ["물내림", won(totals.flush)],
+                    ["공유", won(totals.share)],
+                    ["후원", won(totals.donate)],
+                    ["자랑", won(totals.brag)],
+                    ["체류", fmtDur(totals.dwellSec)],
+                    ["평균", totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"],
+                  ] as [string, string][]).map(([l, v]) => (
+                    <span key={l} style={s.sumItem}>
+                      <span style={s.sumItemL}>{l}</span>
+                      <span style={s.sumItemV}>{v}</span>
+                    </span>
+                  ))}
                 </div>
                 {isExpanded && (
-                  <table style={s.htable}>
-                    <thead>
-                      <tr>
-                        {["시간", "방문", "신규", "채팅", "물내림", "공유", "후원", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.donate || h.brag) ? (
-                        <tr key={hr} style={s.tr}>
-                          <td style={{ ...s.td, ...s.tdTime }}>{String(hr).padStart(2, "0")}시</td>
-                          <td style={s.td}>{h.visits}</td>
-                          <td style={{ ...s.td, color: h.newVisitors ? "#7ff0b0" : undefined }}>{h.newVisitors}</td>
-                          <td style={s.td}>{h.chat}</td>
-                          <td style={s.td}>{h.flush}</td>
-                          <td style={s.td}>{h.share || 0}</td>
-                          <td style={s.td}>{h.donate || 0}</td>
-                          <td style={s.td}>{h.brag || 0}</td>
-                          <td style={s.td}>{h.money ? won(h.money) : "-"}</td>
+                  <div style={s.htableWrap}>
+                    <table style={s.htable}>
+                      <thead>
+                        <tr>
+                          {["시간", "방문", "신규", "채팅", "물내림", "공유", "후원", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}
                         </tr>
-                      ) : null)}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.donate || h.brag) ? (
+                          <tr key={hr}>
+                            <td style={{ ...s.td, ...s.tdTime }}>{String(hr).padStart(2, "0")}시</td>
+                            <td style={s.td}>{h.visits || "-"}</td>
+                            <td style={{ ...s.td, color: h.newVisitors ? "#7ff0b0" : "#3f5148" }}>{h.newVisitors || "-"}</td>
+                            <td style={s.td}>{h.chat || "-"}</td>
+                            <td style={s.td}>{h.flush || "-"}</td>
+                            <td style={s.td}>{h.share || "-"}</td>
+                            <td style={s.td}>{h.donate || "-"}</td>
+                            <td style={s.td}>{h.brag || "-"}</td>
+                            <td style={{ ...s.td, color: "#ffd84d" }}>{h.money ? won(h.money) : "-"}</td>
+                          </tr>
+                        ) : null)}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             );
@@ -555,10 +591,11 @@ export default function AdminDashboard() {
           {onlines.map((o) => (
             <LogRow
               key={o.vid}
+              timeInFoot
               nick={o.nick || "익명"}
               time={`${hhmm(o.since)}~`}
               vid={o.vid}
-              tags={<>{o.conns > 1 && <span style={s.tag}>{o.conns}연결</span>}{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.nickChanged && <span style={s.nickTag}>닉변</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
+              tags={onlineTags(o)}
               dur={dur}
               setDur={setDur}
               onBan={ban}
@@ -569,10 +606,11 @@ export default function AdminDashboard() {
             <LogRow
               key={o.vid}
               muted
+              timeInFoot
               nick={o.nick || "익명"}
               time={`${hhmm(o.since)}~${o.leftAt ? hhmm(o.leftAt) : ""}`}
               vid={o.vid}
-              tags={<>{o.reconnects > 0 && <span style={s.tag}>재접속 {o.reconnects}회</span>}{o.nickChanged && <span style={s.nickTag}>닉변</span>}{o.banned && <span style={s.banTag}>차단</span>}</>}
+              tags={onlineTags(o)}
               dur={dur}
               setDur={setDur}
               onBan={ban}
@@ -703,30 +741,27 @@ export default function AdminDashboard() {
   );
 }
 
-function Stat({ l, v, hi, wide }: { l: string; v: string; hi?: boolean; wide?: boolean }) {
-  return (
-    <div style={{ ...s.stat, ...(wide ? { gridColumn: "1 / -1" } : {}) }}>
-      <span style={s.statL}>{l}</span>
-      <span style={{ ...s.statV, ...(hi ? { color: "#ffd84d" } : {}) }}>{v}</span>
-    </div>
-  );
-}
 function Empty() { return <div style={s.empty}>데이터 없음</div>; }
 
 // 채팅/동접 공통 카드 — [닉네임 (태그)] ………… [시간(우측끝)] / (메시지) / [UUID][차단]
-function LogRow({ nick, time, message, vid, tags, dur, setDur, onBan, muted }: {
+function LogRow({ nick, time, message, vid, tags, dur, setDur, onBan, muted, timeInFoot }: {
   nick: string; time: string; message?: string | null; vid: string; tags?: React.ReactNode;
-  dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void; muted?: boolean;
+  dur: Record<string, string>; setDur: (f: (p: Record<string, string>) => Record<string, string>) => void; onBan: (v: string) => void; muted?: boolean; timeInFoot?: boolean;
 }) {
+  // timeInFoot: 동접 탭처럼 태그가 많은 행은 시간을 아랫줄로 내려 머리줄(닉+태그)을 한 줄에 담는다(모바일 2줄 목표).
   return (
     <div style={muted ? { ...s.crow, ...s.crowMuted } : s.crow}>
       <div style={s.rowHead}>
         <b style={s.rowNick}>{nick}</b>
-        {tags}
-        <span style={s.rowTime}>{time}</span>
+        {tags ? <span style={s.rowTags}>{tags}</span> : null}
+        {!timeInFoot && <span style={s.rowTime}>{time}</span>}
       </div>
       {message ? <div style={s.rowBody}>{message}</div> : null}
-      <div style={s.cfoot}><code style={s.uuid}>{vid}</code><BanCtl vid={vid} dur={dur} setDur={setDur} onBan={onBan} /></div>
+      <div style={s.cfoot}>
+        {timeInFoot && <span style={s.footTime}>{time}</span>}
+        <code style={s.uuid}>{vid}</code>
+        <BanCtl vid={vid} dur={dur} setDur={setDur} onBan={onBan} />
+      </div>
     </div>
   );
 }
@@ -749,7 +784,9 @@ const s: Record<string, React.CSSProperties> = {
   input: { padding: 14, fontSize: 16, borderRadius: 10, border: "1px solid #2c3a32", background: "#16201b", color: "#fff" },
   err: { color: "#ff8a8a", textAlign: "center" },
   top: { display: "flex", alignItems: "center", gap: 10, padding: "4px 2px 10px", position: "sticky", top: 0, background: "#0f1512", zIndex: 10 },
-  liveN: { color: "#7ff0b0", fontSize: 13, marginLeft: "auto" },
+  liveN: { color: "#8fa89a", fontSize: 12, marginLeft: "auto", whiteSpace: "nowrap" },
+  liveReal: { color: "#7ff0b0", fontVariantNumeric: "tabular-nums" as const },
+  liveShown: { color: "#ffd84d", fontVariantNumeric: "tabular-nums" as const },
   tabs: { display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" },
   tab: { flex: 1, padding: "10px 4px", borderRadius: 9, borderWidth: 1, borderStyle: "solid", borderColor: "#2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12, whiteSpace: "nowrap" },
   tabOn: { background: "#ffd233", color: "#1a1a1a", borderColor: "#ffd233", fontWeight: 700 },
@@ -763,18 +800,28 @@ const s: Record<string, React.CSSProperties> = {
   sendBtn: { padding: "9px 13px", borderRadius: 8, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" },
   bcSentMsg: { flex: 1, padding: "9px 11px", borderRadius: 8, background: "rgba(127, 240, 176, 0.15)", color: "#7ff0b0", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center" },
   card: { background: "#16201b", border: "1px solid #243029", borderRadius: 12, padding: 12, marginBottom: 10 },
-  cardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" },
+  cardHead: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10, cursor: "pointer" },
   cardTitle: { fontSize: 13, color: "#8fa89a", marginBottom: 8 },
-  chevron: { marginLeft: "auto", fontSize: 12, color: "#ffd233" },
-  stats: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 },
-  stat: { display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "4px 4px", borderBottom: "1px solid #1b241e" },
-  statV: { fontSize: 13, fontWeight: 800, color: "#fff", fontVariantNumeric: "tabular-nums" },
-  statL: { fontSize: 11, color: "#8fa89a" },
-  htable: { width: "100%", marginTop: 10, borderCollapse: "collapse" as const, fontSize: 12 },
-  th: { color: "#7ff0b0", textAlign: "right" as const, padding: "5px 7px", borderBottom: "2px solid #2c3a32", fontWeight: 600, background: "#0f1a14", whiteSpace: "nowrap" as const },
+  chevron: { marginLeft: "auto", fontSize: 11.5, color: "#8fa89a", fontWeight: 500 },
+  // 계층: 날짜 라벨(1) > 번 돈 히어로(2) > 나머지 지표(3, 볼드 없이 담백하게)
+  dayLabel: { fontSize: 15, fontWeight: 800, color: "#eafff5" },
+  dayDate: { fontSize: 11, color: "#6f8378", fontVariantNumeric: "tabular-nums" as const },
+  liveBadge: { fontSize: 9.5, fontWeight: 800, color: "#0d120f", background: "#7ff0b0", padding: "1px 5px", borderRadius: 4, letterSpacing: 0.3 },
+  // 요약 — 번 돈 히어로 + 나머지 지표는 담백한 인라인 스트립(그리드/과한 볼드 제거)
+  sumHero: { display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: 9, marginBottom: 9, borderBottom: "1px solid #243029" },
+  sumHeroL: { fontSize: 12.5, color: "#8fa89a" },
+  sumHeroV: { fontSize: 22, fontWeight: 800, color: "#ffd84d", fontVariantNumeric: "tabular-nums" as const },
+  sumStrip: { display: "flex", flexWrap: "wrap" as const, rowGap: 7, columnGap: 15 },
+  sumItem: { display: "inline-flex", alignItems: "baseline", gap: 5 },
+  sumItemL: { fontSize: 11.5, color: "#8fa89a" },
+  sumItemV: { fontSize: 13.5, fontWeight: 500, color: "#d7e6dd", fontVariantNumeric: "tabular-nums" as const },
+  // 시간별 테이블 — 차트 탭 테이블과 동일 톤(스크롤 래퍼 + 불투명 sticky 헤더)
+  htableWrap: { maxHeight: 360, overflow: "auto", border: "1px solid #243029", borderRadius: 8, marginTop: 12 },
+  htable: { width: "100%", borderCollapse: "collapse" as const, fontSize: 11.5, fontVariantNumeric: "tabular-nums" as const },
+  th: { position: "sticky" as const, top: 0, zIndex: 1, background: "#0d120f", color: "#cfe5d8", textAlign: "right" as const, padding: "8px 7px", borderBottom: "1px solid #33463b", fontWeight: 700, whiteSpace: "nowrap" as const, boxShadow: "0 2px 5px rgba(0,0,0,0.5)" },
   tr: {},
-  td: { textAlign: "right" as const, padding: "5px 7px", borderBottom: "1px solid #1b241e", color: "#cdddd4" },
-  tdTime: { color: "#8fa89a", fontWeight: 600, textAlign: "left" as const },
+  td: { textAlign: "right" as const, padding: "5px 7px", borderBottom: "1px solid #161f1a", color: "#d7e6dd", whiteSpace: "nowrap" as const },
+  tdTime: { color: "#7ff0b0", fontWeight: 700, textAlign: "left" as const },
   btnPrimary: { padding: 14, borderRadius: 10, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 16, fontWeight: 700 },
   btnGhost: { padding: "7px 11px", borderRadius: 8, border: "1px solid #2c3a32", background: "transparent", color: "#9fb3a6", fontSize: 12 },
   btnDanger: { padding: 11, borderRadius: 9, border: "1px solid #5a2630", background: "#2a1518", color: "#ff9a9a", fontSize: 13 },
@@ -793,9 +840,11 @@ const s: Record<string, React.CSSProperties> = {
   subtabOn: { background: "#1f6b45", color: "#fff", borderColor: "#1f6b45", fontWeight: 700 },
   // 채팅/동접 공통 카드 — 개선된 레이아웃(닉 좌측, 시간 우측끝)
   crow: { background: "#141d18", border: "1px solid #1f2a23", borderRadius: 7, padding: "8px", marginBottom: 4 },
-  rowHead: { display: "flex", alignItems: "center", gap: 6, lineHeight: 1.4 },
-  rowNick: { fontSize: 12.5, color: "#ffd84d", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "62%" },
+  rowHead: { display: "flex", alignItems: "center", gap: 6, lineHeight: 1.35, flexWrap: "wrap" as const },
+  rowNick: { fontSize: 12.5, color: "#ffd84d", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "45%", flexShrink: 0 },
+  rowTags: { display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" as const, minWidth: 0, flex: "1 1 auto" },
   rowTime: { marginLeft: "auto", fontSize: 10.5, color: "#7ff0b0", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
+  footTime: { fontSize: 10.5, color: "#7ff0b0", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
   rowBody: { marginTop: 5, fontSize: 13, color: "#e7efe9", wordBreak: "break-word", lineHeight: 1.4 },
   cline: { display: "flex", alignItems: "baseline", gap: 6, fontSize: 13, flexWrap: "wrap", lineHeight: 1.35 },
   clineNew: { display: "flex", alignItems: "baseline", gap: 8, fontSize: 12.5, lineHeight: 1.4 },
@@ -805,7 +854,7 @@ const s: Record<string, React.CSSProperties> = {
   nb: { fontSize: 12.5, color: "#cfe5d8", whiteSpace: "nowrap" },
   ctx: { wordBreak: "break-word", color: "#e7efe9", flex: 1 },
   cfoot: { display: "flex", alignItems: "center", gap: 6, marginTop: 5 },
-  uuid: { fontSize: 10, color: "#6f8378", background: "#0f1512", padding: "1px 5px", borderRadius: 4, wordBreak: "break-all", flex: 1, userSelect: "all" },
+  uuid: { fontSize: 10, color: "#6f8378", background: "#0f1512", padding: "2px 6px", borderRadius: 4, flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", userSelect: "all" },
   tag: { fontSize: 10, background: "#3a2f12", color: "#ffd233", padding: "1px 5px", borderRadius: 4 },
   banTag: { fontSize: 10, background: "#3a1f12", color: "#ffb27f", padding: "1px 5px", borderRadius: 4 },
   leftTag: { fontSize: 10, background: "#26302b", color: "#9fb3a6", padding: "1px 5px", borderRadius: 4 },

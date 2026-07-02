@@ -49,7 +49,9 @@ const STAT_PERSIST_MS = 60_000;
 const CHAT_PERSIST_MS = 30_000;
 let lastStatPersistAt = 0;
 let lastChatPersistAt = 0;
-const ADMIN_HOURS_PUSH_MS = 30_000; // 어드민 시간별 스냅샷 push 주기(persistMs와 분리 — 10초 storm 방지)
+// 시간별 스냅샷은 이제 pushAdminLive(≈2초, 변화 시)에 함께 실어 라이브로 보낸다.
+// 이 인터벌은 유휴/자정 롤오버 대비 heartbeat(60초) — 변화가 없어도 최소 한 번은 최신화.
+const ADMIN_HOURS_PUSH_MS = 60_000;
 
 function freshToday(date) {
   return { date, visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, donate: 0, brag: 0, dwellSec: 0 };
@@ -203,7 +205,9 @@ function pushAdminLive() {
     aTimer = null;
     if (!aDirty || !adminsConnected()) return;
     aDirty = false;
+    // 요약(오늘 러닝합계·presence·online)과 시간별 24버킷을 함께 라이브로(≈2초). 둘 다 메모리 → Redis 무관.
     io.to("admins").emit("adminStats", adminLiveSnapshot());
+    io.to("admins").emit("adminHours", adminHoursSnapshot());
   }, cfg.presenceBroadcastMs);
 }
 

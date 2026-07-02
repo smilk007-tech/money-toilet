@@ -59,9 +59,18 @@ async function fetchSeries(start: string, end: string, tick: number) {
   return { status: res.status, data };
 }
 
+// 조회 가능한 프리셋 범위(최근 7일 이내). from/to = N일 전(from>=to). minTick: 포인트 3000 상한을 넘지 않는 최소 틱.
+const RANGES = [
+  { key: "d0", label: "오늘", from: 0, to: 0, tick: 15, minTick: 1 },
+  { key: "d1", label: "어제", from: 1, to: 1, tick: 15, minTick: 1 },
+  { key: "d2", label: "엊그제", from: 2, to: 2, tick: 15, minTick: 1 },
+  { key: "d3", label: "그끄저께", from: 3, to: 3, tick: 15, minTick: 1 },
+  { key: "r3", label: "최근 3일", from: 2, to: 0, tick: 30, minTick: 3 },
+  { key: "r7", label: "최근 일주일", from: 6, to: 0, tick: 60, minTick: 5 },
+] as const;
+
 export default function StatsChart() {
-  const [start, setStart] = useState(kstDateOf(0));
-  const [end, setEnd] = useState(kstDateOf(0));
+  const [rangeKey, setRangeKey] = useState<string>("d0");
   const [chartTick, setChartTick] = useState(15);
   const [tableTick, setTableTick] = useState(15);
   const [chartData, setChartData] = useState<SeriesPoint[]>([]);
@@ -72,8 +81,12 @@ export default function StatsChart() {
     () => Object.fromEntries(METRICS.map((m) => [m.key, m.on])),
   );
 
+  const range = RANGES.find((r) => r.key === rangeKey) || RANGES[0];
+  const start = kstDateOf(range.from);
+  const end = kstDateOf(range.to);
+  const tickOpts = CHART_TICKS.filter((t) => t >= range.minTick); // 과다 포인트(3000↑) 방지
+
   const load = useCallback(async () => {
-    if (start > end) { setErr("시작일이 종료일보다 뒤입니다"); return; }
     setLoading(true); setErr("");
     // 차트틱과 표틱이 같으면 동일 요청이라 1번만 호출(중복 제거)
     const sameTick = chartTick === tableTick;
@@ -90,9 +103,10 @@ export default function StatsChart() {
 
   useEffect(() => { load(); }, [load]);
 
-  // 빠른 범위 — 종료=오늘, 시작=N일 전, 틱 자동
-  const quick = (days: number, cTick: number) => {
-    setStart(kstDateOf(days - 1)); setEnd(kstDateOf(0)); setChartTick(cTick);
+  // 프리셋 선택 → 조회 날짜 변경 + 범위별 기본 틱(최소 틱으로 클램프)
+  const pickRange = (r: (typeof RANGES)[number]) => {
+    setRangeKey(r.key);
+    setChartTick(Math.max(r.tick, r.minTick));
   };
 
   const activeMetrics = useMemo(() => METRICS.filter((m) => visible[m.key]), [visible]);
@@ -102,27 +116,31 @@ export default function StatsChart() {
     <div>
       {/* 컨트롤 */}
       <div style={s.card}>
-        <div style={s.ctrlGrid}>
-          <label style={s.ctrlItem}><span style={s.ctrlLbl}>시작</span>
-            <input type="date" value={start} max={end} onChange={(e) => setStart(e.target.value)} style={s.dateInput} /></label>
-          <label style={s.ctrlItem}><span style={s.ctrlLbl}>종료</span>
-            <input type="date" value={end} min={start} max={kstDateOf(0)} onChange={(e) => setEnd(e.target.value)} style={s.dateInput} /></label>
+        {/* 1행: 조회 범위 프리셋(클릭 시 조회 날짜 변경) */}
+        <div style={s.rangeRow}>
+          {RANGES.map((r) => (
+            <button key={r.key} onClick={() => pickRange(r)}
+              style={{ ...s.rangeBtn, ...(rangeKey === r.key ? s.rangeBtnOn : {}) }}>{r.label}</button>
+          ))}
+        </div>
+        {/* 2행: 선택된 시작/종료일 */}
+        <div style={s.rangeInfo}>
+          <span>시작 <b style={s.rangeDate}>{start}</b></span>
+          <span>종료 <b style={s.rangeDate}>{end}</b></span>
+        </div>
+        {/* 3행: 차트틱 · 표틱 · 조회(맨우측) */}
+        <div style={s.ctrlRow3}>
           <label style={s.ctrlItem}><span style={s.ctrlLbl}>차트 틱</span>
             <select value={chartTick} onChange={(e) => setChartTick(Number(e.target.value))} style={s.sel}>
-              {CHART_TICKS.map((t) => <option key={t} value={t}>{t}분</option>)}
+              {tickOpts.map((t) => <option key={t} value={t}>{t}분</option>)}
             </select></label>
           <label style={s.ctrlItem}><span style={s.ctrlLbl}>표 틱</span>
             <select value={tableTick} onChange={(e) => setTableTick(Number(e.target.value))} style={s.sel}>
               {TABLE_TICKS.map((t) => <option key={t} value={t}>{t}분</option>)}
             </select></label>
+          <button style={s.reloadBtn} onClick={load} disabled={loading}>{loading ? "…" : "조회"}</button>
         </div>
-        <div style={s.quickRow}>
-          <button style={s.quickBtn} onClick={() => quick(1, 15)}>오늘</button>
-          <button style={s.quickBtn} onClick={() => quick(7, 60)}>7일</button>
-          <button style={s.quickBtn} onClick={() => quick(30, 60)}>30일</button>
-          <button style={s.reloadBtn} onClick={load} disabled={loading}>{loading ? "…" : "🔄 조회"}</button>
-        </div>
-        <div style={s.hint}>분단위 상세는 최근 30일 보관 · 로그 없는 구간도 0으로 표시</div>
+        <div style={s.hint}>로그 없는 구간도 0으로 표시</div>
         {err && <div style={s.err}>{err}</div>}
       </div>
 
@@ -195,21 +213,27 @@ export default function StatsChart() {
 
 const s: Record<string, React.CSSProperties> = {
   card: { background: "#16201b", border: "1px solid #243029", borderRadius: 12, padding: 12, marginBottom: 10 },
-  ctrlGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
   ctrlItem: { display: "flex", flexDirection: "column", gap: 4 },
   ctrlLbl: { fontSize: 11, color: "#8fa89a" },
-  dateInput: { padding: "7px 8px", borderRadius: 8, border: "1px solid #2c3a32", background: "#0e1812", color: "#e8f5ee", fontSize: 13 },
   sel: { padding: "7px 8px", borderRadius: 8, border: "1px solid #2c3a32", background: "#0e1812", color: "#e8f5ee", fontSize: 13 },
-  quickRow: { display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" },
-  quickBtn: { padding: "7px 12px", borderRadius: 8, border: "1px solid #2c3a32", background: "#1d2a23", color: "#cfe5d8", fontSize: 12 },
-  reloadBtn: { marginLeft: "auto", padding: "7px 14px", borderRadius: 8, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 12, fontWeight: 700 },
-  hint: { fontSize: 11, color: "#5a7a6a", marginTop: 8 },
+  // 1행: 조회 범위 프리셋
+  rangeRow: { display: "flex", gap: 6, flexWrap: "wrap" },
+  rangeBtn: { padding: "7px 12px", borderRadius: 999, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 12.5, fontWeight: 600 },
+  rangeBtnOn: { background: "#ffd233", color: "#1a1a1a", borderColor: "#ffd233", fontWeight: 800 },
+  // 2행: 시작/종료일
+  rangeInfo: { display: "flex", gap: 16, marginTop: 10, fontSize: 12, color: "#8fa89a" },
+  rangeDate: { color: "#e8f5ee", fontVariantNumeric: "tabular-nums", fontWeight: 700 },
+  // 3행: 차트틱 · 표틱 · 조회(우측)
+  ctrlRow3: { display: "flex", gap: 10, alignItems: "flex-end", marginTop: 10 },
+  reloadBtn: { marginLeft: "auto", padding: "9px 18px", borderRadius: 8, border: "none", background: "#ffd233", color: "#1a1a1a", fontSize: 13, fontWeight: 800 },
+  hint: { fontSize: 11, color: "#5a7a6a", marginTop: 10 },
   err: { fontSize: 12, color: "#ff8a8a", marginTop: 8 },
   chips: { display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 },
   chip: { padding: "5px 10px", borderRadius: 20, border: "1px solid #2c3a32", background: "#16201b", color: "#9fb3a6", fontSize: 11.5, fontWeight: 600 },
   tableHead: { fontSize: 12, color: "#8fa89a", marginBottom: 8 },
-  tableWrap: { maxHeight: 420, overflow: "auto", border: "1px solid #1b241e", borderRadius: 8 },
+  tableWrap: { maxHeight: 420, overflow: "auto", border: "1px solid #243029", borderRadius: 8 },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 11, fontVariantNumeric: "tabular-nums" },
-  th: { position: "sticky", top: 0, background: "#1a241e", color: "#8fa89a", textAlign: "right", padding: "6px 6px", borderBottom: "1px solid #243029", fontWeight: 500, whiteSpace: "nowrap" },
-  td: { textAlign: "right", padding: "4px 6px", borderBottom: "1px solid #161f1a", whiteSpace: "nowrap" },
+  // sticky 헤더 — 불투명 배경 + 그림자로 스크롤되는 행 위에서 또렷하게(투명도 문제 해결)
+  th: { position: "sticky", top: 0, zIndex: 1, background: "#0d120f", color: "#cfe5d8", textAlign: "right", padding: "8px 7px", borderBottom: "1px solid #33463b", fontWeight: 700, whiteSpace: "nowrap", boxShadow: "0 2px 5px rgba(0,0,0,0.5)" },
+  td: { textAlign: "right", padding: "5px 7px", borderBottom: "1px solid #161f1a", whiteSpace: "nowrap", color: "#d7e6dd" },
 };

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { decodeReceipt, fmtWon, heroAmount } from "@/lib/receipt/receiptShare";
 import { buildShareMetadata } from "@/lib/ogMeta";
 import { SHORT_ID_RE, loadReceipt } from "@/lib/receipt/receiptStore";
 import { resolveSiteUrl } from "@/lib/siteUrl";
 import PayslipShare from "@/components/PayslipShare";
+import ReceiptMissing from "@/components/ReceiptMissing";
 
 type Props = { params: Promise<{ d: string }> };
 const siteUrl = resolveSiteUrl();
@@ -23,46 +23,11 @@ export async function generateMetadata({ params }: Props) {
   return buildShareMetadata({ nick, amount: fmtWon(hero) });
 }
 
-const wrap: React.CSSProperties = {
-  minHeight: "100dvh",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 22,
-  padding: "32px 16px",
-  background: "radial-gradient(120% 120% at 50% 0%, #1b2a22 0%, #0d120f 60%)",
-};
-const cta: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  background: "linear-gradient(180deg,#2fd39a,#16967a)",
-  color: "#03241c",
-  fontWeight: 900,
-  fontSize: 17,
-  padding: "14px 22px",
-  borderRadius: 14,
-  textDecoration: "none",
-  boxShadow: "0 6px 18px rgba(0,0,0,.45)",
-};
-
 export default async function ReceiptSharePage({ params }: Props) {
   const { d } = await params;
   const data = await resolveData(d);
 
-  if (!data) {
-    return (
-      <main style={wrap}>
-        <p style={{ color: "#eafff5", fontSize: 16, fontWeight: 700 }}>
-          급여명세서를 불러올 수 없어요 🥲
-        </p>
-        <Link href="/" style={cta}>
-          🚽 나도 벌어보기
-        </Link>
-      </main>
-    );
-  }
+  if (!data) return <ReceiptMissing />;
 
   return <PayslipShare data={data} siteUrlHref={siteUrl} />;
 }
