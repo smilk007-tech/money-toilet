@@ -161,7 +161,7 @@ export default function PayslipModal() {
         setStage("done");
         // 3·8·13·18회차 물내림 시에만 조용하게 한 번 흔들기
         if (detail.f % 5 === 3)
-          stampTimersRef.current.push(window.setTimeout(() => setShakeBrag(true), 900));
+          stampTimersRef.current.push(window.setTimeout(() => setShakeBrag(true), 1800));
         return;
       }
       if (hasEverStamped()) {
@@ -173,7 +173,7 @@ export default function PayslipModal() {
         } catch {}
         setStage("done");
         if (detail.f % 5 === 3)
-          stampTimersRef.current.push(window.setTimeout(() => setShakeBrag(true), 900));
+          stampTimersRef.current.push(window.setTimeout(() => setShakeBrag(true), 1800));
         return;
       }
       // 첫 영수증: '위 내용이 사실임을 확인합니다 👉'를 직접 눌러야만 도장이 찍힌다.

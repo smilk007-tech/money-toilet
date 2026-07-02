@@ -369,24 +369,22 @@ body {
   filter: brightness(0.05);
 }
 /* 암전 오버레이 */
-.blackout-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 12;
-  background: rgba(0, 0, 0, 0.93);
-  pointer-events: none;
-  animation: blackout-in 0.55s ease both;
+/* 암전: 배경 스킨(벽·문·바닥)만 어둡게. 문고리·조명·배너·채팅은 영향 없음. */
+.skin-center__base,
+.skin-side,
+.skin-floor {
+  transition: filter 0.55s ease, opacity 0.55s ease;
 }
-.blackout-overlay--out {
-  animation: blackout-out 0.8s ease both;
+.scene--blackout .skin-center__base,
+.scene--blackout .skin-side,
+.scene--blackout .skin-floor {
+  filter: brightness(0.18);
 }
-@keyframes blackout-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+.scene {
+  transition: background-color 0.55s ease;
 }
-@keyframes blackout-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+.scene--blackout {
+  background-color: #101212;
 }
 
 /* 문 경첩(좌측 모서리) */
@@ -458,7 +456,7 @@ body {
 /* A4 광고 (문에 붙은 전단지) — 똑바로, 잠금장치와 안 겹치게 약간 좁힘 */
 .ad-a4 {
   position: absolute;
-  z-index: 18;
+  z-index: 11;
   left: 50%;
   top: 45%;
   transform: translate(-50%, -50%);
@@ -553,7 +551,7 @@ body {
 /* ---- 좌측 휴지걸이 (SVG) ---- */
 .skin-tp {
   position: absolute;
-  z-index: 18;
+  z-index: 11;
   left: 4px;
   top: 62%;
   width: 66px;
@@ -2387,16 +2385,16 @@ body {
 }
 @keyframes bragsShake {
   0%   { transform: rotate(0deg) translateY(0); }
-  8%   { transform: rotate(-3deg) translateY(-2px); }
-  16%  { transform: rotate(3deg) translateY(-2px); }
-  24%  { transform: rotate(-2deg) translateY(-1px); }
-  32%  { transform: rotate(1deg) translateY(0); }
-  40%  { transform: rotate(0deg) translateY(0); }
-  57%  { transform: rotate(0deg) translateY(0); }
-  65%  { transform: rotate(-3deg) translateY(-2px); }
-  73%  { transform: rotate(3deg) translateY(-2px); }
-  81%  { transform: rotate(-2deg) translateY(-1px); }
-  90%  { transform: rotate(1deg) translateY(0); }
+  7%   { transform: rotate(-3deg) translateY(-2px); }
+  14%  { transform: rotate(3deg) translateY(-2px); }
+  21%  { transform: rotate(-2deg) translateY(-1px); }
+  28%  { transform: rotate(1deg) translateY(0); }
+  34%  { transform: rotate(0deg) translateY(0); }
+  62%  { transform: rotate(0deg) translateY(0); }
+  69%  { transform: rotate(-3deg) translateY(-2px); }
+  76%  { transform: rotate(3deg) translateY(-2px); }
+  83%  { transform: rotate(-2deg) translateY(-1px); }
+  91%  { transform: rotate(1deg) translateY(0); }
   100% { transform: rotate(0deg) translateY(0); }
 }
 
@@ -2759,15 +2757,15 @@ body {
   animation: latchRattle 0.45s ease-out both;
 }
 @keyframes latchRattle {
-  0%   { transform: translateX(0) rotate(0deg); }
-  10%  { transform: translateX(-7px) rotate(-6deg); }
-  22%  { transform: translateX(9px) rotate(7deg); }
-  34%  { transform: translateX(-8px) rotate(-5deg); }
-  46%  { transform: translateX(7px) rotate(5deg); }
-  58%  { transform: translateX(-5px) rotate(-3deg); }
-  72%  { transform: translateX(4px) rotate(2deg); }
-  86%  { transform: translateX(-2px) rotate(-1deg); }
-  100% { transform: translateX(0) rotate(0deg); }
+  0%   { transform: translate(14%, -50%) rotate(0deg); }
+  10%  { transform: translate(calc(14% - 7px), -50%) rotate(-6deg); }
+  22%  { transform: translate(calc(14% + 9px), -50%) rotate(7deg); }
+  34%  { transform: translate(calc(14% - 8px), -50%) rotate(-5deg); }
+  46%  { transform: translate(calc(14% + 7px), -50%) rotate(5deg); }
+  58%  { transform: translate(calc(14% - 5px), -50%) rotate(-3deg); }
+  72%  { transform: translate(calc(14% + 4px), -50%) rotate(2deg); }
+  86%  { transform: translate(calc(14% - 2px), -50%) rotate(-1deg); }
+  100% { transform: translate(14%, -50%) rotate(0deg); }
 }
 .skin-latch--broken {
   pointer-events: none;
@@ -2800,13 +2798,13 @@ body {
 .latch-knob-fall::after {
   content: "";
   position: absolute;
-  width: 4px;
-  height: 12px;
-  background: #b0b4b5;
-  border-radius: 0 0 2px 2px;
+  width: 3px;
+  height: 11px;
+  background: rgba(0, 0, 0, 0.32);
+  border-radius: 2px;
   left: 50%;
-  top: 100%;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
 }
 @keyframes latch-knob-fall {
   0%   { transform: translate(-50%, -50%) rotate(0deg) scale(1); opacity: 1; }
@@ -2817,4 +2815,16 @@ body {
   62%  { transform: translate(calc(-50% + 30px), calc(-50% + 38vh)) rotate(260deg); opacity: 1; }
   78%  { transform: translate(calc(-50% + 60px), calc(-50% + 32vh)) rotate(320deg); opacity: 0.6; }
   100% { transform: translate(calc(-50% + 48px), calc(-50% + 44vh)) rotate(380deg) scale(0.8); opacity: 0; }
+}
+/* 손잡이 떨어진 자리 — 음각 소켓 */
+.latch-knob-socket {
+  position: absolute;
+  z-index: 34;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: radial-gradient(circle at 45% 38%, #525757 0%, #3a3d3d 50%, #272a2a 100%);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.75), inset 0 0 8px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
