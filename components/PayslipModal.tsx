@@ -94,6 +94,7 @@ export default function PayslipModal() {
     "waiting",
   );
   const stampTimersRef = useRef<number[]>([]);
+  const animateRef = useRef(false); // 도장 시퀀스가 방금 완료된 경우에만 true (재열람 시 false)
   const cardRef = useRef<HTMLDivElement>(null);
   const exportCardRef = useRef<HTMLDivElement>(null);
   const siteUrlHref =
@@ -106,6 +107,7 @@ export default function PayslipModal() {
 
   const close = useCallback(() => {
     clearStampTimers();
+    animateRef.current = false;
     setData(null);
     setStage("waiting");
   }, [clearStampTimers]);
@@ -126,7 +128,7 @@ export default function PayslipModal() {
         } catch {}
         // 도장이 종이에 닿는 순간에 효과음
         pushTimer(playStampSound, STAMP_SLAM_MS * STAMP_IMPACT_RATIO);
-        pushTimer(() => setStage("done"), STAMP_SLAM_MS);
+        pushTimer(() => { animateRef.current = true; setStage("done"); }, STAMP_SLAM_MS);
       }, STAMP_DELAY_MS);
     },
     [clearStampTimers],
@@ -137,10 +139,18 @@ export default function PayslipModal() {
       const receipt = (e as CustomEvent<ReceiptData>).detail;
       clearStampTimers();
       setData(receipt);
-      if (hasEverStamped() || isStampConfirmedFor(receipt)) {
+      if (isStampConfirmedFor(receipt)) {
+        // 이미 도장 찍힌 명세서 재열람 → 즉시 done, 애니메이션 없음
+        animateRef.current = false;
         setStage("done");
         return;
       }
+      if (hasEverStamped()) {
+        // 새 물내림 + 확인 경험 있음 → 자동 도장 시퀀스 (confirm 버튼 생략)
+        startStampSequence(receipt);
+        return;
+      }
+      // 최초 방문 → confirm 버튼 표시
       setStage("waiting");
     };
     window.addEventListener(APP_EVENTS.payslipOpen, onOpen);
@@ -281,7 +291,7 @@ export default function PayslipModal() {
                 👉 위 내용이 사실임을 확인합니다
               </button>
             ) : (
-              <div className="receipt-modal__actions-row receipt-modal__actions-row--in">
+              <div className={`receipt-modal__actions-row${animateRef.current ? " receipt-modal__actions-row--in" : ""}`}>
                 <button
                   className="receipt-btn receipt-btn--save"
                   type="button"
@@ -299,7 +309,7 @@ export default function PayslipModal() {
               </div>
             )}
           </div>
-          <p className={`receipt-modal__hint${stage === "done" ? " receipt-modal__hint--in" : ""}`}>내 월급은 공개되지 않습니다</p>
+          <p className={`receipt-modal__hint${stage === "done" ? (animateRef.current ? " receipt-modal__hint--in" : " receipt-modal__hint--visible") : ""}`}>내 월급은 공개되지 않습니다</p>
         </div>
       </div>
     </div>
