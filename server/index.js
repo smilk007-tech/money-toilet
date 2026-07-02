@@ -11,10 +11,10 @@ import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
 
-import { DEFAULTS, FLUSH_CAP, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, emptyBucket, driftPresenceFloor, initialPresenceFloor, PRESENCE_FLOOR_MAX } from "./lib/keys.js";
+import { DEFAULTS, FLUSH_CAP, MAX_AUTOBLOCK_SEC, kstDateKey, kstHour, kstMinuteOfDay, emptyBucket, driftPresenceFloor, initialPresenceFloor, PRESENCE_FLOOR_MAX } from "./lib/keys.js";
 import {
   loadConfig, setConfig, persistToday, loadToday, persistHours, loadHours,
-  appendChatLog, loadActiveBans, banVid, unbanVid, listBans, clean,
+  persistMinutes, loadMinutes, appendChatLog, loadActiveBans, banVid, unbanVid, listBans, clean,
 } from "./lib/store.js";
 import {
   passwordMatches, createSession, destroySession, isValidSession,
@@ -27,24 +27,90 @@ const PORT = process.env.PORT || 4000;
 let cfg = { ...DEFAULTS };
 const presence = new Map(); // vid -> { sockets:Set, nick, since }  (실유저만, 어드민 제외)
 const bans = new Map(); // vid -> expiry(ms)|Infinity
-const chatBuf = []; // [{date,ts,hour,vid,nick,text}]
-let today = null; // { date, visits, newVisitors, chat, flush, money }
+const chatBuf = []; // [{date,ts,hour,vid,nick,text}] — Redis chatlog append용(영속 시 비움)
+let today = null; // { date, visits, newVisitors, chat, flush, money, share, donate, brag }
 let hours = null; // [24] of bucket
+let minutes = new Map(); // 분of하루(0~1439) -> 분단위 버킷(+presence 게이지). 어드민 차트/테이블 상세조회용
 let todayDirty = false; // 마지막 영속 이후 today 변경 여부
-const hoursDirty = new Set(); // 마지막 영속 이후 변경된 시간 인덱스
+let hoursDirty = new Set(); // 마지막 영속 이후 변경된 시간 인덱스
+let dirtyMinutes = new Set(); // 마지막 영속 이후 변경된 분 인덱스
+
+/* ---------- 오늘치 라이브 로그(메모리, 자정 리셋) — Task3 ----------
+   어드민은 접속 즉시 '오늘 하루치' 채팅/접속 로그를 스냅샷으로 받아본다(어드민 로그인 이후분만이 아니라).
+   과거(어제~)는 Vercel이 Redis로 조회. 서버 재기동/자정 리셋으로 이 메모리가 비어도, 어드민 브라우저는
+   이미 받은 것을 새로고침 전까지 유지한다(프론트 상태 보존). */
+const todayChatLog = []; // [{ts,hour,vid,nick,text}]
+const todayConnLog = []; // [{ts,type:'join'|'leave',vid,nick}]
+const TODAY_LOG_MAX = 20000; // 메모리 보호 상한(초과 시 오래된 것부터 버림)
+
+// 무거운 write(today/hours/minutes)는 60초로 합침. chatlog는 30초로 배치(어드민 '오늘'은 소켓 라이브라
+// Redis chatlog는 과거조회·크래시대비용뿐 → 10초일 이유가 없음). presence·dwell 샘플만 매 10초 틱.
+const STAT_PERSIST_MS = 60_000;
+const CHAT_PERSIST_MS = 30_000;
+let lastStatPersistAt = 0;
+let lastChatPersistAt = 0;
+const ADMIN_HOURS_PUSH_MS = 30_000; // 어드민 시간별 스냅샷 push 주기(persistMs와 분리 — 10초 storm 방지)
 
 function freshToday(date) {
-  return { date, visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, bragUrl: 0 };
+  return { date, visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, donate: 0, brag: 0, dwellSec: 0 };
+}
+let lastDwellAt = 0; // 마지막 체류시간 샘플 시각(경과분만큼 dwellSec 적립)
+// 분단위 버킷 = 통계 버킷 + presence 게이지 샘플(카운터 아님 → tick 합산 시 max로 집계)
+function emptyMinute() {
+  return { ...emptyBucket(), presence: 0 };
+}
+// today/hours/minutes 동시 누적 + dirty 표기 — ensureDay는 호출부에서 이미 부른 상태를 가정.
+function accrue(field, n, h, m) {
+  today[field] += n;
+  hours[h][field] += n;
+  let mb = minutes.get(m);
+  if (!mb) minutes.set(m, (mb = emptyMinute()));
+  mb[field] += n;
+  todayDirty = true;
+  hoursDirty.add(h);
+  dirtyMinutes.add(m);
 }
 function ensureDay() {
   const d = kstDateKey();
   if (today && today.date === d) return;
   const rolled = !!today; // 자정 롤오버(서버 부팅 첫 호출 제외)
-  if (rolled) flushPersist().catch(() => {}); // 이전 날 저장
+  if (rolled) {
+    // 이전 날 잔여분을 '스냅샷'으로 저장 — 아래 모듈변수 재할당과의 async 경쟁 방지(옛 참조를 명시 전달).
+    persistSnapshot(
+      today.date,
+      todayDirty ? today : null,
+      hoursDirty.size ? hours : null,
+      new Set(hoursDirty),
+      dirtyMinutes.size ? minutes : null,
+      new Set(dirtyMinutes),
+      chatBuf.splice(0),
+    );
+  }
   today = freshToday(d);
   hours = Array.from({ length: 24 }, emptyBucket);
+  minutes = new Map();
+  todayDirty = false;
+  hoursDirty = new Set();
+  dirtyMinutes = new Set();
+  todayChatLog.length = 0;
+  todayConnLog.length = 0;
+  lastStatPersistAt = 0;
   // 접속 중인 클라이언트는 'global' 푸시만으론 자정 초기화를 구분 못 함(스냅처럼 보임) → 전용 이벤트로 안내
   if (rolled) io.emit("dayReset", { total: 0, date: d });
+}
+
+/* 오늘치 채팅/접속 로그 추가 — 메모리 보관 + (채팅은) Redis append 버퍼 + 어드민 라이브 push */
+function logChat(row) {
+  chatBuf.push(row); // Redis chatlog append용
+  todayChatLog.push({ ts: row.ts, hour: row.hour, vid: row.vid, nick: row.nick, text: row.text });
+  if (todayChatLog.length > TODAY_LOG_MAX) todayChatLog.splice(0, todayChatLog.length - TODAY_LOG_MAX);
+  if (adminsConnected()) io.to("admins").emit("adminChat", { ts: row.ts, hour: row.hour, vid: row.vid, nick: row.nick, text: row.text });
+}
+function logConn(type, vid, nick) {
+  const row = { ts: Date.now(), type, vid, nick: nick || "" };
+  todayConnLog.push(row);
+  if (todayConnLog.length > TODAY_LOG_MAX) todayConnLog.splice(0, todayConnLog.length - TODAY_LOG_MAX);
+  if (adminsConnected()) io.to("admins").emit("adminConn", row);
 }
 
 /* ---------- 어뷰징 ---------- */
@@ -64,10 +130,8 @@ function rateOk(vid, bucket = "chat") {
   rate.set(key, arr);
   return arr.length <= cfg.rateLimitN;
 }
-// 공유 집계 연타 방어 — vid당 SHARE_DEDUP_MS 안의 반복 공유는 1회만 집계(악성 연타로 지표 부풀리기 차단).
-// 클릭 즉시 클라가 emit하므로 이탈로 인한 누수는 없고, 여기서 과집계만 걸러낸다.
-const shareClock = new Map(); // vid -> 마지막 공유 집계 ts(ms)
-const SHARE_DEDUP_MS = 60_000;
+// 공유/후원/자랑 클릭 연타 방어는 클라(js)에서 kind별 디바운스로 1차 차단한다.
+// 서버는 rateOk("clicked") 슬라이딩 윈도우를 이벤트루프 보호용 백스톱으로만 둔다(별도 dedup 없음).
 const STRIKE_DECAY_MS = 5 * 60 * 1000; // 마지막 위반 후 이 시간 지나면 누적 strike 리셋(선량한 장기세션 보호)
 
 /* ---------- 접속자 표시 바닥값(자동 드리프트) ----------
@@ -143,26 +207,82 @@ function pushAdminLive() {
   }, cfg.presenceBroadcastMs);
 }
 
-/* ---------- 5분 배치 영속 ---------- */
+/* ---------- 영속(10초 틱 / 무거운 write는 60초 합침) ---------- */
+// 분단위 presence 샘플 — 그 분의 피크 동접(게이지). 아무도 없으면 write 안 함(sparse 유지, 읽을 때 0).
+function sampleMinutePresence() {
+  const size = presence.size;
+  if (size <= 0) return;
+  const m = kstMinuteOfDay();
+  let mb = minutes.get(m);
+  if (!mb) minutes.set(m, (mb = emptyMinute()));
+  if (size > mb.presence) mb.presence = size;
+  dirtyMinutes.add(m);
+}
+// 체류시간 샘플 — 경과초 × 동접 인원을 dwellSec에 적립(today/hours/minutes). 정지·드리프트 대비 경과는 상한.
+function sampleDwell() {
+  const now = Date.now();
+  const elapsedMs = lastDwellAt ? Math.min(now - lastDwellAt, 3 * (cfg.persistMs || 10_000)) : 0;
+  lastDwellAt = now;
+  const size = presence.size;
+  if (size <= 0 || elapsedMs <= 0) return;
+  const sec = Math.round((size * elapsedMs) / 1000);
+  if (sec <= 0) return;
+  ensureDay();
+  accrue("dwellSec", sec, kstHour(), kstMinuteOfDay());
+}
+
+async function persistChatBuf() {
+  if (!chatBuf.length) return;
+  const byDate = {};
+  for (const row of chatBuf.splice(0)) (byDate[row.date] ||= []).push(row);
+  for (const [date, rows] of Object.entries(byDate)) {
+    await appendChatLog(date, rows.map(({ ts, hour, vid, nick, text }) => ({ ts, hour, vid, nick, text })));
+  }
+}
+
+// 현재 날의 dirty today/hours/minutes만 저장. 모든 참조/플래그를 await 이전에 '동기 캡처'해,
+// await 도중 자정 롤오버(모듈변수 재할당)가 끼어들어도 옛 날 데이터를 옛 날짜에 정확히 쓴다(경쟁 방지).
+// 캡처와 동시에 모듈 dirty를 새 Set으로 교체 → await 중 도착한 증분은 다음 틱이 잡는다(누락 없음).
+async function persistStats() {
+  if (!today || !today.date) return;
+  const todayRef = today, hoursRef = hours, minutesRef = minutes, date = today.date;
+  const tDirty = todayDirty; todayDirty = false;
+  const hDirty = hoursDirty; hoursDirty = new Set();
+  const mDirty = dirtyMinutes; dirtyMinutes = new Set();
+  if (tDirty) await persistToday(todayRef);
+  if (hDirty.size) await persistHours(date, hoursRef, hDirty);
+  if (mDirty.size) await persistMinutes(date, minutesRef, mDirty);
+}
+
+// 자정 롤오버 전용 — 옛 날의 참조를 명시적으로 받아 fire-and-forget 저장(모듈변수 재할당 경쟁 없음).
+function persistSnapshot(date, todayObj, hoursArr, hoursDirtySet, minutesMap, minDirtySet, chatRows) {
+  (async () => {
+    try {
+      if (todayObj) await persistToday(todayObj);
+      if (hoursArr && hoursDirtySet && hoursDirtySet.size) await persistHours(date, hoursArr, hoursDirtySet);
+      if (minutesMap && minDirtySet && minDirtySet.size) await persistMinutes(date, minutesMap, minDirtySet);
+      if (chatRows && chatRows.length) {
+        const byDate = {};
+        for (const row of chatRows) (byDate[row.date] ||= []).push(row);
+        for (const [d, rows] of Object.entries(byDate)) await appendChatLog(d, rows.map(({ ts, hour, vid, nick, text }) => ({ ts, hour, vid, nick, text })));
+      }
+    } catch (e) { console.error("[persist rollover]", e); }
+  })();
+}
+
+// 10초 틱 — presence·dwell 샘플(매 틱) + chatlog(30초 합침) + stats(60초 합침). 유휴 시 write 0.
 async function flushPersist() {
-  // shareClock 정리 — dedup 창(60초)을 지난 항목은 무의미하므로 제거(메모리 보호).
-  const shareCutoff = Date.now() - SHARE_DEDUP_MS;
-  for (const [vid, t] of shareClock) if (t < shareCutoff) shareClock.delete(vid);
-  if (today && todayDirty) {
-    await persistToday(today);
-    todayDirty = false;
-  }
-  if (today && hoursDirty.size) {
-    await persistHours(today.date, hours, hoursDirty);
-    hoursDirty.clear();
-  }
-  if (chatBuf.length) {
-    const byDate = {};
-    for (const row of chatBuf.splice(0)) (byDate[row.date] ||= []).push(row);
-    for (const [date, rows] of Object.entries(byDate)) {
-      await appendChatLog(date, rows.map(({ ts, hour, vid, nick, text }) => ({ ts, hour, vid, nick, text })));
-    }
-  }
+  sampleMinutePresence();
+  sampleDwell();
+  const now = Date.now();
+  if (now - lastChatPersistAt >= CHAT_PERSIST_MS) { lastChatPersistAt = now; await persistChatBuf(); }
+  if (now - lastStatPersistAt >= STAT_PERSIST_MS) { lastStatPersistAt = now; await persistStats(); }
+}
+
+// 종료/롤오버 등 — 남은 것 전부 즉시 저장(주기 게이트 무시)
+async function flushAll() {
+  await persistChatBuf();
+  await persistStats();
 }
 
 /* ===================== Express (어드민 REST: 로그인/밴/제어) ===================== */
@@ -220,8 +340,15 @@ app.post("/admin/config", requireAdmin, async (req, res) => {
   res.json({ ok: true, config: cfg });
 });
 app.post("/admin/reset-money", requireAdmin, async (_req, res) => {
+  ensureDay();
+  // 러닝합계 + 오늘 시간·분 버킷의 금액까지 0으로(차트·표와 일관). 과거 날짜 Redis는 건드리지 않음.
   today.money = 0;
-  await persistToday(today);
+  for (const h of hours) h.money = 0;
+  for (const mb of minutes.values()) mb.money = 0;
+  todayDirty = true;
+  for (let i = 0; i < 24; i++) hoursDirty.add(i);
+  for (const k of minutes.keys()) dirtyMinutes.add(k);
+  await persistStats();
   io.emit("global", { total: 0 });
   res.json({ ok: true });
 });
@@ -236,8 +363,11 @@ io.on("connection", async (socket) => {
   if (adminToken && (await isValidSession(String(adminToken)))) {
     socket.data.isAdmin = true;
     socket.join("admins");
+    ensureDay();
     socket.emit("adminStats", adminLiveSnapshot());
-    socket.emit("adminHours", adminHoursSnapshot()); // 최초 1회는 즉시(이후엔 5분 주기로만)
+    socket.emit("adminHours", adminHoursSnapshot()); // 최초 1회는 즉시(이후엔 ADMIN_HOURS_PUSH_MS 주기)
+    // 오늘 하루치 라이브 로그 스냅샷(어드민 로그인 이후분만이 아니라 '오늘 전체') — Task3
+    socket.emit("adminTodayLog", { chats: todayChatLog.slice(), conns: todayConnLog.slice() });
     return; // 어드민은 view-only — 유저 핸들러 미부착, 동접 제외
   }
 
@@ -262,10 +392,9 @@ io.on("connection", async (socket) => {
     if (!socket.data.counted && p.fresh) {
       socket.data.counted = true;
       ensureDay();
-      const h = kstHour();
-      today.visits++; hours[h].visits++;
-      if (p.isNew) { today.newVisitors++; hours[h].newVisitors++; }
-      todayDirty = true; hoursDirty.add(h);
+      const h = kstHour(), m = kstMinuteOfDay();
+      accrue("visits", 1, h, m);
+      if (p.isNew) accrue("newVisitors", 1, h, m);
     }
 
     socket.emit("global", { total: today ? today.money : 0 });
@@ -276,9 +405,11 @@ io.on("connection", async (socket) => {
 
     // 인게임 실유저 — presence에 추가하고 브로드캐스트
     let info = presence.get(vid);
+    const isNewPresence = !info; // 이 vid의 첫 소켓(=오늘 접속 로그의 '입장')
     if (!info) presence.set(vid, (info = { sockets: new Set(), nick: "", since: Date.now() }));
     info.sockets.add(socket.id);
     info.nick = socket.data.nick || info.nick;
+    if (isNewPresence) logConn("join", vid, info.nick); // 오늘 접속 로그 — 재접속 횟수/닉변 today 기준 파생
 
     broadcastPresence();
     pushAdminLive();
@@ -313,13 +444,11 @@ io.on("connection", async (socket) => {
 
     const nick = socket.data.nick || "익명의 볼일러";
     ensureDay();
-    const h = kstHour();
-    today.chat++; hours[h].chat++;
-    todayDirty = true; hoursDirty.add(h);
+    const h = kstHour(), m = kstMinuteOfDay();
+    accrue("chat", 1, h, m);
     const ts = now;
-    chatBuf.push({ date: today.date, ts, hour: h, vid, nick, text });
     socket.broadcast.emit("chat", { name: nick, text, kind: "user" }); // 실제 옆사람(나 제외)
-    if (adminsConnected()) io.to("admins").emit("adminChat", { ts, hour: h, vid, nick, text }); // 어드민 라이브
+    logChat({ date: today.date, ts, hour: h, vid, nick, text }); // 오늘 로그 + Redis 버퍼 + 어드민 라이브
     pushAdminLive();
   });
 
@@ -335,10 +464,9 @@ io.on("connection", async (socket) => {
     if (amount < 1) return;
 
     ensureDay();
-    const h = kstHour();
-    today.money += amount; hours[h].money += amount;
-    today.flush++; hours[h].flush++;
-    todayDirty = true; hoursDirty.add(h);
+    const h = kstHour(), m = kstMinuteOfDay();
+    accrue("money", amount, h, m);
+    accrue("flush", 1, h, m);
 
     const nick = socket.data.nick || "익명의 볼일러";
     if (p.broadcast !== false) {
@@ -353,32 +481,25 @@ io.on("connection", async (socket) => {
       const logText = isCapped
         ? `💰 ${amountStr}원 물내림! MAX`
         : `💰 ${amountStr}원 물내림!`;
-      chatBuf.push({ date: today.date, ts: now, hour: h, vid, nick, text: logText });
-      if (adminsConnected()) io.to("admins").emit("adminChat", { ts: now, hour: h, vid, nick, text: logText });
+      logChat({ date: today.date, ts: now, hour: h, vid, nick, text: logText });
     }
     io.emit("global", { total: today.money });
     pushAdminLive();
   });
 
-  // 공유하기 클릭 집계 — 클라가 '클릭 즉시'(모든 await 이전) emit → 이탈로 인한 누수 없음.
-  // created:true 면 자랑(명세서) URL 신규 생성(캐시미스)까지 함께 집계.
-  // 악성 연타는 vid당 60초 1회로 제한(집계 왜곡 방지). 실제 URL 생성 자체를 막는 건 아님.
-  socket.on("share", (p = {}) => {
+  // 공유/후원/자랑 클릭 집계 — 클라가 '클릭 즉시'(모든 await 이전) emit → 이탈로 인한 누수 없음.
+  // kind: 'share'(공유하기) | 'donate'(후원하기) | 'brag'(자랑하기, URL 생성과 무관한 단순 클릭).
+  // 연타 차단은 클라(kind별 디바운스)가 담당. 서버 rateOk는 이벤트루프 보호용 백스톱만(dedup 없음).
+  socket.on("clicked", (p = {}) => {
     const vid = socket.data.vid;
     if (!vid) return;
     if (isBanned(vid)) return; // 섀도밴 — 집계 제외
-    // 폭주 방어 — chat/flush와 동일한 슬라이딩 윈도우(rateLimitN/rateWindowMs)로 과도한 emit은 조용히 버린다.
-    // 아래 60초 dedup은 '집계'만 막지만, 이건 '처리 자체'를 throttle해 이벤트루프를 보호한다(방어 심화).
-    if (!rateOk(vid, "share")) return;
-    const now = Date.now();
-    const last = shareClock.get(vid) ?? 0;
-    if (now - last < SHARE_DEDUP_MS) return; // 연타 dedup
-    shareClock.set(vid, now);
+    const kind = p.kind;
+    if (kind !== "share" && kind !== "donate" && kind !== "brag") return;
+    if (!rateOk(vid, "clicked")) return; // 폭주 백스톱
     ensureDay();
-    const h = kstHour();
-    today.share++; hours[h].share++;
-    if (p.created) { today.bragUrl++; hours[h].bragUrl++; }
-    todayDirty = true; hoursDirty.add(h);
+    const h = kstHour(), m = kstMinuteOfDay();
+    accrue(kind, 1, h, m);
     pushAdminLive();
   });
 
@@ -388,7 +509,10 @@ io.on("connection", async (socket) => {
     const info = presence.get(vid);
     if (info) {
       info.sockets.delete(socket.id);
-      if (info.sockets.size === 0) { presence.delete(vid); rate.delete(vid + ":chat"); rate.delete(vid + ":flush"); rate.delete(vid + ":share"); }
+      if (info.sockets.size === 0) {
+        presence.delete(vid); rate.delete(vid + ":chat"); rate.delete(vid + ":flush"); rate.delete(vid + ":clicked");
+        logConn("leave", vid, info.nick); // 오늘 접속 로그 — 이탈
+      }
       // presence가 실제로 바뀐 경우에만 브로드캐스트 (공유페이지 방문자는 presence에 없으므로 여기 안 옴)
       broadcastPresence();
       pushAdminLive();
@@ -405,20 +529,21 @@ async function boot() {
   const t = await loadToday();
   if (t && t.date === d) today = { ...today, ...t, date: d }; // 같은 날이면 러닝합계 복구
   hours = await loadHours(d); // 시간별 복구
+  minutes = await loadMinutes(d); // 분단위 복구(재기동 후에도 오늘 차트 유지)
   for (const b of await loadActiveBans()) bans.set(b.vid, b.expiry);
   resyncPresenceFloor(); // 접속자 바닥값 초기화
   scheduleFloorDrift(); // 자동 드리프트 시작(presenceFloorMax > 0이면 항상 발동)
 
   setInterval(() => flushPersist().catch((e) => console.error("[persist]", e)), cfg.persistMs);
-  // 시간별 통계는 5분 배치 영속과 같은 주기로만 push(매초 폴링하지 않음) — presence/오늘/online은
+  // 어드민 시간별 스냅샷 push — persistMs(10초)와 분리한 자체 주기(10초 storm 방지). presence/오늘/online은
   // pushAdminLive()로 변동 시점에만 디바운스 push(hello/chat/flush/disconnect에서 호출)
-  setInterval(() => { if (adminsConnected()) io.to("admins").emit("adminHours", adminHoursSnapshot()); }, cfg.persistMs);
+  setInterval(() => { if (adminsConnected()) io.to("admins").emit("adminHours", adminHoursSnapshot()); }, ADMIN_HOURS_PUSH_MS);
 
   server.listen(PORT, () => {
     console.log(`[mt-socket] :${PORT} day=${today.date} money=${today.money} visits=${today.visits} bans=${bans.size}`);
   });
 }
 for (const sig of ["SIGTERM", "SIGINT"]) {
-  process.on(sig, async () => { try { await flushPersist(); } catch { /* noop */ } process.exit(0); });
+  process.on(sig, async () => { try { await flushAll(); } catch { /* noop */ } process.exit(0); });
 }
 boot();

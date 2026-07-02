@@ -233,13 +233,9 @@ export default function PayslipModal() {
     const fp = stableFingerprint(data);
 
     // 집계 신호는 '클릭 즉시'(모든 await 이전) 발사 — 공유 시트/네트워크 도중 이탈해도 유실되지 않는다.
-    // created = 캐시 미스 = 이 공유로 /r/ 짧은 URL이 새로 생성됨(동기 판정이라 이탈 위험 구간 밖).
+    // '자랑하기' 단순 클릭 집계(URL 신규 생성 여부와 무관). URL 생성은 아래 로직에서 별도로 진행.
     try {
-      window.dispatchEvent(
-        new CustomEvent(APP_EVENTS.share, {
-          detail: { created: !shareIdCache.has(fp) },
-        }),
-      );
+      window.dispatchEvent(new CustomEvent(APP_EVENTS.brag));
     } catch {}
 
     // 캐시 히트면 API 재호출 없이 바로 사용

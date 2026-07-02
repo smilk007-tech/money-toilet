@@ -1,10 +1,11 @@
 /* Redis 키 · 상수 · KST 날짜 헬퍼 (소켓서버)
    설계:
-   - mt:today        : 오늘 러닝 합계 JSON {date,visits,newVisitors,chat,flush,money,share,bragUrl} (TTL 없음, 자정 0 리셋)
-   - mt:hours:<date> : 시간별 HASH (field=0~23, value={visits,newVisitors,chat,flush,money,share,bragUrl}) — 하루합계는 화면에서 합산
-   - mt:chatlog:<date>: 채팅 LIST (5분 배치 append, 3일 TTL)
+   - mt:today        : 오늘 러닝 합계 JSON {date,visits,newVisitors,chat,flush,money,share,donate,brag} (TTL 없음, 자정 0 리셋)
+   - mt:hours:<date> : 시간별 HASH (field=0~23, value=bucket) — 하루합계·일단위 카드는 여기서 합산 (95일)
+   - mt:min:<date>   : 분단위 HASH (field=0~1439=분of하루, value=bucket+presence) — 어드민 차트/테이블 상세조회 (30일)
+   - mt:chatlog:<date>: 채팅 LIST (배치 append, 5일 TTL)
    - 밴/세션은 변경 시에만 write
-   라이브(메모리)에서 누적하고 5분마다 위 키에 배치 기록 → Upstash 무료 보호. */
+   라이브(메모리)에서 누적하고 persistMs(기본 10초)마다 위 키에 '변경분만' 배치 기록 → Upstash 무료 보호. */
 
 const KST = 9 * 3600 * 1000;
 export function kstDateKey(at = Date.now()) {
@@ -13,6 +14,11 @@ export function kstDateKey(at = Date.now()) {
 }
 export function kstHour(at = Date.now()) {
   return new Date(at + KST).getUTCHours();
+}
+// 분of하루(0~1439) — 분단위 통계 버킷 필드. hour = Math.floor(minuteOfDay/60).
+export function kstMinuteOfDay(at = Date.now()) {
+  const d = new Date(at + KST);
+  return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
 export function lastDateKeys(n, at = Date.now()) {
   const out = [];
@@ -26,6 +32,7 @@ export const K = {
   bansIndex: "mt:bans:index",
 };
 export const hoursKey = (date) => `mt:hours:${date}`;
+export const minKey = (date) => `mt:min:${date}`;
 export const chatLogKey = (date) => `mt:chatlog:${date}`;
 export const vk = { ban: (vid) => `mt:ban:${vid}` };
 export const ak = {
@@ -35,6 +42,7 @@ export const ak = {
 
 export const TTL = {
   hours: 60 * 60 * 24 * 95, // 시간별 95일 보관
+  minutes: 60 * 60 * 24 * 30, // 분단위 상세 30일 보관 (그 이전은 시간단위로만 조회)
   chatLog: 60 * 60 * 24 * 5, // 채팅로그 5일 — 어드민 [오늘~그끄저께](3일 전)까지 안전 조회용 여유
   adminSession: 60 * 60 * 24, // 어드민 세션 24시간
   loginLock: 60 * 15,
@@ -48,8 +56,12 @@ export const MAX_PER_SEC = Math.ceil(100_000_000 / (20.6 * 8 * 3600)); // 169원
 export const FLUSH_CAP = MAX_PER_SEC * 3600; // 608,400
 export const CHATLOG_MAX = 6000;
 
-/** 빈 시간 버킷 — share: 공유하기 클릭, bragUrl: 자랑(명세서) URL 신규 생성 */
-export const emptyBucket = () => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, bragUrl: 0 });
+/** 빈 통계 버킷 — share: 공유하기 클릭, donate: 후원하기 클릭, brag: 자랑하기 클릭(URL 생성과 무관한 단순 클릭)
+    dwellSec: 체류시간 집계 = Σ(동접 인원 × 흐른 초). '총 체류(사용자-초)'이자 평균세션(=dwellSec/visits)의 분자.
+    (분단위 버킷은 여기에 presence 게이지 샘플을 추가로 얹는다 — 카운터가 아니므로 tick 합산 시 max로 집계) */
+export const emptyBucket = () => ({ visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, donate: 0, brag: 0, dwellSec: 0 });
+// 카운터 필드(합산 대상) — presence는 게이지라 제외
+export const COUNTER_FIELDS = ["visits", "newVisitors", "chat", "flush", "money", "share", "donate", "brag", "dwellSec"];
 
 export const DEFAULTS = {
   rateLimitN: 7,
@@ -58,7 +70,7 @@ export const DEFAULTS = {
   chatMinIntervalMs: 700, // 같은 사람 연속 채팅 최소 간격(연타/도배 1차 방어) — 미만이면 조용히 무시
   maxMsgLen: 40,
   presenceBroadcastMs: 2000, // 일반 유저 presence 브로드캐스트 + 어드민 라이브 push 디바운스 공용
-  persistMs: 300_000, // 5분마다 Redis 영속 + 어드민 시간별 통계 push 주기
+  persistMs: 10_000, // 10초마다 Redis 영속(변경분만 write) — 초기 소규모라 파격적으로 단축. 유휴 시엔 write 0.
   chatDisabled: false,
   notices: [], // 시스템 공지 배너. 어드민에서 관리. Notice[] JSON.
   presenceFloorAuto: true, // 접속자 바닥값 자동 드리프트(오픈초기 기본 ON). 어드민은 항상 실제 presence를 본다.

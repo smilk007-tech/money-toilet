@@ -5,14 +5,18 @@
    - 과거(시간별/채팅로그): Vercel API(공유 Redis, 토큰검증)
    - 로그인/밴/공지: 소켓서버(Railway) REST */
 
-import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { activeNoticeFrom } from "@/lib/notices";
 import { io, type Socket } from "socket.io-client";
+import StatsChart from "./StatsChart";
 
-type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number; share: number; bragUrl: number };
+// share: 공유하기, donate: 후원하기, brag: 자랑하기(단순 클릭) / dwellSec: 체류시간 집계(Σ 동접×초)
+type Bucket = { visits: number; newVisitors: number; chat: number; flush: number; money: number; share: number; donate: number; brag: number; dwellSec: number };
 type Online = { vid: string; nick: string; conns: number; since: number; banned: boolean };
-// 어드민이 '접속한 이후' 관측한 유저 — 이탈해도 목록에서 지우지 않고 이탈 표기로 남긴다(프론트 전용, 미영속).
+// '오늘' 관측한 유저(채팅서버가 준 오늘치 접속로그 + 현재 online 기반). 이탈해도 이탈 표기로 남긴다.
+// initialNick/nickChanged: 오늘 최초 닉 대비 현재 닉 변경 여부(닉변 배지용, 오늘 기준).
 type Tracked = Online & { status: "online" | "left"; leftAt?: number; reconnects: number; initialNick?: string; nickChanged?: boolean };
+type ConnRow = { ts: number; type: "join" | "leave"; vid: string; nick: string };
 type ChatRow = { ts: number; hour: number; vid: string; nick: string; text: string };
 type ReceiptRow = { id: string; ts: number; n: string; t: number; f: number };
 type BanRow = { vid: string; expiry: number | null };
@@ -31,13 +35,76 @@ const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } c
 
 const won = (n: number) => (n || 0).toLocaleString("ko-KR");
 const hhmm = (ts: number) => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
-const EMPTY: Bucket = { visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, bragUrl: 0 };
+const EMPTY: Bucket = { visits: 0, newVisitors: 0, chat: 0, flush: 0, money: 0, share: 0, donate: 0, brag: 0, dwellSec: 0 };
 const sumDay = (hours: Bucket[]) => hours.reduce((a, h) => ({
   visits: a.visits + h.visits, newVisitors: a.newVisitors + h.newVisitors,
   chat: a.chat + h.chat, flush: a.flush + h.flush, money: a.money + h.money,
-  share: a.share + (h.share || 0), bragUrl: a.bragUrl + (h.bragUrl || 0),
+  share: a.share + (h.share || 0), donate: a.donate + (h.donate || 0), brag: a.brag + (h.brag || 0),
+  dwellSec: a.dwellSec + (h.dwellSec || 0),
 }), { ...EMPTY });
+// 체류초 → 사람이 읽는 길이("3시간 20분" / "12분 5초" / "45초")
+const fmtDur = (sec: number) => {
+  const s = Math.max(0, Math.round(sec || 0));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  if (h) return `${h}시간 ${m}분`;
+  if (m) return `${m}분 ${ss}초`;
+  return `${ss}초`;
+};
 const DURATIONS = [{ v: "1d", t: "1일" }, { v: "3d", t: "3일" }, { v: "7d", t: "1주" }, { v: "30d", t: "1달" }, { v: "perm", t: "영구" }];
+
+// 채팅/접속 로그 누적 병합(dedupe) — 재접속 시 서버 스냅샷과 기존 상태를 합쳐 '이미 받은 것'을 지우지 않는다.
+const CHAT_KEEP = 3000, CONN_KEEP = 20000;
+function mergeChats(prev: ChatRow[], incoming: ChatRow[]): ChatRow[] {
+  const seen = new Set(prev.map((c) => `${c.ts}|${c.vid}|${c.text}`));
+  const add = incoming.filter((c) => !seen.has(`${c.ts}|${c.vid}|${c.text}`));
+  if (!add.length) return prev;
+  const out = [...add, ...prev];
+  return out.length > CHAT_KEEP ? out.slice(0, CHAT_KEEP) : out;
+}
+function mergeConns(prev: ConnRow[], incoming: ConnRow[]): ConnRow[] {
+  const seen = new Set(prev.map((c) => `${c.ts}|${c.type}|${c.vid}`));
+  const add = incoming.filter((c) => !seen.has(`${c.ts}|${c.type}|${c.vid}`));
+  if (!add.length) return prev;
+  const out = [...prev, ...add];
+  return out.length > CONN_KEEP ? out.slice(out.length - CONN_KEEP) : out;
+}
+// 오늘치 접속로그 + 현재 online 목록 → 동접/이탈 파생(오늘 기준). reconnects = 첫 입장 이후의 재입장 횟수.
+function deriveTracked(connLog: ConnRow[], online: Online[], nickByVid: Record<string, string>): Tracked[] {
+  const byVid: Record<string, Tracked & { joins: number }> = {};
+  for (const row of [...connLog].sort((a, b) => a.ts - b.ts)) {
+    let t = byVid[row.vid];
+    if (!t) t = byVid[row.vid] = { vid: row.vid, nick: row.nick || "", conns: 0, since: row.ts, banned: false, status: "left", reconnects: 0, joins: 0 };
+    if (row.nick) t.nick = row.nick;
+    if (row.type === "join") {
+      t.joins++; t.status = "online";
+      if (row.ts < t.since) t.since = row.ts;
+      if (!t.initialNick && row.nick) t.initialNick = row.nick; // 오늘 최초 닉
+    } else { t.status = "left"; t.leftAt = row.ts; }
+  }
+  const onlineVids = new Set<string>();
+  for (const o of online) {
+    onlineVids.add(o.vid);
+    let t = byVid[o.vid];
+    if (!t) t = byVid[o.vid] = { ...o, initialNick: o.nick, status: "online", reconnects: 0, joins: 1 };
+    t.status = "online"; t.conns = o.conns; t.banned = o.banned;
+    if (o.nick) t.nick = o.nick;
+    if (!t.initialNick && o.nick) t.initialNick = o.nick;
+    if (o.since && o.since < t.since) t.since = o.since;
+  }
+  const out: Tracked[] = [];
+  for (const vid of Object.keys(byVid)) {
+    const t = byVid[vid];
+    if (t.status === "online" && !onlineVids.has(vid)) { t.status = "left"; if (!t.leftAt) t.leftAt = t.since; } // 지금 online 아니면 이탈
+    const nick = nickByVid[vid] || t.nick || "";
+    out.push({
+      vid, nick, conns: t.conns, since: t.since, banned: t.banned, status: t.status, leftAt: t.leftAt,
+      reconnects: Math.max(0, t.joins - 1),
+      initialNick: t.initialNick,
+      nickChanged: !!(t.initialNick && nick && nick !== t.initialNick), // 오늘 최초 닉 ≠ 현재 닉
+    });
+  }
+  return out;
+}
 
 // KST 날짜 (daysAgo: 0=오늘 1=어제 2=엊그제)
 const dateOf = (daysAgo: number) => {
@@ -62,7 +129,7 @@ export default function AdminDashboard() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
-  const [tab, setTab] = useState<"stats" | "online" | "liveChat" | "chatlog" | "receipts" | "bans" | "ops">("stats");
+  const [tab, setTab] = useState<"stats" | "chart" | "online" | "liveChat" | "chatlog" | "receipts" | "bans" | "ops">("stats");
   const [opsTab, setOpsTab] = useState<"boost" | "chat" | "notice" | "ops">("boost");
   const [cfgSaved, setCfgSaved] = useState(false);
   const [live, setLive] = useState<Live | null>(null);
@@ -70,8 +137,9 @@ export default function AdminDashboard() {
   // vid → 최신 닉네임 맵 — adminChat/adminStats 수신 시마다 갱신.
   // 라이브 채팅 렌더 시 이 맵을 우선 사용해 닉네임 변경을 소급 반영.
   const [nickByVid, setNickByVid] = useState<Record<string, string>>({});
-  // 동접자 추적 — 어드민 소켓 연결 이후 관측한 유저만. 이탈 시각·재접속 횟수를 프론트에서 파생(서버 무관).
-  const [tracked, setTracked] = useState<Record<string, Tracked>>({});
+  // 동접자 추적 — 채팅서버가 준 '오늘치 접속로그' + 현재 online 목록으로 파생(오늘 기준, 어드민 로그인 시점 무관).
+  // 서버 재기동/자정 리셋으로 스냅샷이 비어도, 이미 받은 로그는 새로고침 전까지 브라우저에 남는다(누적 dedupe).
+  const [connLog, setConnLog] = useState<ConnRow[]>([]);
   const [histChats, setHistChats] = useState<Record<string, ChatRow[]>>({});
   const [histHours, setHistHours] = useState<Record<string, Bucket[]>>({});
   const [bans, setBans] = useState<BanRow[]>([]);
@@ -109,38 +177,15 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!authed) return;
-    setTracked({}); // 새 어드민 세션 시작 — 과거 이탈자를 끌고 오지 않도록 초기화(관측은 지금부터)
+    // 재접속 시에도 기존 로그를 지우지 않는다(누적 dedupe) — 서버 재기동/자정 리셋으로 스냅샷이 비어도 유지.
     const sock = io(SOCKET_BASE || undefined, { auth: { adminToken: getToken() }, transports: ["websocket", "polling"], reconnection: true });
     sockRef.current = sock;
     sock.on("adminStats", (d: LiveStats) => {
-      // 온라인 목록에서 vid→nick 최신화
+      // 온라인 목록에서 vid→nick 최신화(닉변 소급 반영). 동접자 파생은 connLog+online에서 렌더 시 계산.
       if (d.online) {
         setNickByVid((prev) => {
           const next = { ...prev };
           for (const o of d.online) if (o.nick && o.vid) next[o.vid] = o.nick;
-          return next;
-        });
-        // 동접자 추적 갱신 — 신규/유지/재접속/이탈을 스냅샷 대비 diff로 판정(이탈 시각은 관측 시점).
-        const now = Date.now();
-        const onlineVids = new Set(d.online.map((o) => o.vid));
-        setTracked((prev) => {
-          const next: Record<string, Tracked> = { ...prev };
-          for (const o of d.online) {
-            const cur = next[o.vid];
-            if (!cur) {
-              next[o.vid] = { ...o, status: "online", reconnects: 0, initialNick: o.nick, nickChanged: false };
-            } else if (cur.status === "left") {
-              const initialNick = cur.initialNick ?? cur.nick;
-              next[o.vid] = { ...o, status: "online", reconnects: cur.reconnects + 1, initialNick, nickChanged: !!(initialNick && o.nick && o.nick !== initialNick) };
-            } else {
-              const initialNick = cur.initialNick ?? cur.nick;
-              next[o.vid] = { ...cur, ...o, initialNick, nickChanged: !!(initialNick && o.nick && o.nick !== initialNick) };
-            }
-          }
-          for (const vid of Object.keys(next)) {
-            if (next[vid].status === "online" && !onlineVids.has(vid))
-              next[vid] = { ...next[vid], status: "left", leftAt: now };
-          }
           return next;
         });
       }
@@ -150,7 +195,14 @@ export default function AdminDashboard() {
     sock.on("adminChat", (c: ChatRow) => {
       // 채팅 수신 시점의 nick으로 맵 업데이트 — 닉 변경 시 이전 메시지도 소급 반영
       if (c.nick && c.vid) setNickByVid((prev) => ({ ...prev, [c.vid]: c.nick }));
-      setLiveChats((prev) => [c, ...prev].slice(0, 1000));
+      setLiveChats((prev) => mergeChats(prev, [c]));
+    });
+    // 오늘 하루치 접속 로그 이벤트(입장/이탈) — 오늘 기준 동접/이탈/재접속 파생용
+    sock.on("adminConn", (row: ConnRow) => setConnLog((prev) => mergeConns(prev, [row])));
+    // 접속 즉시 서버가 주는 '오늘 전체' 스냅샷 — 어드민 로그인 이후분만이 아니라 하루치 전체
+    sock.on("adminTodayLog", (d: { chats: ChatRow[]; conns: ConnRow[] }) => {
+      if (d.chats?.length) setLiveChats((prev) => mergeChats(prev, d.chats));
+      if (d.conns?.length) setConnLog((prev) => mergeConns(prev, d.conns));
     });
     return () => { sock.close(); sockRef.current = null; };
   }, [authed]);
@@ -176,16 +228,14 @@ export default function AdminDashboard() {
     }
   }, [authed, loadBans]);
 
-  // 채팅로그 로더 — 과거 날짜(ago>=1)는 불변이라 메모리 캐시 적중 시 재요청하지 않는다.
-  // 오늘(ago=0)은 최초 1회 로드 후, 새로고침(force)일 때만 Vercel 캐시를 우회해 신규 데이터를 가져온다.
+  // 채팅로그 로더 — 오늘(ago=0)은 채팅서버 라이브(liveChats)로 보여주므로 Redis 조회 안 함.
+  // 과거(ago>=1)만 Redis에서 조회하고, 불변이라 메모리 캐시 적중 시 재요청하지 않는다.
   const loadChatlog = useCallback(async (ago: number) => {
+    if (ago === 0) return; // 오늘은 소켓 라이브 사용
     const date = dateOf(ago);
-    // 과거(ago>=1)는 불변 → 메모리 캐시 적중 시 재요청 생략. 오늘(ago=0)은 항상 라이브로 새로 불러옴
-    // (서브탭 재진입·자정 롤오버 시에도 최신 반영). 캐시버스터로 CDN/데이터 캐시 우회.
-    if (ago >= 1 && loadedChatDatesRef.current.has(date)) return;
+    if (loadedChatDatesRef.current.has(date)) return;
     setChatlogLoading(true);
-    const bust = ago === 0 ? `&_t=${Date.now()}` : "";
-    const { data } = await vercel(`chatlog?date=${date}${bust}`);
+    const { data } = await vercel(`chatlog?date=${date}`);
     if (data.ok) {
       loadedChatDatesRef.current.add(date);
       setHistChats((p) => ({ ...p, [date]: data.chats || [] }));
@@ -223,9 +273,36 @@ export default function AdminDashboard() {
     else setErr("비밀번호가 틀렸습니다");
   };
   const logout = async () => { await rail("logout", { method: "POST", body: "{}" }); try { localStorage.removeItem(TOKEN_KEY); } catch { /* */ } setAuthed(false); };
-  const ban = async (vid: string) => { const { data } = await rail("ban", { method: "POST", body: JSON.stringify({ vid, duration: dur[vid] ?? "1d" }) }); if (data.ok) { flash("차단됨"); loadBans(); } else flash("실패"); };
-  const unban = async (vid: string) => { const { data } = await rail("unban", { method: "POST", body: JSON.stringify({ vid }) }); if (data.ok) { flash("해제됨"); loadBans(); } };
-  const resetMoney = async () => { if (!confirm("다같이 번 돈을 0원으로 초기화할까요?")) return; await rail("reset-money", { method: "POST", body: "{}" }); flash("초기화됨"); };
+  const ban = async (vid: string) => {
+    const d = dur[vid] ?? "1d";
+    const durLabel = DURATIONS.find((x) => x.v === d)?.t ?? d;
+    if (!confirm(`이 사용자를 ${durLabel} 차단할까요?\n${vid}`)) return;
+    const { data } = await rail("ban", { method: "POST", body: JSON.stringify({ vid, duration: d }) });
+    if (data.ok) { flash("차단됨"); loadBans(); } else flash("실패");
+  };
+  const unban = async (vid: string) => {
+    if (!confirm(`이 사용자의 차단을 해제할까요?\n${vid}`)) return;
+    const { data } = await rail("unban", { method: "POST", body: JSON.stringify({ vid }) });
+    if (data.ok) { flash("해제됨"); loadBans(); }
+  };
+  // 자랑 URL 수동 삭제 — 오클릭 방지 confirm 허들 후 삭제(콘텐츠+목록). 삭제 즉시 목록에서 제거.
+  const delReceipt = async (date: string, id: string) => {
+    if (!confirm(`자랑 URL /r/${id} 을(를) 삭제할까요?\n공유 링크가 즉시 만료되며 되돌릴 수 없습니다.`)) return;
+    const token = getToken();
+    const res = await fetch(`/api/admin/receipts?date=${date}&id=${id}`, {
+      method: "DELETE", cache: "no-store", headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.ok) {
+      setHistReceipts((p) => ({ ...p, [date]: (p[date] || []).filter((rc) => rc.id !== id) }));
+      flash("삭제됨");
+    } else flash("삭제 실패");
+  };
+  const resetMoney = async () => {
+    if (!confirm("'다같이 번 돈'과 오늘 시간·분 금액 기록을 모두 0으로 초기화할까요?\n되돌릴 수 없습니다.")) return;
+    await rail("reset-money", { method: "POST", body: "{}" });
+    flash("초기화됨");
+  };
   const sendBc = async () => {
     const t = bc.trim();
     if (!t) return;
@@ -254,7 +331,10 @@ export default function AdminDashboard() {
   ];
 
   // 채팅로그 필터/정렬
-  const baseChats = tab === "liveChat" ? liveChats : (histChats[dateOf(chatlogDay)] || []);
+  // 오늘(liveChat 탭 · 채팅로그 '오늘' 서브탭)은 채팅서버 라이브(liveChats), 어제~는 Redis(histChats).
+  const baseChats = tab === "liveChat" || (tab === "chatlog" && chatlogDay === 0)
+    ? liveChats
+    : (histChats[dateOf(chatlogDay)] || []);
   const q1 = chatQ.trim().toLowerCase();
   const chats = [...baseChats]
     .filter((c) => {
@@ -265,9 +345,9 @@ export default function AdminDashboard() {
       return c.text.toLowerCase().includes(q1) || nick.toLowerCase().includes(q1) || c.vid.toLowerCase().includes(q1);
     })
     .sort((a, b) => (chatSort === "new" ? b.ts - a.ts : a.ts - b.ts));
-  // 접속자/이탈자 — tracked(어드민 접속 이후 관측분)에서 파생. 과거 이탈자는 포함하지 않음.
+  // 접속자/이탈자 — 오늘치 접속로그(connLog) + 현재 online에서 파생(오늘 기준).
   const q2 = onQ.trim().toLowerCase();
-  const trackedArr = Object.values(tracked)
+  const trackedArr = deriveTracked(connLog, live?.online || [], nickByVid)
     .filter((o) => !q2 || (o.nick || "").toLowerCase().includes(q2) || o.vid.toLowerCase().includes(q2));
   const onlines = trackedArr
     .filter((o) => o.status === "online")
@@ -295,7 +375,7 @@ export default function AdminDashboard() {
         <button onClick={logout} style={s.btnGhost}>로그아웃</button>
       </header>
       <nav style={s.tabs}>
-        {([["stats", "통계"], ["online", "동접자"], ["liveChat", "현재채팅"], ["chatlog", "채팅로그"], ["receipts", "자랑URL"], ["ops", "🛠 제어"]] as const).map(([k, t]) => (
+        {([["stats", "통계"], ["chart", "📊 차트"], ["online", "동접자"], ["liveChat", "현재채팅"], ["chatlog", "채팅로그"], ["receipts", "자랑URL"], ["bans", "🚫 차단"], ["ops", "🛠 제어"]] as const).map(([k, t]) => (
           <button key={k} onClick={() => setTab(k)} style={{ ...s.tab, ...(tab === k ? s.tabOn : {}) }}>{t}</button>
         ))}
       </nav>
@@ -320,18 +400,21 @@ export default function AdminDashboard() {
                   <Stat l="채팅" v={won(totals.chat)} />
                   <Stat l="물내림" v={won(totals.flush)} />
                   <Stat l="공유" v={won(totals.share)} />
-                  <Stat l="자랑 URL" v={won(totals.bragUrl)} />
+                  <Stat l="후원" v={won(totals.donate)} />
+                  <Stat l="자랑" v={won(totals.brag)} />
+                  <Stat l="총 체류" v={fmtDur(totals.dwellSec)} />
+                  <Stat l="평균 체류" v={totals.visits ? fmtDur(totals.dwellSec / totals.visits) : "-"} />
                   <Stat l="번 돈" v={`${won(totals.money)}원`} hi wide />
                 </div>
                 {isExpanded && (
                   <table style={s.htable}>
                     <thead>
                       <tr>
-                        {["시간", "방문", "신규", "채팅", "물내림", "공유", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}
+                        {["시간", "방문", "신규", "채팅", "물내림", "공유", "후원", "자랑", "금액"].map((h) => <th key={h} style={s.th}>{h}</th>)}
                       </tr>
                     </thead>
                     <tbody>
-                      {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.bragUrl) ? (
+                      {(d.hours || []).map((h, hr) => (h.visits || h.chat || h.flush || h.money || h.share || h.donate || h.brag) ? (
                         <tr key={hr} style={s.tr}>
                           <td style={{ ...s.td, ...s.tdTime }}>{String(hr).padStart(2, "0")}시</td>
                           <td style={s.td}>{h.visits}</td>
@@ -339,7 +422,8 @@ export default function AdminDashboard() {
                           <td style={s.td}>{h.chat}</td>
                           <td style={s.td}>{h.flush}</td>
                           <td style={s.td}>{h.share || 0}</td>
-                          <td style={s.td}>{h.bragUrl || 0}</td>
+                          <td style={s.td}>{h.donate || 0}</td>
+                          <td style={s.td}>{h.brag || 0}</td>
                           <td style={s.td}>{h.money ? won(h.money) : "-"}</td>
                         </tr>
                       ) : null)}
@@ -351,6 +435,8 @@ export default function AdminDashboard() {
           })}
         </div>
       )}
+
+      {tab === "chart" && <StatsChart />}
 
       {tab === "ops" && (
         <div>
@@ -423,7 +509,7 @@ export default function AdminDashboard() {
                   <div key={i} style={s.noticeCard}>
                     <div style={s.noticeCardHead}>
                       <span style={{ fontSize: 11, color: isActive ? "#7ff0b0" : "#5a7a6a", fontWeight: isActive ? 700 : 400 }}>{isActive ? "● 현재 표시 중" : "○ 비활성"}</span>
-                      <button style={s.btnSm} onClick={() => setCfg((p) => ({ ...p, notices: p.notices.filter((_, j) => j !== i) }))}>삭제</button>
+                      <button style={s.btnSm} onClick={() => { if (!confirm("이 공지를 삭제할까요? (저장 전까지는 되돌릴 수 있음)")) return; setCfg((p) => ({ ...p, notices: p.notices.filter((_, j) => j !== i) })); }}>삭제</button>
                     </div>
                     <div style={s.cfgDesc}>공지 문구 *</div>
                     <input value={n.text} style={{ ...s.noticeInput, width: "100%", marginTop: 3, boxSizing: "border-box" as const }} placeholder="서버 점검 예정" onChange={(e) => upd({ text: e.target.value })} />
@@ -464,7 +550,7 @@ export default function AdminDashboard() {
             <input style={s.search} placeholder="검색: 닉네임 / UUID" value={onQ} onChange={(e) => setOnQ(e.target.value)} />
             <button style={s.sortBtn} onClick={() => setOnSort((v) => (v === "new" ? "old" : "new"))}>{onSort === "new" ? "최신순" : "과거순"}</button>
           </div>
-          <div style={s.note}>접속 {onlines.length}명 · 이탈 {leftUsers.length}명 (어드민 접속 이후 · 어드민 제외)</div>
+          <div style={s.note}>접속 {onlines.length}명 · 이탈 {leftUsers.length}명 (오늘 · 어드민 제외)</div>
           {onlines.length === 0 && leftUsers.length === 0 && <Empty />}
           {onlines.map((o) => (
             <LogRow
@@ -513,7 +599,7 @@ export default function AdminDashboard() {
             <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
             <button style={{ ...s.sortBtn, ...(excludeFlush ? s.filterOn : {}) }} onClick={() => setExcludeFlush((v) => !v)}>💰제외</button>
           </div>
-          <div style={s.note}>{chats.length}건 (접속 후 수신분)</div>
+          <div style={s.note}>{chats.length}건 (오늘 · 실시간)</div>
           {chats.length === 0 && <Empty />}
           {chats.map((c, i) => {
             // 라이브 채팅은 nickByVid 우선 — 닉 변경 시 이전 메시지도 최신 닉으로 갱신
@@ -545,12 +631,9 @@ export default function AdminDashboard() {
             <input style={s.search} placeholder="검색: 메시지 / 닉네임 / UUID" value={chatQ} onChange={(e) => setChatQ(e.target.value)} />
             <button style={s.sortBtn} onClick={() => setChatSort((v) => (v === "new" ? "old" : "new"))}>{chatSort === "new" ? "최신순" : "과거순"}</button>
             <button style={{ ...s.sortBtn, ...(excludeFlush ? s.filterOn : {}) }} onClick={() => setExcludeFlush((v) => !v)}>💰제외</button>
-            {chatlogDay === 0 && (
-              <button style={s.sortBtn} onClick={() => loadChatlog(0)} disabled={chatlogLoading} title="오늘 채팅로그 새로고침(캐시 우회)">{chatlogLoading ? "…" : "🔄"}</button>
-            )}
           </div>
           <div style={s.note}>
-            {dateOf(chatlogDay)} · {chats.length}건{chatlogDay === 0 ? " · 5분 주기 반영(새로고침으로 최신화)" : " · 보관본(메모리 캐시)"}
+            {dateOf(chatlogDay)} · {chats.length}건{chatlogDay === 0 ? " · 채팅서버 라이브(오늘 전체)" : " · 보관본(메모리 캐시)"}
           </div>
           {chatlogLoading && chats.length === 0 ? <div style={s.empty}>불러오는 중…</div> : chats.length === 0 ? <Empty /> : null}
           {chats.map((c, i) => (
@@ -581,10 +664,10 @@ export default function AdminDashboard() {
               <button style={{ ...s.sortBtn, marginLeft: 8, padding: "3px 9px" }} onClick={() => loadReceipts(0)} disabled={receiptLoading} title="오늘 목록 새로고침">{receiptLoading ? "…" : "🔄"}</button>
             )}
           </div>
-          <div style={s.receiptHint}>💡 카드를 누르면 새 탭에서 공유 페이지가 열립니다</div>
+          <div style={s.receiptHint}>💡 "열기 ↗"는 새 탭에서 공유 페이지 · "삭제"는 확인 후 공유 링크를 즉시 만료시킵니다</div>
           {receiptLoading && receiptRows.length === 0 ? <div style={s.empty}>불러오는 중…</div> : receiptRows.length === 0 ? <Empty /> : null}
           {receiptRows.map((rc) => (
-            <a key={rc.id} href={`/r/${rc.id}`} target="_blank" rel="noopener noreferrer" style={s.receiptRow}>
+            <div key={rc.id} style={s.receiptRow}>
               <div style={s.rowHead}>
                 <b style={s.rowNick}>{rc.n || "익명"}</b>
                 <span style={s.receiptAmt}>{won(rc.t)}원</span>
@@ -593,15 +676,20 @@ export default function AdminDashboard() {
               <div style={s.receiptFoot}>
                 <code style={s.receiptId}>/r/{rc.id}</code>
                 <span style={s.receiptFlush}>물내림 {rc.f}회</span>
-                <span style={s.receiptOpen}>열기 ↗</span>
+                <a href={`/r/${rc.id}`} target="_blank" rel="noopener noreferrer" style={s.receiptOpen}>열기 ↗</a>
+                <button style={s.receiptDel} onClick={() => delReceipt(dateOf(receiptDay), rc.id)}>삭제</button>
               </div>
-            </a>
+            </div>
           ))}
         </div>
       )}
 
       {tab === "bans" && (
         <div>
+          <div style={s.ctrlRow}>
+            <div style={{ ...s.note, marginBottom: 0 }}>차단 중 {bans.length}명 · 만료 시 자동 해제</div>
+            <button style={{ ...s.sortBtn, marginLeft: "auto" }} onClick={loadBans}>🔄 새로고침</button>
+          </div>
           {bans.length === 0 && <Empty />}
           {bans.map((b) => (
             <div key={b.vid} style={s.crow}>
@@ -739,5 +827,6 @@ const s: Record<string, React.CSSProperties> = {
   receiptFoot: { display: "flex", alignItems: "center", gap: 8, marginTop: 7, flexWrap: "wrap" as const },
   receiptId: { fontSize: 11, color: "#7fd0ff", background: "#0f1b22", padding: "2px 6px", borderRadius: 5, wordBreak: "break-all" },
   receiptFlush: { fontSize: 11, color: "#9fb3a6" },
-  receiptOpen: { marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#7ff0b0", whiteSpace: "nowrap" },
+  receiptOpen: { marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#7ff0b0", whiteSpace: "nowrap", textDecoration: "none" },
+  receiptDel: { fontSize: 11.5, fontWeight: 700, color: "#ff9a9a", background: "#2a1518", border: "1px solid #5a2630", borderRadius: 6, padding: "3px 10px", whiteSpace: "nowrap" },
 };

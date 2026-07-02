@@ -1,14 +1,26 @@
-/* 영속 스토어 — Upstash Redis. 5분 배치로만 기록(이벤트마다 write 금지).
+/* 영속 스토어 — Upstash Redis. 배치로만 기록(이벤트마다 write 금지).
+   영속 주기(persistMs=10초)에 '변경분만' write하되, 무거운 write(today/hours/minutes)는
+   서버(index.js)에서 60초로 합쳐(coalesce) 무료티어(월 50만 커맨드) 안에 머문다.
    - mt:today        : SET 러닝합계 (TTL 없음)
-   - mt:hours:<date> : HSET 시간별(바뀐 시간만), 95일 TTL
-   - mt:chatlog:<date>: RPUSH 배치, 3일 TTL
+   - mt:hours:<date> : HSET 시간별(바뀐 시간만, field 0~23), 95일 TTL
+   - mt:min:<date>   : HSET 분단위(바뀐 분만, field 0~1439, value=버킷+presence), 30일 TTL
+   - mt:chatlog:<date>: RPUSH 배치, 5일 TTL
    - 밴: 변경 시에만 즉시 write */
 
 import { getRedis } from "./redis.js";
 import {
-  K, vk, hoursKey, chatLogKey, TTL, DEFAULTS, DURATION_SEC, CHATLOG_MAX,
+  K, vk, hoursKey, minKey, chatLogKey, TTL, DEFAULTS, DURATION_SEC, CHATLOG_MAX,
   emptyBucket, lastDateKeys,
 } from "./keys.js";
+
+// TTL은 키마다 '이 프로세스에서 처음 쓸 때' 한 번만 건다. HSET/RPUSH는 기존 TTL을 지우지 않으므로
+// 매 배치마다 EXPIRE를 반복할 필요가 없다(반복 EXPIRE = 낭비 커맨드). 재기동 시 Set이 비어 다시 1회 건다(무해).
+const ttlOnce = new Set();
+function expireOnce(pipeline, key, ttl) {
+  if (ttlOnce.has(key)) return;
+  pipeline.expire(key, ttl);
+  ttlOnce.add(key);
+}
 
 export function clean(s, max) {
   return String(s ?? "")
@@ -75,7 +87,7 @@ export async function persistHours(date, hours, dirty) {
   if (!Object.keys(obj).length) return;
   const p = r.pipeline();
   p.hset(hoursKey(date), obj);
-  p.expire(hoursKey(date), TTL.hours);
+  expireOnce(p, hoursKey(date), TTL.hours);
   await p.exec();
 }
 export async function loadHours(date) {
@@ -90,6 +102,34 @@ export async function loadHours(date) {
   return arr;
 }
 
+/* ---------- 분단위 영속(어드민 차트/테이블 상세조회용) ----------
+   minutesMap: Map<분of하루(0~1439), 버킷(+presence 게이지)>, dirty: 변경된 분 인덱스 Set.
+   시간별과 동일하게 '바뀐 분만' HSET → 유휴 시 write 0. presence는 그 분의 피크 동접(게이지). */
+export async function persistMinutes(date, minutesMap, dirty) {
+  const r = getRedis();
+  if (!r || !minutesMap) return;
+  const idxs = dirty ? [...dirty] : [...minutesMap.keys()];
+  const obj = {};
+  for (const i of idxs) { const b = minutesMap.get(i); if (b) obj[i] = b; }
+  if (!Object.keys(obj).length) return;
+  const p = r.pipeline();
+  p.hset(minKey(date), obj);
+  expireOnce(p, minKey(date), TTL.minutes);
+  await p.exec();
+}
+// 특정 날짜의 분단위 버킷 Map<분,버킷> — 없는 분은 호출부(읽기)에서 0으로 채운다(sparse).
+export async function loadMinutes(date) {
+  const r = getRedis();
+  const map = new Map();
+  if (!r) return map;
+  const raw = (await r.hgetall(minKey(date))) || {};
+  for (const [k, v] of Object.entries(raw)) {
+    const i = Number(k);
+    if (i >= 0 && i < 1440 && v) map.set(i, { ...emptyBucket(), presence: 0, ...v });
+  }
+  return map;
+}
+
 /* ---------- 채팅로그(배치 append) ---------- */
 // rows: [{ts, hour, vid, nick, text}]
 export async function appendChatLog(date, rows) {
@@ -98,7 +138,7 @@ export async function appendChatLog(date, rows) {
   const p = r.pipeline();
   p.rpush(chatLogKey(date), ...rows);
   p.ltrim(chatLogKey(date), -CHATLOG_MAX, -1);
-  p.expire(chatLogKey(date), TTL.chatLog);
+  expireOnce(p, chatLogKey(date), TTL.chatLog);
   await p.exec();
 }
 
@@ -156,6 +196,7 @@ export async function resetStats() {
   const r = getRedis();
   if (!r) return;
   const dates = lastDateKeys(95);
+  const minDates = lastDateKeys(30); // 분단위 TTL(30일)에 맞춰 초기화 범위도 30일
   const logDates = lastDateKeys(5); // 채팅로그 TTL(5일)에 맞춰 초기화 범위도 5일
-  await r.del(K.today, ...dates.map(hoursKey), ...logDates.map(chatLogKey));
+  await r.del(K.today, ...dates.map(hoursKey), ...minDates.map(minKey), ...logDates.map(chatLogKey));
 }
